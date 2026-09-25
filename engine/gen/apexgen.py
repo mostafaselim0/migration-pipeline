@@ -176,8 +176,23 @@ def data_type(col):
 
 
 # ------------------------------------------------------------------ IG region
+def show_cond(c, prefix="display_condition"):
+    """Server-side condition of a column shown only with a right (rules.columns / computed "show_if"): a SQL condition, or a
+    named legacy right "right:VIEW_COST" / "right:VIEW_BALANCE" (app_ui.has_right).  Without the right the column is not rendered."""
+    s = c.get("show_if")
+    if not s:
+        return {}
+    if s.lower().startswith("right:"):
+        s = f"app_ui.has_right('{s.split(':', 1)[1].strip().upper()}') = 1"
+    if prefix == "display_when":                               # page items
+        return dict(display_when_type="EXPRESSION", display_when=s, display_when2="SQL")
+    return {f"{prefix}_type": "EXPRESSION", prefix: s, f"{prefix}2": "SQL"}
+
+
 def ig_region(pg, key, title, blk, seq, lovs, where=None, ajax_items=None, condition_item=None, hide_header=False, readonly=False,
-              template=T_IRR):
+              template=T_IRR, master=None, static_id=None, doc_grid=False):
+    """master: (parent grid region id, parent grid key, {column: parent grid column}) for a grid under the selected line of
+    another grid (detail of a detail); APEX filters it by that line and saves parent lines first."""
     rid = nid(pg, key, "region")
     out = []
     ops = "".join(x for x, ok in (("i", blk.get("insert", True)), ("u", blk.get("update", True)), ("d", blk.get("delete", True))) if ok)
@@ -201,9 +216,10 @@ def ig_region(pg, key, title, blk, seq, lovs, where=None, ajax_items=None, condi
         order = f"\n order by {alias_t(blk['order_by'], blk['table'])}" if blk.get("order_by") and "&" not in blk["order_by"] else ""
         src = dict(query_type="SQL", plug_source="select " + ",\n       ".join(sel) + f"\n  from {blk['table']} t"
                    + (f"\n where {alias_t(where, blk['table'])}" if where else "") + order, include_rowid_column=False)
-    out.append(call("wwv_flow_imp_page.create_page_plug", id=Id(rid), plug_name=title,
+    out.append(call("wwv_flow_imp_page.create_page_plug", id=Id(rid), plug_name=title, region_name=static_id,
                     region_template_options=rto,
                     plug_template=template, plug_display_sequence=seq, **src, plug_source_type="NATIVE_IG", ajax_items_to_submit=ajax_items,
+                    master_region_id=Id(master[0]) if master else None,
                     plug_display_condition_type="ITEM_IS_NOT_NULL" if condition_item else None,
                     plug_display_when_condition=condition_item, prn_page_header=title))
     cols = []
@@ -225,8 +241,14 @@ def ig_region(pg, key, title, blk, seq, lovs, where=None, ajax_items=None, condi
         cid = nid(pg, key, "c", c["name"])
         dt = data_type(c)
         common = dict(id=Id(cid), name=c["name"], source_type="DB_COLUMN", source_expression=c["name"], data_type=dt,
-                      session_state_data_type="VARCHAR2", is_query_only=False, display_sequence=s)
+                      session_state_data_type="VARCHAR2", is_query_only=False, display_sequence=s, **show_cond(c))
         s += 10
+        if c["name"] in join and master:                   # sub-grid: the value comes from the selected line of the parent grid
+            cols.append((c["name"], call("wwv_flow_imp_page.create_region_column", **common, item_type="NATIVE_HIDDEN",
+                        attributes=attrs(value_protected="Y"), enable_filter=False, enable_hide=True, is_primary_key=False,
+                        parent_column_id=Id(nid(pg, master[1], "c", master[2][c["name"]])), duplicate_value=True,
+                        include_in_export=False), False))
+            continue
         if c["name"] in join:
             cols.append((c["name"], call("wwv_flow_imp_page.create_region_column", **common, item_type="NATIVE_HIDDEN",
                         attributes=attrs(value_protected="Y"), enable_filter=False, enable_hide=True, is_primary_key=False,
@@ -313,6 +335,11 @@ def ig_region(pg, key, title, blk, seq, lovs, where=None, ajax_items=None, condi
                     update_authorization_scheme=Id(AZ_UPD) if "u" in ops else None,
                     delete_authorization_scheme=Id(AZ_DEL) if "d" in ops else None,
                     lost_update_check_type="VALUES", add_row_if_empty=False, submit_checked_rows=False)
+        if doc_grid:        # lines of a document: one save for header and all lines (the page button), like the legacy commit
+            igkw["toolbar_buttons"] = "SEARCH_COLUMN:SEARCH_FIELD:ACTIONS_MENU:RESET"
+    if master:                                              # empty sub-grid: say how it works
+        igkw["no_data_found_message"] = ("لا توجد تفاصيل للسطر المختار - اختر سطراً من الجدول السابق أو أضف تفاصيل له"
+                                         " / No details for the selected line: select a line above or add details")
     igkw.update(lazy_loading=False, requires_filter=False, select_first_row=True, fixed_row_height=True, pagination_type="SCROLL",
                 show_total_row_count=True, show_toolbar=True, enable_save_public_report=False, enable_subscriptions=True, enable_flashback=True,
                 define_chart_view=True, enable_download=True, enable_mail_download=True, fixed_header="PAGE", show_icon_view=False, show_detail_view=False)
@@ -414,7 +441,7 @@ def form_region(pg, title, blk, lovs, template=T_STANDARD, seq=10, cols_per_row=
         name = f"P{pg}_{c['name']}"
         base = dict(id=Id(nid(pg, "item", c["name"])), name=name, source_data_type=data_type(c), is_required=bool(c["required"]) and not readonly,
                     item_sequence=10 * (i + 1), item_plug_id=Id(rid), item_source_plug_id=Id(rid), use_cache_before_default="NO",
-                    source=c["name"], source_type="REGION_SOURCE_COLUMN", is_persistent="N")
+                    source=c["name"], source_type="REGION_SOURCE_COLUMN", is_persistent="N", **show_cond(c, "display_when"))
         if c.get("sql"):                                   # computed display value of the record (rules.computed)
             base.update(item_source_plug_id=None, source_type="QUERY", is_required=False, source_data_type=None,
                         source=f"select {ssq(c['sql'])} from {blk['table']} t where t.rowid = :P{pg}_ROWID")
@@ -575,6 +602,7 @@ def ir_list(spec, lovs, target_page, target_is_modal):
             kw.update(display_text_as="LOV_ESCAPE_SC", rpt_named_lov=Id(lov_id(c["lov"])), rpt_show_filter_lov="1")
         if c["hidden"]:
             kw.update(display_text_as="HIDDEN_ESCAPE_SC")
+        kw.update(show_cond(c))                            # list column shown only with the right
         body += call("wwv_flow_imp_page.create_worksheet_column", **kw)
         if not c["hidden"] and len(shown) < 10:
             shown.append(c["name"])
@@ -719,6 +747,7 @@ def print_spec(spec):
     js = {"title": spec["title_a"], "table": m["table"], "cols": cols(m), "details": []}
     mcols = {c["name"] for c in m["cols"]}
     for d in spec["details"]:
+        if d.get("parent"): continue                          # sub-grids (detail of a detail) are not printed
         join = [[dc, mc] for dc, mc in d["join"] if mc in mcols]
         if not join: continue
         pk = [c["name"] for c in d["cols"] if c.get("pk") and c["name"] not in {x for x, _ in join}]
@@ -1107,39 +1136,167 @@ def soft_delete_components(pg, spec, cascade_stmts):
                 process_success_message=sd.get("message_a") or "تم حذف المستند", internal_uid=pid % 10**15)
 
 
-def warning_components(pg, spec, items):
-    """rules.warnings: legacy 'continue?' confirmations.  Save / Create first ask the server (AJAX callback WARN_CHECK) for warning
-    texts; when there are any the user confirms before the page is submitted."""
+def _warn_block(pg, ws, req_expr, rowid_expr, finish):
+    fns, calls = [], []
+    for k, w in enumerate(ws):
+        body = w["plsql"].replace(":PAGE_ROWID", rowid_expr).replace(":PAGE_", f":P{pg}_")
+        fns.append(f"  function w{k} return varchar2 is\n  begin\n{body}\n  end;")
+        when = ",".join(x.strip() for x in (w.get("when") or "CREATE,SAVE").split(","))
+        calls.append(f"  if instr(',{when},', ',' || {req_expr} || ',') > 0 then\n"
+                     f"    l_t := w{k};\n    if l_t is not null then l_all := l_all || l_t || chr(10); end if;\n  end if;")
+    return "declare\n  l_all varchar2(32767);\n  l_t varchar2(4000);\n" + "\n".join(fns) + "\nbegin\n" + "\n".join(calls) + "\n" + finish + "\nend;"
+
+
+def warning_components(pg, spec, items, region_id=None):
+    """rules.warnings: legacy 'continue?' confirmations.
+    * default: Save / Create first ask the server (AJAX callback WARN_CHECK); the user confirms before the page is submitted.
+    * "lines": true (warnings about the document's lines): they run inside the save itself, after the header and every grid
+      line (also the unsaved ones) are written; if one fires, the whole save is rolled back, the page keeps what the user typed
+      and asks "save anyway?"; confirming saves again without asking (P<page>_WARN_OK)."""
     ws = (spec.get("rules") or {}).get("warnings") or []
     if not ws:
         return ""
-    fns, calls = [], []
-    for k, w in enumerate(ws):
-        body = w["plsql"].replace(":PAGE_ROWID", "apex_application.g_x02").replace(":PAGE_", f":P{pg}_")
-        fns.append(f"  function w{k} return varchar2 is\n  begin\n{body}\n  end;")
-        when = ",".join(x.strip() for x in (w.get("when") or "CREATE,SAVE").split(","))
-        calls.append(f"  if instr(',{when},', ',' || apex_application.g_x01 || ',') > 0 then\n"
-                     f"    l_t := w{k};\n    if l_t is not null then l_all := l_all || l_t || chr(10); end if;\n  end if;")
-    code = "declare\n  l_all varchar2(32767);\n  l_t varchar2(4000);\n" + "\n".join(fns) + "\nbegin\n" + "\n".join(calls) + "\n  htp.prn(rtrim(l_all, chr(10)));\nend;"
-    out = call("wwv_flow_imp_page.create_page_process", id=Id(nid(pg, "p", "warn")), process_sequence=1, process_point="ON_DEMAND",
-               process_type="NATIVE_PLSQL", process_name="WARN_CHECK", process_sql_clob=code, process_clob_language="PLSQL",
-               internal_uid=nid(pg, "p", "warn") % 10**15)
+    pre = [w for w in ws if not (w.get("lines") and region_id)]
+    post = [w for w in ws if w.get("lines") and region_id]
+    out = ""
+    if pre:
+        code = _warn_block(pg, pre, "apex_application.g_x01", "apex_application.g_x02", "  htp.prn(rtrim(l_all, chr(10)));")
+        out += call("wwv_flow_imp_page.create_page_process", id=Id(nid(pg, "p", "warn")), process_sequence=1, process_point="ON_DEMAND",
+                    process_type="NATIVE_PLSQL", process_name="WARN_CHECK", process_sql_clob=code, process_clob_language="PLSQL",
+                    internal_uid=nid(pg, "p", "warn") % 10**15)
+    ok_item = f"P{pg}_WARN_OK"
+    if post:
+        out += call("wwv_flow_imp_page.create_page_item", id=Id(nid(pg, "item", "WARN_OK")), name=ok_item, item_sequence=9999,
+                    item_plug_id=Id(region_id), display_as="NATIVE_HIDDEN", is_persistent="N", attributes=attrs(value_protected="N"))
+        code = _warn_block(pg, post, ":REQUEST", f":P{pg}_ROWID",
+                           "  if l_all is not null then\n"
+                           "    raise_application_error(-20998, substr('⚠ ' || rtrim(l_all, chr(10)), 1, 2000));\n  end if;")
+        out += call("wwv_flow_imp_page.create_page_process", id=Id(nid(pg, "p", "warnlines")), process_sequence=80, process_point="AFTER_SUBMIT",
+                    process_type="NATIVE_PLSQL", process_name="تنبيهات السطور (قبل الحفظ النهائي)", process_sql_clob=code,
+                    process_clob_language="PLSQL", error_display_location="INLINE_IN_NOTIFICATION",
+                    process_when=f":REQUEST in ('SAVE', 'CREATE') and nvl(:{ok_item}, 'N') <> 'Y'", process_when_type="EXPRESSION",
+                    process_when2="PLSQL", internal_uid=nid(pg, "p", "warnlines") % 10**15)
+        # a fired line warning comes back as an error: show it as a question instead, and save again when confirmed
+        hook = ("(function () {\n"
+                "  var orig = apex.message.showErrors;\n"
+                "  apex.message.showErrors = function (errs) {\n"
+                "    var list = Array.isArray(errs) ? errs : [errs];\n"
+                "    var w = list.filter(function (e) { return e && String(e.message || '').indexOf('\\u26a0') >= 0; })[0];\n"
+                "    if (!w || !window.mpWarnReq) { return orig.apply(this, arguments); }\n"
+                "    var req = window.mpWarnReq; window.mpWarnReq = null;\n"
+                "    var t = $('<div>').html(String(w.message)).text().replace('\\u26a0', '').trim();\n"
+                "    var en = document.documentElement.lang === 'en';\n"
+                "    apex.message.confirm(t + '\\n\\n' + (en ? 'Nothing was saved yet. Save anyway?' : 'لم يتم الحفظ بعد. هل تريد الحفظ رغم ذلك؟'),\n"
+                "      function (ok) { if (ok) { apex.item('" + ok_item + "').setValue('Y'); apex.page.submit({request: req, validate: true}); } });\n"
+                "  };\n"
+                "})();")
+        ev = nid(pg, "da", "warnhook")
+        out += call("wwv_flow_imp_page.create_page_da_event", id=Id(ev), name="line warnings: ask instead of failing", event_sequence=5,
+                    bind_type="bind", execution_type="IMMEDIATE", bind_event_type="ready")
+        out += call("wwv_flow_imp_page.create_page_da_action", id=Id(nid(pg, "da", "warnhook", "a")), event_id=Id(ev), event_result="TRUE",
+                    action_sequence=10, execute_on_page_init="Y", action="NATIVE_JAVASCRIPT_CODE", attribute_01=hook)
     page_items = ",".join("#" + i for i in items)
     for req in ("SAVE", "CREATE"):
         ev = nid(pg, "da", "warn", req)
         out += call("wwv_flow_imp_page.create_page_da_event", id=Id(ev), name=f"warnings {req}", event_sequence=20,
                     triggering_element_type="BUTTON", triggering_button_id=Id(nid(pg, "btn", req)), bind_type="bind",
                     execution_type="IMMEDIATE", bind_event_type="click")
-        js = (f"var req = '{req}';\n"
-              f"apex.server.process('WARN_CHECK', {{x01: req, x02: apex.item('P{pg}_ROWID').getValue(), pageItems: '{page_items}'}},"
-              " {dataType: 'text'}).then(function (t) {\n"
-              "  var go = function () { apex.page.submit({request: req, validate: true}); };\n"
-              "  t = (t || '').trim();\n"
-              "  if (!t) { go(); return; }\n"
-              "  apex.message.confirm(t + '\\n\\n' + (document.documentElement.lang === 'en' ? 'Continue?' : 'هل تريد الاستمرار؟'),"
-              " function (ok) { if (ok) go(); });\n"
-              "});")
+        go = (f"  var go = function () {{ " + (f"window.mpWarnReq = req; apex.item('{ok_item}').setValue('N'); " if post else "")
+              + "apex.page.submit({request: req, validate: true}); };\n")
+        if pre:
+            js = (f"var req = '{req}';\n" + go +
+                  f"apex.server.process('WARN_CHECK', {{x01: req, x02: apex.item('P{pg}_ROWID').getValue(), pageItems: '{page_items}'}},"
+                  " {dataType: 'text'}).then(function (t) {\n"
+                  "  t = (t || '').trim();\n"
+                  "  if (!t) { go(); return; }\n"
+                  "  apex.message.confirm(t + '\\n\\n' + (document.documentElement.lang === 'en' ? 'Continue?' : 'هل تريد الاستمرار؟'),"
+                  " function (ok) { if (ok) go(); });\n"
+                  "});")
+        else:
+            js = f"var req = '{req}';\n" + go + "go();"
         out += call("wwv_flow_imp_page.create_page_da_action", id=Id(nid(pg, "da", "warn", req, "a")), event_id=Id(ev), event_result="TRUE",
+                    action_sequence=10, execute_on_page_init="N", action="NATIVE_JAVASCRIPT_CODE", attribute_01=js)
+    return out
+
+
+def fill_components(fp, spec, grids, items, main_rid=None):
+    """fills: buttons that add rows to a grid for the user to complete, like the legacy buttons that filled block records before
+    COMMIT.  Each fill: {"label_a", "label_e", "table", "sql"} - sql returns one row per line, columns named like the grid's
+    columns (a column COL__D gives the text shown for a list column COL); :PAGE_<COL> are the document's fields.  Optional
+    "confirm_a", "icon", and "items": input fields of the fill that are not columns of the document (the legacy screen-only
+    fields), [{"name", "label_a", "label_e", "type": "number|text|date", "lov": "select d, r ...", "cascade": ["NAME"]}], shown
+    under the document header.  The rows appear as new, unsaved lines; nothing is written until the user saves."""
+    out = ""
+    by_table = {}
+    for t, key, rid in grids:
+        by_table.setdefault(t.upper(), (key, rid))
+    for k, f in enumerate(spec.get("fills") or []):
+        tgt = by_table.get((f.get("table") or "").upper())
+        if not tgt:
+            print(f"   fill {k} of {spec['form']}: grid {f.get('table')} not on the page")
+            continue
+        key, rid = tgt
+        name = f"FILL{k}"
+        own = []
+        for j, p in enumerate(f.get("items") or []):
+            if not main_rid: break
+            iname = f"P{fp}_{p['name'].upper()}"[:30]; own.append(iname)
+            base = dict(id=Id(nid(fp, "fillitem", k, p["name"])), name=iname, item_sequence=900 + 10 * k + j, item_plug_id=Id(main_rid),
+                        prompt=p.get("label_a") or p.get("label_e") or p["name"], begin_on_new_line="Y" if j == 0 else "N", colspan=4,
+                        label_alignment="RIGHT", field_template=T_LABEL_OPT, item_template_options="#DEFAULT#", is_persistent="N",
+                        display_when=f"P{fp}_ROWID", display_when_type="ITEM_IS_NOT_NULL")
+            if p.get("lov"):
+                lv = p["lov"].replace(":PAGE_", f":P{fp}_")
+                extra = dict(lov_cascade_parent_items=",".join(f"P{fp}_{x.upper()}" for x in p["cascade"]), ajax_optimize_refresh="Y") \
+                    if p.get("cascade") else {}
+                out += call("wwv_flow_imp_page.create_page_item", **base, display_as="NATIVE_POPUP_LOV", lov=lv, lov_display_null="YES",
+                            cSize=30, attributes=attrs(case_sensitive="N", display_as="POPUP", fetch_on_search="Y", initial_fetch="FIRST_ROWSET",
+                                                       manual_entry="N", match_type="CONTAINS", min_chars="0"), **extra)
+            elif (p.get("type") or "").lower() == "date":
+                out += call("wwv_flow_imp_page.create_page_item", **base, display_as="NATIVE_DATE_PICKER_APEX", format_mask="DD/MM/YYYY",
+                            cSize=30, attributes=attrs(display_as="POPUP", max_date="NONE", min_date="NONE", multiple_months="N",
+                                                       show_time="N", use_defaults="Y"))
+            else:
+                out += call("wwv_flow_imp_page.create_page_item", **base, display_as="NATIVE_NUMBER_FIELD"
+                            if (p.get("type") or "number").lower() == "number" else "NATIVE_TEXT_FIELD", cSize=30,
+                            attributes=attrs(number_alignment="left", virtual_keyboard="decimal")
+                            if (p.get("type") or "number").lower() == "number" else attrs(disabled="N", subtype="TEXT", trim_spaces="BOTH"))
+        page_items = ",".join("#" + i for i in items + own)
+        sql = f["sql"].replace(":PAGE_", f":P{fp}_")
+        out += call("wwv_flow_imp_page.create_page_process", id=Id(nid(fp, "p", "fill", k)), process_sequence=10 + k, process_point="ON_DEMAND",
+                    process_type="NATIVE_PLSQL", process_name=name,
+                    process_sql_clob=f"declare\n  c sys_refcursor;\nbegin\n  open c for\n{sql};\n  apex_json.open_object;\n"
+                                     "  apex_json.write('rows', c);\n  apex_json.close_object;\nend;",
+                    process_clob_language="PLSQL", internal_uid=nid(fp, "p", "fill", k) % 10**15)
+        out += call("wwv_flow_imp_page.create_page_button", id=Id(nid(fp, "btn", "fill", k)), button_sequence=5 + k, button_plug_id=Id(rid),
+                    button_name=name, button_action="DEFINED_BY_DA", button_template_options="#DEFAULT#:t-Button--iconLeft",
+                    button_template_id=T_BUTTON, button_image_alt=f.get("label_a") or f.get("label_e") or "تعبئة",
+                    button_position="EDIT", button_alignment="RIGHT", icon_css_classes=f.get("icon") or "fa-download",
+                    security_scheme=Id(AZ_INS))
+        ev = nid(fp, "da", "fill", k)
+        out += call("wwv_flow_imp_page.create_page_da_event", id=Id(ev), name=f"fill {f.get('table')}", event_sequence=30 + k,
+                    triggering_element_type="BUTTON", triggering_button_id=Id(nid(fp, "btn", "fill", k)), bind_type="bind",
+                    execution_type="IMMEDIATE", bind_event_type="click")
+        confirm = (f.get("confirm_a") or "").replace("'", "\\'")
+        js = ("var en = document.documentElement.lang === 'en';\n"
+              "var run = function () {\n"
+              f"  apex.server.process('{name}', {{pageItems: '{page_items}'}}, {{dataType: 'json'}}).then(function (d) {{\n"
+              f"    var g = apex.region('{key}').call('getViews', 'grid'), m = g.model, rows = (d && d.rows) || [], n = 0;\n"
+              "    rows.forEach(function (r) {\n"
+              "      var id = m.insertNewRecord(), rec = (typeof id === 'object') ? id : m.getRecord(id);\n"
+              "      Object.keys(r).forEach(function (c) {\n"
+              "        if (/__D$/.test(c) || m.getFieldKey(c) === undefined) { return; }\n"
+              "        var v = r[c] === null || r[c] === undefined ? '' : String(r[c]);\n"
+              "        m.setValue(rec, c, r[c + '__D'] !== undefined ? {v: v, d: String(r[c + '__D'])} : v);\n"
+              "      });\n"
+              "      n++;\n"
+              "    });\n"
+              "    apex.message.showPageSuccess(n ? (en ? n + ' line(s) added: complete them, then save.' : 'تمت إضافة ' + n + ' سطر: راجعها وأكملها ثم اضغط حفظ.')\n"
+              "                                 : (en ? 'Nothing to add.' : 'لا توجد سطور للإضافة.'));\n"
+              "  });\n"
+              "};\n"
+              + (f"apex.message.confirm('{confirm}', function (ok) {{ if (ok) run(); }});" if confirm else "run();"))
+        out += call("wwv_flow_imp_page.create_page_da_action", id=Id(nid(fp, "da", "fill", k, "a")), event_id=Id(ev), event_result="TRUE",
                     action_sequence=10, execute_on_page_init="N", action="NATIVE_JAVASCRIPT_CODE", attribute_01=js)
     return out
 
@@ -1163,7 +1320,23 @@ def gen_master_detail(spec, lovs):
                      button_condition=f"P{fp}_ROWID", button_condition_type="ITEM_IS_NOT_NULL")
     body += link_buttons(fp, spec, rid)
     detail_ids = []
+    grids = {}                                                # table -> (region id, key, block) of the first grid on it
+    fill_targets = {(f.get("table") or "").upper() for f in spec.get("fills") or []}
     for i, d in enumerate(spec["details"]):
+        if d.get("parent"):                                   # detail of a detail: a grid under the selected line of its parent grid
+            par = grids.get(d["parent"])
+            pcols = {c["name"] for c in par[2]["cols"]} if par else set()
+            join = [(dc, pc) for dc, pc in d["join"] if pc in pcols]
+            if not par or not join:
+                continue
+            title = d.get("title_a") or d.get("title_e") or "تفاصيل السطر"
+            drid, dsrc, editable = ig_region(fp, f"det{i}", title, dict(d, join=join), 30 + 10 * i, lovs, condition_item=f"P{fp}_ROWID",
+                                             readonly=readonly, template=T_STANDARD, master=(par[0], par[1], dict(join)), doc_grid=True,
+                                             static_id=f"det{i}" if d["table"] in fill_targets else None)
+            body += dsrc
+            if editable:
+                detail_ids.append((drid, dict(d, join=join), i))
+            continue
         mcols = {c["name"] for c in m["cols"]}
         join = [(dc, mc) for dc, mc in d["join"] if mc in mcols]
         if not join:
@@ -1177,15 +1350,20 @@ def gen_master_detail(spec, lovs):
         items = ",".join(list(dict.fromkeys([f"P{fp}_{mc}" for _, mc in join] + extra_items)))
         title = d.get("title_a") or d.get("title_e") or ("التفاصيل" if len(spec["details"]) == 1 else f"التفاصيل {i + 1}")
         drid, dsrc, editable = ig_region(fp, f"det{i}", title, dict(d, join=join), 30 + 10 * i, lovs, where=where, ajax_items=items,
-                                         condition_item=f"P{fp}_ROWID", readonly=readonly, template=T_STANDARD)
+                                         condition_item=f"P{fp}_ROWID", readonly=readonly, template=T_STANDARD, doc_grid=True,
+                                         static_id=f"det{i}" if d["table"] in fill_targets else None)
         body += dsrc
+        grids.setdefault(d["table"], (drid, f"det{i}", d))
         if editable:
             detail_ids.append((drid, dict(d, join=join), i))
+    if not readonly:
+        body += fill_components(fp, spec, [(d["table"], f"det{i}", nid(fp, f"det{i}", "region")) for i, d in enumerate(spec["details"])],
+                                [f"P{fp}_{c['name']}" for c in m["cols"] if not c.get("computed")], main_rid=rid)
     if not readonly and "d" in ops_of(m):
         # deleting a document removes its lines first (legacy screens deleted the whole document); rules may still reject it
         stmts = []
         for dblk in spec["details"]:
-            if not dblk.get("delete", True): continue
+            if not dblk.get("delete", True) or dblk.get("parent"): continue    # sub-grid rows go with their parent line (FK)
             join = [(dc, mc) for dc, mc in dblk["join"] if mc in {c["name"] for c in m["cols"]}]
             if join:
                 stmts.append(f"delete from {dblk['table']} where " + " and ".join(f"{dc} = :P{fp}_{mc}" for dc, mc in join) + ";")
@@ -1234,7 +1412,7 @@ def gen_master_detail(spec, lovs):
     body += info_components(fp, spec)
     body += action_components(fp, spec)            # also on read-only documents (e.g. posting a voucher shown read-only)
     if not readonly:
-        body += warning_components(fp, spec, [f"P{fp}_{c['name']}" for c in m["cols"]])
+        body += warning_components(fp, spec, [f"P{fp}_{c['name']}" for c in m["cols"]], region_id=rid)
     return {pg: list_body, fp: body, **gen_print(spec)}
 
 

@@ -162,5 +162,8 @@
  "تم تطبيق الحد الائتماني الجديد وتسجيله في سجل التعديلات": "The new credit limit was applied and recorded in the change log",
  "تم حذف المرتجع": "Return deleted",
  "انتهت العملية - راجع رسائل الحركات في الجدول": "Finished - see the transaction messages in the table",
- "معايير الطباعة": "Print parameters"
+ "معايير الطباعة": "Print parameters",
+ "لا توجد تفاصيل للسطر المختار - اختر سطراً من الجدول السابق أو أضف تفاصيل له / No details for the selected line: select a line above or add details": "No details for the selected line: select a line above or add details",
+ "جلب أصناف الفاتورة": "Get the invoice items",
+ "نوع حركة الفاتورة": "Invoice transaction type"
 }

@@ -1,4 +1,30 @@
 {
+ "fills": [
+  {
+   "label_a": "جلب أصناف الفاتورة",
+   "label_e": "Get the invoice items",
+   "table": "VN_SUBTRNS_ITEMS",
+   "icon": "fa-download",
+   "items": [
+    {
+     "name": "INV_BILL_ID1",
+     "label_a": "نوع حركة الفاتورة",
+     "label_e": "Invoice transaction type",
+     "lov": "select trns_type_code || ' - ' || desc_a d, trns_type_code r from st_trns_type where nvl(effect, 0) = 1 order by trns_type_code"
+    },
+    {
+     "name": "INV_BILL_ID2",
+     "label_a": "رقم الفاتورة",
+     "label_e": "Invoice number",
+     "cascade": [
+      "INV_BILL_ID1"
+     ],
+     "lov": "select trns_serial || ' - ' || to_char(trns_date, 'DD/MM/YYYY') || ' - ' || doc_no d, trns_serial r from st_trns_mast where trns_type_code = :PAGE_INV_BILL_ID1 and (supplier_code = :PAGE_SUPPLIER_ID or :PAGE_SUPPLIER_ID is null) and nvl(delete_flag, 0) = 0 order by trns_date desc, trns_serial desc"
+    }
+   ],
+   "sql": "select to_number(:PAGE_INV_BILL_ID1) bill_id1, to_number(:PAGE_INV_BILL_ID2) bill_id2, it.item_group_code group_code,\n       it.item_code, it.item_code || ' - ' || it.name_a item_code__d, 0 disc_ratio, 0 disc_value, max(m.supplier_ref) supplier_ref\n  from st_item it, st_trns_det dt, st_trns_mast m\n where nvl(it.stop_flag, 0) = 0 and dt.group_code = it.item_group_code and dt.item_code = it.item_code\n   and m.trns_type_code = dt.trns_type_code and m.trns_serial = dt.trns_serial\n   and nvl(dt.delete_flag, 0) = 0 and nvl(m.delete_flag, 0) = 0\n   and dt.trns_type_code = to_number(:PAGE_INV_BILL_ID1) and dt.trns_serial = to_number(:PAGE_INV_BILL_ID2)\n   and not exists (select 1 from vn_subtrns_items x where x.bill_id1 = dt.trns_type_code and x.bill_id2 = dt.trns_serial\n                      and x.group_code = dt.group_code and x.item_code = dt.item_code)\n   and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or it.item_group_code in\n        (select group_code from st_group_password where password_number = to_number(:G_PASSWORD_NUMBER)))\n group by it.item_group_code, it.item_code, it.name_a\n order by it.name_a"
+  }
+ ],
  "pattern": "AUTO",
  "notes": "Supplier debit transactions (payments/settlements, VN_TRNSTYPE EFFECT 0, manual only): legacy numbering, header checks, payment-line settlement against open invoices, GL-link balance, posted/paid lock. Wave 3b: legacy LOVs (types, suppliers, cost centres, accounts, payment types, open invoices of the supplier, contracts and bands as cascading lists), type and supplier fixed after insert, payment method list (1 descending / 2 invoice help / 3 debit amount), invoice residual and riyal net value on the payment lines.",
  "rules": {

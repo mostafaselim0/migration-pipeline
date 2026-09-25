@@ -8,6 +8,11 @@ create or replace package app_ui authid definer as
   -- expiry date of a lot, for display columns.  A function on purpose: the same scalar subquery inside the query APEX builds
   -- around a grid (ST_ADJUST_IN lines) hits an optimizer bug in 19c (ORA-00600 [qcsvsci1] then ORA-07445 in pfrdis)
   function lot_expiry (p_confg_id in number) return date;
+  -- legacy display rights (GET_USER_SEC) for columns shown only to some users (generator "show_if": "right:<NAME>"):
+  --   VIEW_COST     admin group (password number 0), or ST_BASIC.SHOW_COST = 1 and USERS.ALLOW_VIEW_COST = 1
+  --   VIEW_BALANCE  user 0, or USERS.ALLOW_VIEW_BALANCE = 1
+  -- 1 = may see.  An installation without the right's columns sees the value (1).
+  function has_right (p_right in varchar2) return number;
 end app_ui;
 /
 create or replace package body app_ui as
@@ -78,6 +83,30 @@ create or replace package body app_ui as
     select max(expire_date) into l_d from st_item_confg where item_confg_id = p_confg_id;
     return l_d;
   end lot_expiry;
+
+  function has_right (p_right in varchar2) return number is
+    l_user number := to_number(v('G_USER_CODE'));
+    l_grp  number := to_number(v('G_PASSWORD_NUMBER'));
+    l_n    number;
+  begin
+    case upper(p_right)
+      when 'VIEW_COST' then
+        if nvl(l_grp, 0) = 0 then return 1; end if;
+        execute immediate 'select nvl(max(show_cost), 0) from st_basic' into l_n;
+        if l_n <> 1 then return 0; end if;
+        execute immediate 'select nvl(max(allow_view_cost), 0) from users where users_code = :u' into l_n using l_user;
+      when 'VIEW_BALANCE' then
+        if nvl(l_user, 0) = 0 then return 1; end if;
+        execute immediate 'select nvl(max(allow_view_balance), 0) from users where users_code = :u' into l_n using l_user;
+      else
+        return 0;
+    end case;
+    return case when l_n = 1 then 1 else 0 end;
+  exception
+    when others then
+      if sqlcode in (-904, -942) then return 1; end if;         -- this installation has no such right
+      raise;
+  end has_right;
 
 end app_ui;
 /

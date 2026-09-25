@@ -21,9 +21,14 @@ Override keys you may use (omit everything you do not need):
               "values": ["on", "off"], "required": true, "readonly_after_insert": true, "cascade": "COL"}},
   "computed": {"TABLE.NAME": {"sql": "scalar expression over the row alias t", "label_a": "...", "type": "NUMBER|DATE"}},
   "blocks": {"TABLE": {"insert": true, "update": true, "delete": false, "where": "extra filter of a detail grid"}},
-  "delete_lines": "refuse"
+  "delete_lines": "refuse",
+  "sub_details": [{"table": "T", "parent": "DETAIL_TABLE", "join": [["COL", "PARENT_COL"]], "title_a": "..."}]   grid under the selected line
 }
+  columns / computed may carry "show_if": "right:VIEW_COST" | "right:VIEW_BALANCE" | "<SQL condition>" (column hidden without it);
+  a warning {"name", "plsql", "when"} with "lines": true runs after the lines are written (only for warnings about the lines).
 - "links": [{"label_a": "...", "label_e": "...", "form": "OTHER_FORM", "items": {"TARGET_COL": "COL"}}]
+- "fills": [{"label_a": "...", "table": "GRID_TABLE", "sql": "select ... one row per new line, columns named like the grid",
+             "items": [{"name": "SCREEN_ONLY_FIELD", "label_a": "...", "lov": "select d, r ..."}]}]   legacy buttons that filled lines
 - "notes": "one line"
 
 Rules:

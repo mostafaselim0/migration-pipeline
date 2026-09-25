@@ -4,8 +4,8 @@
  "rules": {
   "computed": {
    "ST_ITEM_REQ_DET.ITEM_NAME": {"sql": "(select max(nvl(i.name_e, i.name_a)) from st_item i where i.item_group_code = t.group_code and i.item_code = t.item_code)", "label_a": "إســم الصنـــف", "label_e": "Item Name"},
-   "ST_ITEM_REQ_DET.TO_STORE_BAL": {"sql": "case when (nvl(to_number(v('G_USER_CODE')), 0) = 0 or (select nvl(max(u.allow_view_balance), 0) from users u where u.users_code = to_number(v('G_USER_CODE'))) = 1) then round(nvl(get_balance((select r.store_code from st_item_req r where r.trns_type_code = t.trns_type_code and r.trns_serial = t.trns_serial), t.group_code, t.item_code), 0) / nvl((select max(u.factor) from st_item_unit u where u.group_code = t.group_code and u.item_code = t.item_code and u.unit_code = t.unit_code), 1), 3) end", "label_a": "رصيد مخزن الطلب", "label_e": "Req Store Balance", "type": "NUMBER"},
-   "ST_ITEM_REQ_DET.FROM_STORE_BAL": {"sql": "case when (nvl(to_number(v('G_USER_CODE')), 0) = 0 or (select nvl(max(u.allow_view_balance), 0) from users u where u.users_code = to_number(v('G_USER_CODE'))) = 1) then round(nvl(get_balance((select r.from_store_code from st_item_req r where r.trns_type_code = t.trns_type_code and r.trns_serial = t.trns_serial), t.group_code, t.item_code), 0) / nvl((select max(u.factor) from st_item_unit u where u.group_code = t.group_code and u.item_code = t.item_code and u.unit_code = t.unit_code), 1), 3) end", "label_a": "رصيد المخزن المحول منه", "label_e": "Trnsf Store", "type": "NUMBER"}
+   "ST_ITEM_REQ_DET.TO_STORE_BAL": {"show_if": "right:VIEW_BALANCE", "sql": "case when (nvl(to_number(v('G_USER_CODE')), 0) = 0 or (select nvl(max(u.allow_view_balance), 0) from users u where u.users_code = to_number(v('G_USER_CODE'))) = 1) then round(nvl(get_balance((select r.store_code from st_item_req r where r.trns_type_code = t.trns_type_code and r.trns_serial = t.trns_serial), t.group_code, t.item_code), 0) / nvl((select max(u.factor) from st_item_unit u where u.group_code = t.group_code and u.item_code = t.item_code and u.unit_code = t.unit_code), 1), 3) end", "label_a": "رصيد مخزن الطلب", "label_e": "Req Store Balance", "type": "NUMBER"},
+   "ST_ITEM_REQ_DET.FROM_STORE_BAL": {"show_if": "right:VIEW_BALANCE", "sql": "case when (nvl(to_number(v('G_USER_CODE')), 0) = 0 or (select nvl(max(u.allow_view_balance), 0) from users u where u.users_code = to_number(v('G_USER_CODE'))) = 1) then round(nvl(get_balance((select r.from_store_code from st_item_req r where r.trns_type_code = t.trns_type_code and r.trns_serial = t.trns_serial), t.group_code, t.item_code), 0) / nvl((select max(u.factor) from st_item_unit u where u.group_code = t.group_code and u.item_code = t.item_code and u.unit_code = t.unit_code), 1), 3) end", "label_a": "رصيد المخزن المحول منه", "label_e": "Trnsf Store", "type": "NUMBER"}
   },
   "where": "TRNS_TYPE_CODE IN (SELECT T.TRNS_TYPE_CODE FROM ST_TRNS_TYPE T WHERE T.EFFECT = 7 AND T.TRNS_TYPE = 12 AND T.STORE_CODE IS NOT NULL) AND (NVL(:G_PASSWORD_NUMBER,0) = 0 OR TRNS_TYPE_CODE IN (SELECT TP.TRNS_TYPE_CODE FROM ST_TRNSTYPE_PASSWORD TP WHERE TP.PASSWORD_NUMBER = :G_PASSWORD_NUMBER)) AND (TRNS_TYPE_CODE, TRNS_SERIAL) IN (SELECT D.TRNS_TYPE_CODE, D.TRNS_SERIAL FROM ST_ITEM_REQ_DET D WHERE NVL(D.PR_FLAG,0) = 0)",
   "readonly": [
@@ -43,7 +43,7 @@
   ],
   "warnings": [
    {
-    "name": "كميات أوامر شراء لم يتم إستلامها",
+    "name": "كميات أوامر شراء لم يتم إستلامها", "lines": true,
     "plsql": "return app_act_st.rq_warn_outstanding(:PAGE_ROWID, 'ST_ITEM_REQ_HANDLE');",
     "when": "SAVE"
    }

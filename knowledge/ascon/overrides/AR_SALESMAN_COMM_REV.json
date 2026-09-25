@@ -50,6 +50,9 @@
   "delete": false,
   "notes": "Review of the salesmen's commissions (AR_COMM_PAY / AR_COMM_SALES / AR_COMM_AGES written by GET_SALESMAN_COMM): calculate and delete a month, adjust the commission percent / value; the generated grid on AR_SALESMAN_COMM was corrected; rules in APP_RULES3_AR.",
   "rules": {
+  "sub_details": [
+   {"table": "AR_COMM_PAY_ITEMS", "parent": "AR_COMM_PAY", "join": [["TRNS_ID", "TRNS_ID"], ["TRNS_SERIAL", "TRNS_SERIAL"], ["MAINAREA_ID", "MAINAREA_ID"], ["SUBAREA_ID", "SUBAREA_ID"], ["BILL_SEQ", "BILL_SEQ"], ["COMM_MONTH", "COMM_MONTH"], ["COMM_YEAR", "COMM_YEAR"]], "insert": false, "update": false, "delete": false, "title_a": "أصناف فاتورة السداد المختارة", "title_e": "Items of the selected payment line"},
+   {"table": "AR_COMM_SALES_ITEMS", "parent": "AR_COMM_SALES", "join": [["TRNS_ID", "TRNS_ID"], ["TRNS_SERIAL", "TRNS_SERIAL"], ["MAINAREA_ID", "MAINAREA_ID"], ["SUBAREA_ID", "SUBAREA_ID"], ["BILL_SEQ", "BILL_SEQ"], ["COMM_MONTH", "COMM_MONTH"], ["COMM_YEAR", "COMM_YEAR"]], "insert": false, "update": false, "delete": false, "title_a": "أصناف فاتورة المبيعات المختارة", "title_e": "Items of the selected sales line"}],
     "where": "(nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or CODE in (select SALESMAN_CODE from AR_SALESMAN_PASSWORD where PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)))",
     "row_rules": {
       "SALESMAN": "if app_rules3_ar.is_form('AR_SALESMAN_COMM_REV') then app_rules3_ar.readonly_master; end if;",

@@ -99,6 +99,8 @@
   "delete": true,
   "notes": "Grouped customers' payments (AR_TRNS header with the customers' lines AR_MAINTRNS, debit accounts AR_TRNS_ACCOUNT and credit accounts AR_SUBACC); the generated grid on AR_CUST_PASSWORD was corrected; rules in APP_RULES3_AR; the invoice allocation of each customer line and the posting are not reproduced (see the process document).",
   "rules": {
+  "sub_details": [
+   {"table": "AR_SUBTRNS", "parent": "AR_MAINTRNS", "title_a": "توزيع سداد العميل المختار على الفواتير", "title_e": "Invoice allocation of the selected customer line"}],
     "where": "TRNS_ID in (select ID from AR_TRNSTYPE where EFFECT = 1 and TRNS_TYPE <> 6 and nvl(TOT_TRNS_FLAG, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or ID in (select TRNS_ID from AR_TRNSTYPE_PASSWORD where FLAG = 1 and PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER))))",
     "row_rules": {
       "AR_TRNS": "app_rules3_ar.multi_mast_row(inserting, :new.trns_id, :new.cash_flag, :new.box_code, :new.bank_code, :new.branch, :new.doc_no, :new.trns_date, :new.post_flag, :old.post_flag, :new.ctgry_code, :new.acc_post_date, :new.trns_account, :new.cost_no, :new.description_a);",

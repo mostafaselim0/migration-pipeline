@@ -491,6 +491,21 @@ def apply_rules(spec, ov, ctx=None):
                 if opt.get("label_e"): have["label_e"] = opt["label_e"]
             elif ctx is not None and col in ctx.cols(t):
                 b["cols"].append(make_col(ctx, t, col, opt.get("label_a"), opt.get("label_e")))
+    # rules.sub_details: a grid under the selected line of another grid of the screen (detail of a detail)
+    for sd in rules.get("sub_details") or []:
+        t, parent = sd["table"].upper(), sd["parent"].upper()
+        if ctx is None or t not in ctx.meta or not any(b["table"] == parent for b in spec.get("details", [])):
+            spec["notes"].append(f"sub-detail {t}: its parent grid {parent} is not on this screen"); continue
+        db = {"name": t, "table": t, "multi": True, "where": None, "order_by": sd.get("order_by"), "items": None,
+              "insert": sd.get("insert", True), "update": sd.get("update", True), "delete": sd.get("delete", True)}
+        if sd.get("columns"): db["columns"] = sd["columns"]
+        j = sd.get("join") or fk_join(ctx, t, parent)
+        if not j:
+            spec["notes"].append(f"sub-detail {t}: no join to {parent}"); continue
+        cols = build_cols(ctx, spec["form"], db, "detail", j)
+        db.pop("items", None)
+        spec["details"].append(dict(db, join=j, parent=parent, cols=cols, title_a=sd.get("title_a"), title_e=sd.get("title_e"),
+                                    is_view=ctx.meta[t]["kind"] == "VIEW"))
     if rules.get("where") and spec.get("master"):
         spec["master"]["where"] = rules["where"]           # e.g. TRNS_TYPE_CODE in (...) for screens sharing ST_TRNS_MAST
     if rules.get("title_a"): spec["title_a"] = rules["title_a"]
@@ -556,6 +571,7 @@ def apply_column_rules(spec, rules, ctx):
                 if k in w: c[k] = bool(w[k])
             if w.get("readonly_after_insert"): c["ro_update"] = True
             if w.get("link"): c["link"] = w["link"]      # grid column opening another screen for its row
+            if w.get("show_if"): c["show_if"] = w["show_if"]    # shown only to users with the right (else not rendered at all)
             if "default" in w: c["default"] = w["default"]
             for k in ("label_a", "label_e"):
                 if w.get(k): c[k] = w[k]
@@ -568,7 +584,7 @@ def apply_column_rules(spec, rules, ctx):
                               "label_a": w.get("label_a") or col, "label_e": w.get("label_e") or col,
                               "widget": "NUMBER" if typ == "NUMBER" else "DATE" if typ == "DATE" else "TEXT", "lov": None, "static": None,
                               "required": False, "pk": False, "auto": False, "hidden": False, "readonly": True, "default": None,
-                              "computed": True, "sql": w["sql"]})
+                              "computed": True, "sql": w["sql"], "show_if": w.get("show_if")})
     for t, flags in (rules.get("blocks") or {}).items():
         tb, _, nth = t.upper().partition("#")               # "TABLE" = every block of it, "TABLE#2" = its second block
         same = [b for b in blocks if b["table"] == tb]
@@ -597,6 +613,8 @@ def apply_extras(spec, ov):
         spec["actions"] = ov["actions"]
     if ov and ov.get("links"):                       # buttons that only open another screen
         spec["links"] = ov["links"]
+    if ov and ov.get("fills"):                       # buttons that add rows to a grid for the user to complete before saving
+        spec["fills"] = ov["fills"]
     pr = (ov or {}).get("print") or prints().get(spec["form"].upper())
     if pr and (spec.get("pattern") in ("MASTER_DETAIL", "REPORT_FORM", "GRID") or (spec.get("pattern") == "PROCESS" and spec.get("proc"))):
         spec["print_rdf"] = pr

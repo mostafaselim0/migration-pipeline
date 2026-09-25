@@ -87,3 +87,40 @@ or commas do not survive the URL: they fail the session checksum.
 ## Actions on read-only documents
 
 `actions` now also appear on read-only documents, for example a voucher shown read-only that has a post button.
+
+## Added 2026-09-25: the four remaining gaps
+
+All four were tested in Edge on app 100 (build copy, test data removed afterwards).
+
+**Columns shown only with a right.** `rules.columns.<COL>.show_if` or `rules.computed.<COL>.show_if`: a SQL condition,
+or a named legacy right, `"right:VIEW_COST"` (group 0, or `ST_BASIC.SHOW_COST = 1` and `USERS.ALLOW_VIEW_COST = 1`) or
+`"right:VIEW_BALANCE"` (user 0, or `USERS.ALLOW_VIEW_BALANCE = 1`), evaluated by `app_ui.has_right`. Without the right,
+the grid column, form field or list column is not rendered at all. Used on the 20 cost and balance columns of the stock
+screens.
+
+**Warnings about the lines.** `"lines": true` on a `rules.warnings` entry. The warning runs inside the save itself, after
+the header and every grid line are written, so it also sees unsaved lines. If it fires, the whole save is rolled back.
+The page keeps what the user typed and asks "لم يتم الحفظ بعد. هل تريد الحفظ رغم ذلك؟"; confirming saves.
+Warnings that compare the typed value with the saved one (a changed flag, for example) must stay without `lines`. Used
+on ST_ITEM_REQ, ST_ITEM_REQ_HANDLE and the credit limit of ST_SALES_ORDER.
+
+**Buttons that fill lines.** Top-level `fills`:
+`[{"label_a", "label_e", "table", "sql", "items": [{"name", "label_a", "lov", "cascade", "type"}], "confirm_a", "icon"}]`.
+* The button sits on the grid of `table`.
+* `sql` returns one row per new line, with columns named like the grid's (`COL__D` gives the text shown for a list
+  column), and may use `:PAGE_<COL>` and the fill's own `items`, which are screen-only fields shown under the header.
+* The rows are added as new, unsaved lines, and nothing is written before Save.
+
+Used on VNDBTRN (*جلب أصناف الفاتورة*, the legacy GET_ITEMS).
+
+**Detail of a detail.** `rules.sub_details`: `[{"table", "parent", "join": [[COL, PARENT_COL]], "title_a", "title_e",
+"insert", "update", "delete", "order_by"}]`.
+* A grid under the selected line of the grid on `parent`, using APEX master-detail grids: it follows the selected
+  line, and new rows take its keys.
+* `join` defaults to the foreign key. `rules.columns` may address the sub-grid's columns.
+* Sub-grids are not printed and are not in the document delete cascade (their foreign key protects them).
+
+Used on ST_ITEM (class discounts per unit), AR_SALESMAN_COMM_REV (item lines) and AR_MULTI_CUST_TRNS (invoice allocation).
+
+**One save per document.** The grids of a document page no longer have their own Save button: **حفظ التعديلات** saves
+the header and all lines in one transaction, so every rule and warning sees the whole document.

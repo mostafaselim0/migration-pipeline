@@ -85,7 +85,7 @@
     ],
     "warnings": [
       {
-        "name": "حد الائتمان",
+        "name": "حد الائتمان", "lines": true,
         "when": "SAVE",
         "plsql": "return app_act_st.so_warn_credit(:PAGE_ROWID, :PAGE_CUSTOMER_CODE, :PAGE_APPROVED);"
       },

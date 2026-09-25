@@ -2,6 +2,8 @@
  "pattern": "AUTO",
  "notes": "items (ST_ITEM.fmb): code = NVL(MAX(ITEM_CODE),0)+1 per group (first SUBSTR(group,1,5)||'0001'), transaction group allowed for the user group, stop flag from the group, uniqueness of alternative / Lemon / SMC codes, VAT 0 or 15 -> TX_TAXES_ITEMS, min/max limits, M.O.H discount, exactly one basic unit with factor 1, unique factors, units used in transactions locked, unique barcodes, alternative items; delete refused with transactions (lots, locations, balances rows removed); balance / cost panel",
  "rules": {
+  "sub_details": [
+   {"table": "AR_ST_ITEMS_DISC", "parent": "ST_ITEM_UNIT", "join": [["ITEM_GROUP_CODE", "GROUP_CODE"], ["ITEM_CODE", "ITEM_CODE"], ["UNIT_CODE", "UNIT_CODE"]], "title_a": "خصومات فئات العملاء للوحدة المختارة", "title_e": "Customer class discounts of the selected unit"}],
   "where": "app_rules3_st.group_allowed(ITEM_GROUP_CODE) = 1",
   "key_expr": {
    "ST_ITEM.ITEM_CODE": "app_rules3_st.next_item_code(:new.item_group_code)",
@@ -50,6 +52,7 @@
   "readonly": ["ST_ITEM.ITEM_CODE"],
   "optional": ["ST_ITEM.ITEM_CODE", "ST_ITEM_PIECES.DELETE_FLAG", "ST_SUB_ITEM.SUB_ITEM_GROUP_CODE"],
   "columns": {
+   "AR_ST_ITEMS_DISC.CLASS_CODE": {"lov": "select class_code || ' - ' || case when app_sec.lang = 'en' then nvl(desc_e, desc_a) else desc_a end d, class_code r from ar_st_item_classes order by class_code", "widget": "SELECT"},
    "ST_ITEM.ITEM_GROUP_CODE": {"readonly_after_insert": true, "widget": "POPUP",
     "lov": "select g.item_group_code || ' - ' || g.name_a d, g.item_group_code r from st_item_group g where g.group_status = 1 and app_rules3_st.group_allowed(g.item_group_code) = 1 order by g.item_group_code"},
    "ST_ITEM.ITEM_STATUS": {"static": [["نشط", "1", "Active"], ["غير نشط", "2", "Inactive"]], "default": {"type": "STATIC", "value": "1"}},
