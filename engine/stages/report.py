@@ -78,8 +78,13 @@ def main():
             L += [f"- screen {s['form']}: {s['what']}" for s in sg]
             L += [f"- package `{p}`: every member raises ORA-20990 \"needs review\" when used (its package-level declarations "
                   "do not fit this database)" for p in dg.get("stubbed_packages", [])]
-            L += [f"- package member `{m}`: raises ORA-20990 \"needs review\" when used" for m in dg["isolated_members"]]
-            L += [f"- DB script statement failed: {s}" for s in dg.get("script_errors", [])]
+            by_pkg = collections.OrderedDict()
+            for m in dg["isolated_members"]:
+                p, _, n = m.partition("."); by_pkg.setdefault(p, []).append(n)
+            L += [f"- package `{p}`: {len(ns)} member(s) raise ORA-20990 \"needs review\" when used ({', '.join(ns[:6])}{', ...' if len(ns) > 6 else ''})"
+                  for p, ns in by_pkg.items()]
+            by_script = collections.Counter(s.split(":", 1)[0] for s in dg.get("script_errors", []))
+            L += [f"- DB script `{sc}`: {n} statement(s) failed (triggers on tables this installation lacks, ORA-00942)" for sc, n in by_script.items()]
             L += [f"- {s}" for s in dg["skipped_rules"]]
             L += [f"- generated trigger dropped: {s}" for s in dg["dropped_triggers"]]
             L += [f"- package still invalid: {s}" for s in dg["invalid_left"]]

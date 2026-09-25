@@ -682,6 +682,40 @@ def _sql_fails(cur, sql, table, cols, ctx=None):
 def check_fragments(ctx, cur, spec):
     """Reviewed SQL fragments of the rules (filters, computed columns, lists of values, SQL defaults) are parsed against the
     client's schema; the ones naming a table or column this installation lacks are switched off and listed."""
+    # detail joins taken from a Forms relation name block items, not always columns (TRNS_SERIAL_DET -> TRNS_SERIAL):
+    # map item names to their column, else use the foreign key, else leave the detail out
+    if spec.get("master") and spec.get("details"):
+        mt = spec["master"]["table"]
+        src = ctx.src_forms.get(spec["form"]) or {}
+        item_col = {}
+        for it in src.get("items", []):
+            if it.get("column_name"):
+                item_col[(it.get("item") or "").upper()] = it["column_name"].upper()
+        kept = []
+        for d in spec["details"]:
+            dt = d["table"]; dcols = set(ctx.cols(dt)); mcols = set(ctx.cols(d.get("parent") or mt))
+            fixed, ok = [], True
+            for pair in d.get("join") or []:
+                dc, mc = pair[0].upper(), pair[1].upper()
+                if dc not in dcols:
+                    dc = next((c for c in (item_col.get(dc), re.sub(r"_DET$", "", dc)) if c and c in dcols), None)
+                if mc not in mcols:
+                    mc = next((c for c in (item_col.get(mc), re.sub(r"_MAST$", "", mc)) if c and c in mcols), None)
+                if not dc or not mc:
+                    ok = False; break
+                fixed.append([dc, mc])
+            if ok and fixed:
+                d["join"] = fixed
+            else:
+                alt = fk_join(ctx, dt, d.get("parent") or mt) if dt in ctx.meta else []
+                if alt:
+                    degraded(spec["form"], f"join of detail {dt} taken from the foreign key (the form's relation names items that are not columns)", spec["notes"])
+                    d["join"] = alt
+                else:
+                    degraded(spec["form"], f"detail grid {dt} left out: its join columns {d.get('join')} are not columns of the tables", spec["notes"])
+                    continue
+            kept.append(d)
+        spec["details"] = kept
     blocks = ([spec.get("master")] if spec.get("master") else []) + spec.get("details", [])
     for b in blocks:
         t = b["table"]; cols = set(ctx.cols(t))

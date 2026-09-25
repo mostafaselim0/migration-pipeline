@@ -85,6 +85,7 @@ def switched_off_pattern():
 
 
 RUNTIME_ERR = re.compile(r"ORA-(20\d{3}|01403|06502|01422|00942|00904|01476|01722|06503|04063|04068|06550)")
+BIND = re.compile(r"(?<![\w:]):[A-Za-z]\w*")          # :PAGE_X / :P123_X / :G_LANG -> null when a fragment is evaluated
 
 
 def probe_defaults(specs, cur):
@@ -95,7 +96,7 @@ def probe_defaults(specs, cur):
 
     def fails(sql):
         try:
-            cur.execute(f"select * from ({re.sub(r'(?<![\\w:]):[A-Za-z]\\w*', 'null', sql)}) where rownum <= 1")
+            cur.execute("select * from (" + BIND.sub("null", sql) + ") where rownum <= 1")
             cur.fetchall()
             return None
         except Exception as e:
@@ -136,6 +137,20 @@ def scrub_specs(specs):
         return 0
     n = 0
     for s in specs:
+        for key in ("actions", "links", "fills"):    # document buttons: condition, call and message of the reviewed action
+            items = s.get(key)
+            if not items:
+                continue
+            keep = []
+            for a in items:
+                text = " ".join(str(a.get(k) or "") for k in ("condition", "call", "message", "when", "sql"))
+                m = pat.search(text)
+                if m:
+                    LOG["skipped_rules"].append(f"{s['form']}: button {a.get('name') or a.get('label_e') or key} dropped, it calls {m.group(1)} (switched off)")
+                    n += 1
+                else:
+                    keep.append(a)
+            s[key] = keep
         infos = (s.get("rules") or {}).get("info")
         if infos:                                    # info panel of a document: one SQL per displayed value
             keep = []
