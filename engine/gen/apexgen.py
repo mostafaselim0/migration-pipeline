@@ -1604,9 +1604,10 @@ def gen_report(rs):
         if it.get("initial") is not None and it["datatype"] != "date":
             kw["item_default"] = it["initial"]
         if it.get("multi") and it["lov"]:                 # recovered lexical filter: several values, colon-separated
-            kw.update(colspan=6)
+            kw.update(colspan=6, begin_on_new_line="Y")   # a wide item on its own row (the 12-column grid must not overflow)
             body += call("wwv_flow_imp_page.create_page_item", **base, **kw, display_as="NATIVE_SHUTTLE", lov=it["lov"],
                          attributes=attrs(show_controls="ALL"))
+            n = 0                                          # the next item starts a new row too
         elif it["lov"]:
             body += call("wwv_flow_imp_page.create_page_item", **base, **kw, display_as="NATIVE_POPUP_LOV", lov=it["lov"], lov_display_null="YES",
                          attributes=attrs(case_sensitive="N", display_as="POPUP", fetch_on_search="Y", initial_fetch="FIRST_ROWSET",
