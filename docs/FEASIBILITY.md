@@ -49,6 +49,10 @@ stage find those screens and the generator use the client's own reports.
 | restore | 1,516 tables, 179,870 rows, 0 rejected rows; 4,577 text columns to CHAR semantics; 30 triggers written for the source schema re-created; 3 invalid objects (invalid in the reference too); 115 s |
 | delta | screens 207 SAME / 6 UNVERIFIED (0 changed or new: NAJD runs the same ASCON registry); reports 239 SAME; 9 tables differ; 62 stored units differ, 19 new |
 | build | 696 pages (213 screens, 260 reports), 237 legacy print layouts compiled with 0 errors, English application published; 3 product procedures (lot handling in stock taking and transfers, and the tax statement builder, which calls `GET_SERVICE_VALUE`, a function NAJD's version does not have) and 2 trigger rule lines (NAJD's `ST_TRNS_DET` has no lot / expiry columns) switched off pending review; 169 s |
-| verify | see `clients/najd/work/REPORT.md` |
+| verify | signed in as NAJD's legacy user 0 (legacy password, forced change): 644 pages opened, 0 errors; 132 document pages opened on a real NAJD record, 0 errors (83 screens have no records at NAJD); 1,411 s |
 
-Total machine time for the client: about 10 minutes plus the browser check, no manual step and no language model.
+Also reported: 3 legacy print layouts (`ST_INVOICE`, `ST_INVOICE2`, `TX_PRINT_DET`) print with a few formula fields
+empty, because the formulas call code NAJD's version does not have.
+
+Total machine time for the client: about 5 minutes to a working application, plus 23 minutes of browser checks.
+There were no manual steps and no language model.

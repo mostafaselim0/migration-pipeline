@@ -25,8 +25,8 @@ Creates the admin user `MP_ADMIN` in the PDB (needs Windows User env `SYS_PWD`).
 ## Per client
 
 ```
-python pipeline.py --new acme                 # creates clients/acme/client.json and clients/acme/dump/
-   ... edit client.json (app_id at least), copy the dump into clients/acme/dump/
+python pipeline.py --new acme                 # creates clients/acme/client.json (next free app id) and clients/acme/dump/
+   ... copy the dump into clients/acme/dump/ (and set customer_code in client.json if known)
    ... optional: the ASCON folder -> clients/acme/sources/ASCON, the converted XML -> clients/acme/sources/XML
 python pipeline.py acme                       # restore catalog generate delta build verify report
 ```

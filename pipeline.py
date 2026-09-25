@@ -72,8 +72,15 @@ def main(argv):
         os.makedirs(os.path.join(dst, "dump"), exist_ok=True)
         tpl = json.load(io.open(os.path.join(REPO, "clients", "_template", "client.json"), encoding="utf-8"))
         tpl["schema"] = tpl["workspace"] = argv[1].upper()
+        used = [100]                                                  # next free application id (100 = the reference client)
+        for p in os.listdir(os.path.join(REPO, "clients")):
+            cj = os.path.join(REPO, "clients", p, "client.json")
+            if p != "_template" and os.path.exists(cj):
+                used.append(int(json.load(io.open(cj, encoding="utf-8")).get("app_id") or 0))
+        tpl["app_id"] = max(used) + 100
         json.dump(tpl, io.open(os.path.join(dst, "client.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-        print(f"created {os.path.relpath(dst, REPO)}\\client.json: set app_id, then put the dump in {os.path.relpath(dst, REPO)}\\dump")
+        print(f"created {os.path.relpath(dst, REPO)}\\client.json (application {tpl['app_id']}): put the dump in "
+              f"{os.path.relpath(dst, REPO)}\\dump, then  python pipeline.py {argv[1]}")
         return 0
     client, rest = argv[0], argv[1:]
     if not os.path.exists(os.path.join(REPO, "clients", client, "client.json")):

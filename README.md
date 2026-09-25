@@ -55,7 +55,7 @@ python pipeline.py <reference> learn             record the reviewed reference c
 | client | dump | schema / workspace | app | state |
 |---|---|---|---|---|
 | smart | reference, restored by hand (repository `smart-transformation`) | SMART | 100 / 1101 | knowledge source; pipeline output identical to the hand-driven build |
-| najd | `NAJD_2022-05-21.dmp` (classic exp, dump only) | NAJD | 200 / 2001 | pilot, see docs/FEASIBILITY.md |
+| najd | `NAJD_2022-05-21.dmp` (classic exp, dump only) | NAJD | 200 / 2001 | pilot: 644 pages and 132 documents opened in Edge with 0 errors (docs/FEASIBILITY.md) |
 
 ## Requirements
 
