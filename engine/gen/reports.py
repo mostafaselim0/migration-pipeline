@@ -245,6 +245,51 @@ def dedupe_select(sql):
     return sql[:a] + body + sql[b:]
 
 
+def lexical_defaults(cur, sql, initials, notes, extra):
+    """Oracle Reports lexical parameters (&NAME) were filled by the legacy parameter form; the RDF keeps their default,
+    usually the SELECT listing all allowed values.  Instead of dropping the filter:
+      * '<col> in (&NAME)' with a single-column SELECT default becomes a real multi-select parameter :NAME_SEL over that
+        list (nothing selected = the default list, i.e. the legacy behaviour with no selection);
+      * every other &NAME that has a default is replaced by the default text (tuple filters, WHERE fragments, ORDER BY).
+    &NAMEs without a default are left to drop_lexicals.  extra collects {bind: lov select} for the new parameters."""
+    if "&" not in sql or not initials:
+        return sql
+    parts = []
+    for lit, t in split_quotes(sql):
+        if lit or "&" not in t:
+            parts.append(t); continue
+
+        def one_col(m):
+            col, name = m.group(1), m.group(2).upper()
+            init = (initials.get(name) or "").strip().rstrip(";")
+            if not re.match(r"(?is)^\s*select\b", init):
+                return m.group(0)
+            span = top_level_select_list(init)
+            if not span or len(split_top_level(init[span[0]:span[1]])) != 1:
+                return m.group(0)                                   # tuple list: default text below
+            try:
+                c1 = describe(cur, init, binds_in(init))[0][0]
+            except Exception:
+                return m.group(0)
+            bind = f"{name}_SEL"
+            extra[bind] = init
+            notes.append(f"lexical &{name}: multi-select parameter {bind} over its default list")
+            return (f'{col} in (select q."{c1}" from ({init}) q where (:{bind} is null or '
+                    f'q."{c1}" in (select column_value from table(apex_string.split(:{bind}, \':\')))))')
+        t = re.sub(r"(?i)\b([\w.]+)\s+in\s*\(\s*&(\w+)\s*\)", one_col, t)
+
+        def default_text(m):
+            name = m.group(1).upper()
+            init = (initials.get(name) or "").strip().rstrip(";")
+            if not init:
+                return m.group(0)
+            notes.append(f"lexical &{name} replaced by its default value")
+            return init
+        t = re.sub(r"&(\w+)", default_text, t)
+        parts.append(t)
+    return "".join(parts)
+
+
 def trim_order_by(sql):
     """Remove a trailing ORDER BY (not allowed inside some wrappers and useless for an interactive report)."""
     depth, last = 0, None
@@ -349,9 +394,16 @@ def build():
             if len(kids) > 1: notes.append("other linked queries not shown: " + ", ".join(list(kids)[1:]))
         # ---- binds -> page items
         params = {p["name"]: p for p in rep["params"]}
+        initials = {p["name"].upper(): p.get("initial") for p in rep["params"] if p.get("initial")}
         all_binds = []
         for q in chain:
-            q["sql0"] = trim_order_by(drop_lexicals(strip_comments(q["sql"]), notes)).strip().rstrip(";")
+            base = strip_comments(q["sql"])
+            extra = {}
+            q["sql0"] = trim_order_by(drop_lexicals(lexical_defaults(cur, base, initials, notes, extra), notes)).strip().rstrip(";")
+            q["sql0_drop"] = trim_order_by(drop_lexicals(base, [])).strip().rstrip(";")   # fallback: every lexical dropped
+            for bind, lov_sql in extra.items():
+                params[bind] = {"name": bind, "datatype": "character", "label": (params.get(bind[:-4]) or {}).get("label"),
+                                "initial": None, "lov": {"sql": lov_sql}, "mask": None, "multi": True}
             all_binds += binds_in(q["sql0"])
         all_binds = list(dict.fromkeys(all_binds))
         pg = r["page"]
@@ -371,14 +423,19 @@ def build():
                 try:
                     cols = describe(cur, sqlq, present_binds(sqlq, mapping.values()))
                 except Exception as e:
-                    if "ORA-00918" not in str(e):        # duplicate result names: Reports allowed them, SQL does not
+                    if "ORA-00918" in str(e):            # duplicate result names: Reports allowed them, SQL does not
+                        sqlq2 = dedupe_select(sqlq)
+                        if sqlq2 == sqlq:
+                            raise
+                        cols = describe(cur, sqlq2, present_binds(sqlq2, mapping.values()))
+                        sqlq = sqlq2
+                        notes.append("duplicate column names of the legacy query aliased (_2, _3 ...)")
+                    elif q.get("sql0_drop") and q["sql0_drop"] != q["sql0"]:
+                        sqlq = rename_binds(q["sql0_drop"], mapping, types)   # the lexical defaults did not parse here
+                        cols = describe(cur, sqlq, present_binds(sqlq, mapping.values()))
+                        notes.append("lexical defaults do not parse on this schema; lexical filters dropped: " + str(e).splitlines()[0][:100])
+                    else:
                         raise
-                    sqlq2 = dedupe_select(sqlq)
-                    if sqlq2 == sqlq:
-                        raise
-                    cols = describe(cur, sqlq2, present_binds(sqlq2, mapping.values()))
-                    sqlq = sqlq2
-                    notes.append("duplicate column names of the legacy query aliased (_2, _3 ...)")
                 q_cols.append(cols)
                 a = f"q{i + 1}"
                 if i == 0:
@@ -411,9 +468,9 @@ def build():
             notes.append("SQL does not run on the new schema: " + msg)
             rs["sql_error"] = msg; rs["raw_sql"] = main["sql"][:4000]
             out.append(rs); continue
-        # ---- parameter items
+        # ---- parameter items (only the binds the final SQL still uses: a dropped lexical takes its parameter with it)
         items = []
-        for b in all_binds:
+        for b in [b for b in all_binds if re.search(":" + re.escape(mapping[b]) + r"\b", sql)]:
             p = params.get(b, {"name": b, "datatype": "character", "label": None, "initial": None, "lov": None, "mask": None})
             role = SYSTEM_PARAMS.get(b)
             g = lab["by_name"].get(b) or lab["by_name"].get(re.sub(r"^(FROM|TO|F|T)_", "", b)) or {}
@@ -436,7 +493,7 @@ def build():
                     notes.append(f"LOV of {b} dropped: {str(e)[:120]}"); lov = None
             items.append({"bind": b, "item": mapping[b], "role": role, "datatype": p.get("datatype") or "character",
                           "mask": p.get("mask"), "initial": p.get("initial"), "label_a": label_a, "label_e": g.get("e") or b.replace("_", " ").title(),
-                          "lov": lov, "known": b in params})
+                          "lov": lov, "known": b in params, "multi": bool(p.get("multi")) and lov is not None})
         rs.update(ok=True, sql=sql, columns=columns, items=items, queries=[q["name"] for q in chain])
         if len(rep["queries"]) > len(chain):
             notes.append(f"{len(rep['queries']) - len(chain)} unlinked/secondary queries not shown (summaries, logos, headers)")

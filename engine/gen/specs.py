@@ -408,6 +408,8 @@ OVR_DIR = os.path.join(os.path.dirname(HERE), "legacy", "overrides")
 def load_override(form):
     p = mp.kpath("overrides", f"{form}.json") or ""                 # client overlay, then shared knowledge
     if not os.path.exists(p):
+        p = mp.work("transpiled", f"{form}.json")                    # else the rules transpiled from the form's own triggers
+    if not os.path.exists(p):
         return None
     try:
         ov = json.load(io.open(p, encoding="utf-8"))

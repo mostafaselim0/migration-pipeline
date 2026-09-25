@@ -11,6 +11,10 @@ delta stage lists them in `work/llm/worklist.json`; for a client close to the pr
   block), the product's rules when the screen is CHANGED, and only the business-logic triggers of the legacy form
   (validation, transaction, derivation, action, defaulting); navigation, key and cosmetic triggers are left out,
   comments and blank lines stripped, the whole cut at `--chars` (20,000 by default).  A typical screen is 8-10k tokens.
+* **Only the transpiler's residue.**  A screen with Forms source first goes through the deterministic transpile step
+  (stage generate): plain validations, numbering, defaults, lookups and procedure buttons are already rules.  The prompt
+  carries only `work/transpiled/<FORM>.residue.json`, the triggers that rewrite could not express, which is usually a
+  fraction of the form's code.
 * **The brief is cached.**  The instructions (`knowledge/<product>/contracts/LLM_BRIEF.md`, about 1k tokens) are the
   same for every screen and sent with prompt caching.
 * **A hard budget.**  `--budget` stops before a call would exceed it; `--max` limits the number of screens.

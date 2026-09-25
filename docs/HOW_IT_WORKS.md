@@ -64,10 +64,22 @@ Reads the client's data dictionary (tables, keys, foreign keys, comments), the l
 into `work/cache/`.  When the client delivered only its dump, the product's reference sources are used
 (`knowledge/<product>/product.json` `reference_sources`).
 
-### generate (`specs.py`, `reports.py`)
-One spec per screen of the legacy registry `SYS_FILES`: pattern (grid, master-detail, report form, process), tables,
-columns, lists of values, labels, pages; reviewed rules are merged from the overlay, else from the knowledge
-(`overrides/<FORM>.json`).  One report page per registry report `SYS_REPORTS`, with the RDF's query translated to SQL.
+### generate (`transpile.py`, `specs.py`, `reports.py`)
+* **transpile**: for every screen with Forms XML and no reviewed override, the trigger PL/SQL is rewritten into rules
+  without any model: validation and PRE-INSERT/UPDATE triggers become row rules on the table (`:BLOCK.ITEM` -> `:new.COL`,
+  `MESSAGE` + `RAISE FORM_TRIGGER_FAILURE` -> `raise_application_error`, navigation built-ins removed), WHEN-CREATE-RECORD
+  assignments become defaults, POST-QUERY lookups become computed columns, CALL_FORM buttons become links and single
+  procedure calls become actions.  Each rule is parsed by the database first.  What the rewrite cannot express (alerts that
+  branch, other blocks' items, program units, COMMIT_FORM ...) is written to `work/transpiled/<FORM>.residue.json`, the
+  short list the optional `llm` stage or a reviewer works from.
+* **specs**: one spec per screen of the legacy registry `SYS_FILES`: pattern (grid, master-detail, report form, process),
+  tables, columns, lists of values, labels, pages; reviewed rules are merged from the overlay, else from the knowledge
+  (`overrides/<FORM>.json`), else from the transpiled rules.  Rule fragments are parsed against the client's schema and the
+  ones that do not fit are switched off and listed.
+* **reports**: one report page per registry report `SYS_REPORTS`, with the RDF's query translated to SQL.  Lexical
+  parameters (`&NAME`, filled by the legacy parameter form) take their default from the RDF: a single-column
+  `col in (&NAME)` becomes a real multi-select parameter over that list, other lexicals are replaced by their default text,
+  and only a lexical without a default is dropped.  Duplicate result names are aliased.
 
 ### delta (`engine/stages/delta.py`, `fingerprint.py`)
 Compares hashes of the client's system with the knowledge's reference installation: screens (form layout, form logic,

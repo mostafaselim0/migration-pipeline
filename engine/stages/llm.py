@@ -58,6 +58,14 @@ def screen_text(spec, meta):
 def legacy_text(form, cat, limit):
     f = next((x for x in cat.get("forms", []) if (x.get("form") or "").upper() == form), None)
     out = []
+    residue = load("transpiled", form + ".residue.json")
+    if f and residue is not None:
+        # the transpiler already turned the plain triggers into rules: only what it could not express is sent
+        out.append("-- rules already transpiled from the plain triggers; only the triggers below still need a rule set")
+        for r in residue:
+            if r.get("severity") != "low":
+                out.append(f"-- {r['trigger']} {r.get('block') or ''}.{r.get('item') or ''} (not transpiled: {r['reason']})\n{squeeze(r['text'])}")
+        f = dict(f, triggers=[])
     if f:
         for b in f["blocks"]:
             if b.get("where"):

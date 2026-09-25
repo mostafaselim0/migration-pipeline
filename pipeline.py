@@ -22,7 +22,7 @@ STAGES = {
     "restore":  [(S, "restore.py")],
     "catalog":  [(G, "meta.py"), (G, "labels.py"), (G, "catalog.py")],
     "delta":    [(S, "delta.py")],
-    "generate": [(G, "specs.py"), (G, "reports.py")],
+    "generate": [(G, "transpile.py"), (G, "specs.py"), (G, "reports.py")],
     "build":    [(G, "build.py", "db"), (G, "build.py", "apex"), (G, "build.py", "install"), (G, "build.py", "translate")],
     "verify":   [(S, "verify.py")],
     "report":   [(S, "report.py")],
