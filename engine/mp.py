@@ -38,7 +38,18 @@ SCHEMA = CFG["schema"].upper()
 DSN = CFG.get("dsn", "localhost:1521/ORCLPDB")
 PDB = CFG.get("pdb", DSN.rsplit("/", 1)[-1])
 APP_ID = int(CFG["app_id"])
-TAPP_ID = int(CFG.get("translated_app_id") or APP_ID * 10 + 1)      # APEX: translated application ids must not end in 0
+
+
+def translated_app_id(app_id):
+    """The English copy's application id: <app id>1 (translated ids must not end in 0), skipping the ids APEX reserves for
+    itself (3000-8999: e.g. client 300 would get 3001, refused with ORA-20205)."""
+    for cand in (app_id * 10 + 1, app_id * 100 + 1, app_id * 1000 + 1):
+        if not 3000 <= cand <= 8999:
+            return cand
+    return app_id * 10000 + 1
+
+
+TAPP_ID = int(CFG.get("translated_app_id") or translated_app_id(APP_ID))
 WORKSPACE = CFG.get("workspace", SCHEMA).upper()
 # APEX component ids are unique across the whole instance: each client's application is installed with its own offset
 ID_OFFSET = int(CFG["id_offset"]) if CFG.get("id_offset") is not None else APP_ID * 10 ** 13

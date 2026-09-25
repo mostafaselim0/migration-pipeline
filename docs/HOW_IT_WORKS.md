@@ -48,7 +48,7 @@ the few screens whose legacy logic the knowledge base has not seen yet (see [LLM
    file) and the direct grants the legacy code needs (no DBA role).
 3. **Pass 1, structure only.** The PDB job queue is stopped for the whole restore; imported jobs are removed and DB
    links dropped, because they point at the client's live systems.  Classic `imp` does not rewrite schema names written
-   inside DDL (`create trigger ... on NAJD_MED.ST_TRNS_MAST`): those statements are rebuilt from the imp log and re-run
+   inside DDL (`create trigger ... on LEGACY_OWNER.ST_TRNS_MAST`): those statements are rebuilt from the imp log and re-run
    for the new schema.
 4. Every `VARCHAR2` / `CHAR` column is switched to CHAR length semantics: the legacy databases are AR8MSWIN1256 (one byte
    per Arabic letter), this one AL32UTF8 (two bytes); without this, Arabic text would be cut or rejected.

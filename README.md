@@ -23,7 +23,7 @@ business rules reviewed for the product.  Then `clients/acme/work/REPORT.md` say
 
 **Is "only the dump" enough?**  For ASCON clients, yes: everything in the database, which includes most of the
 business logic, plus screens, reports and reviewed rules from the product knowledge.  What a client changed inside its
-Forms / Reports files needs its ASCON folder as well.  Details and the NAJD pilot numbers: [docs/FEASIBILITY.md](docs/FEASIBILITY.md).
+Forms / Reports files needs its ASCON folder as well.  Details: [docs/FEASIBILITY.md](docs/FEASIBILITY.md).
 
 ## Documentation
 
@@ -55,7 +55,7 @@ python pipeline.py <reference> learn             record the reviewed reference c
 | client | dump | schema / workspace | app | state |
 |---|---|---|---|---|
 | smart | reference, restored by hand (repository `smart-transformation`) | SMART | 100 / 1101 | knowledge source; pipeline output identical to the hand-driven build |
-| najd | `NAJD_2022-05-21.dmp` (classic exp, dump only) | NAJD | 200 / 2001 | pilot: 644 pages and 132 documents opened in Edge with 0 errors (docs/FEASIBILITY.md) |
+| areej | `AREEJ_DUMP.DMP` (Data Pump 2026-08-16, imported by hand) + its ASCON folder and XML | AREEJ | 300 / 30001 | car-rental installation, 22 systems; first full client run (clients/areej/work/REPORT.md) |
 
 ## Requirements
 

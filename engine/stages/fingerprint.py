@@ -104,7 +104,7 @@ def schema_names():
 
 
 def plsql_prints(cur):
-    qual = re.compile(r'(?i)"?\b(' + "|".join(map(re.escape, schema_names())) + r')\b"?\s*\.')   # SMART.T, "NAJD".T -> T
+    qual = re.compile(r'(?i)"?\b(' + "|".join(map(re.escape, schema_names())) + r')\b"?\s*\.')   # SMART.T, "OWNER".T -> T
     cur.execute("select type, name, text from user_source order by type, name, line")
     src = collections.defaultdict(list)
     for t, n, txt in cur:

@@ -148,6 +148,11 @@ def drop_lexicals(sql, notes):
         if not lit and "&" in t:
             found += re.findall(r"&(\w+)", t)
             t = re.sub(r"(?i)\border\s+by\s+&\w+\s*(,\s*&\w+\s*)*", " ", t)
+            # "<col> in (&list)" / "(<col>, <col>) in (&list)" / "nvl(x, 0) in &list": the list came from the legacy parameter
+            # form; without it the filter is dropped altogether (1=1), never turned into "in (null)", which matches no row
+            # and is not even valid for a multi-column IN (ORA-00920)
+            t = re.sub(r"(?i)(\b[\w.]+)?\([^()]*\)\s*(not\s+)?in\s*(\(\s*&\w+\s*\)|&\w+)", " 1=1 ", t)   # nvl(x)/(a, b) in (&l): no space before "("
+            t = re.sub(r"(?i)\b[\w.]+\s*(not\s+)?in\s*(\(\s*&\w+\s*\)|&\w+)", " 1=1 ", t)
             t = re.sub(r"(?i)\bin\s*\(\s*&\w+\s*\)", " in (null)", t)
             t = re.sub(r"(?i)\bin\s+&\w+", " in (null)", t)
             t = re.sub(r"(?i)\bwhere\s+&\w+", " where 1=1 ", t)
@@ -158,6 +163,86 @@ def drop_lexicals(sql, notes):
     if found:
         notes.append("lexical parameters removed: " + ", ".join(sorted(set(found))))
     return "".join(parts)
+
+
+def masked(sql):
+    """The SQL with every string literal blanked (same length), so regexes see only code."""
+    return "".join(t if k != "lit" else "'" + " " * (len(t) - 2) + "'" if len(t) >= 2 else t for k, t in lex(sql))
+
+
+def top_level_select_list(sql):
+    """(start, end) of the select list of the outermost query: after SELECT [DISTINCT|UNIQUE|ALL], before its FROM."""
+    m = masked(sql)
+    s = re.search(r"(?i)\bselect\b(\s+(distinct|unique|all)\b)?", m)
+    if not s:
+        return None
+    depth, i = 0, s.end()
+    while i < len(m):
+        ch = m[i]
+        if ch == "(": depth += 1
+        elif ch == ")": depth -= 1
+        elif depth == 0 and m[i:i + 4].lower() == "from" and re.match(r"(?i)\bfrom\b", m[i:i + 5]) and not (i and (m[i - 1].isalnum() or m[i - 1] == "_")):
+            return s.end(), i
+        i += 1
+    return None
+
+
+def split_top_level(text):
+    """Split on commas outside parentheses and literals; returns (start, end) spans."""
+    m = masked(text)
+    spans, depth, start = [], 0, 0
+    for i, ch in enumerate(m):
+        if ch == "(": depth += 1
+        elif ch == ")": depth -= 1
+        elif ch == "," and depth == 0:
+            spans.append((start, i)); start = i + 1
+    spans.append((start, len(m)))
+    return spans
+
+
+ALIAS_STOP = {"end", "else", "then", "when", "in", "is", "not", "null", "and", "or", "like", "between", "escape", "from", "as", "over"}
+
+
+def result_name(item):
+    """(name, alias span) of a select-list item: 'expr alias' / 'expr as alias' -> alias, 'a.b' -> B, else None."""
+    s = item.rstrip()
+    m = re.match(r'(?is)^(.*?\S)\s+(?:as\s+)?("([^"]+)"|([A-Za-z_][\w$#]*))\s*$', s)
+    if m and (m.group(3) or m.group(4).lower() not in ALIAS_STOP) and not re.search(r"[-+*/|(,=<>]\s*$|\b(and|or|not|in|is|like|then|else|when|escape)\s*$", masked(m.group(1)), re.I):
+        return (m.group(3) or m.group(4).upper()), (m.start(2), m.end(2))
+    t = s.strip()
+    if re.match(r'^[\w$#."]+$', t):
+        last = t.split(".")[-1].strip('"')
+        return (last if t.endswith('"') else last.upper()), None
+    return None, None
+
+
+def dedupe_select(sql):
+    """Alias duplicate result names in the outermost select list (Oracle Reports allowed them, SQL and APEX do not):
+    the second EMP_CODE becomes EMP_CODE_2 ... Returns the SQL unchanged when nothing is duplicated / parseable."""
+    span = top_level_select_list(sql)
+    if not span:
+        return sql
+    a, b = span
+    body = sql[a:b]
+    items = split_top_level(body)
+    names = [result_name(body[x:y]) for x, y in items]
+    seen, edits = collections.Counter(), []
+    for (x, y), (name, aspan) in zip(items, names):
+        if not name:
+            continue
+        seen[name] += 1
+        if seen[name] > 1:
+            new = f"{name}_{seen[name]}"
+            if aspan:
+                edits.append((x + aspan[0], x + aspan[1], new))
+            else:
+                end = x + len(body[x:y].rstrip())
+                edits.append((end, end, " " + new))
+    if not edits:
+        return sql
+    for x, y, txt in sorted(edits, reverse=True):
+        body = body[:x] + txt + body[y:]
+    return sql[:a] + body + sql[b:]
 
 
 def trim_order_by(sql):
@@ -283,7 +368,17 @@ def build():
             q_cols = []
             for i, q in enumerate(chain):
                 sqlq = rename_binds(q["sql0"], mapping, types)
-                cols = describe(cur, sqlq, present_binds(sqlq, mapping.values()))
+                try:
+                    cols = describe(cur, sqlq, present_binds(sqlq, mapping.values()))
+                except Exception as e:
+                    if "ORA-00918" not in str(e):        # duplicate result names: Reports allowed them, SQL does not
+                        raise
+                    sqlq2 = dedupe_select(sqlq)
+                    if sqlq2 == sqlq:
+                        raise
+                    cols = describe(cur, sqlq2, present_binds(sqlq2, mapping.values()))
+                    sqlq = sqlq2
+                    notes.append("duplicate column names of the legacy query aliased (_2, _3 ...)")
                 q_cols.append(cols)
                 a = f"q{i + 1}"
                 if i == 0:

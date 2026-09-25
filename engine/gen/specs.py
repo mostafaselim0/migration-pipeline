@@ -47,7 +47,9 @@ class Ctx:
         return n if n in self.meta else None
 
     def cols(self, t):
-        return {c["name"]: c for c in self.meta[t]["cols"]}
+        """Columns of a table; {} when the table does not exist in this installation (reviewed rules may name one)."""
+        m = self.meta.get(t)
+        return {c["name"]: c for c in m["cols"]} if m else {}
 
     # ------------------------------------------------------------------ LOVs
     def pk_index(self):
@@ -447,6 +449,9 @@ def spec_from_override(ctx, form, entries, ov):
     spec["master"] = dict(mb, cols=build_cols(ctx, form, mb, "master" if ov["pattern"] == "MASTER_DETAIL" else "single"))
     spec["details"] = []
     for d in ov.get("details", []):
+        if d["table"].upper() not in ctx.meta:                     # another version of the product: this detail table is absent
+            degraded(form, f"detail grid {d['table'].upper()} of the reviewed rules left out: table does not exist in this installation", notes)
+            continue
         db = blk(d["table"], True)
         if d.get("columns"): db["columns"] = d["columns"]; db["items"] = None
         j = d.get("join") or fk_join(ctx, db["table"], mb["table"])
@@ -623,9 +628,25 @@ def apply_extras(spec, ov):
     return spec
 
 
+DEGRADED = []            # (form, what) - reviewed knowledge that does not fit this installation (work/out/specs_degraded.json)
+
+
+def degraded(form, what, notes=None):
+    DEGRADED.append({"form": form, "what": what})
+    if notes is not None:
+        notes.append("degraded: " + what)
+
+
 def build_spec(ctx, form, entries):
     ov = load_override(form)
     if ov and ov.get("pattern") != "AUTO":
+        mt = ((ov.get("master") or {}).get("table") or "").upper()
+        if ov["pattern"] in ("GRID", "MASTER_DETAIL", "REPORT_FORM") and mt not in ctx.meta:
+            # the reviewed screen is built on a table this installation does not have: generate the screen from the client's
+            # own sources instead and say so (rules of the override are not applied, they refer to that table)
+            spec = build_spec_auto(ctx, form, entries)
+            degraded(form, f"reviewed rules skipped: their table {mt or '?'} does not exist in this installation", spec["notes"])
+            return apply_extras(spec, None)
         return apply_extras(apply_rules(spec_from_override(ctx, form, entries, ov), ov, ctx), ov)
     spec = build_spec_auto(ctx, form, entries)
     return apply_extras(apply_rules(spec, ov, ctx) if ov else spec, ov)
@@ -750,6 +771,9 @@ def main():
     data = {"systems": systems, "files": files, "reports": reports, "report_pages": rep_leaves,
             "specs": specs, "lovs": list(ctx.lovs.values())}
     json.dump(data, io.open(os.path.join(OUT, "specs.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
+    json.dump(DEGRADED, io.open(os.path.join(OUT, "specs_degraded.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    if DEGRADED:
+        print(f"reviewed knowledge that does not fit this installation: {len(DEGRADED)} item(s) (out/specs_degraded.json)")
     cnt = collections.Counter(s["pattern"] for s in specs); src = collections.Counter(s["source"] for s in specs)
     with io.open(os.path.join(OUT, "specs_report.txt"), "w", encoding="utf-8") as fh:
         fh.write(f"forms {len(specs)}  patterns {dict(cnt)}  sources {dict(src)}  lovs {len(ctx.lovs)}  report pages {len(rep_leaves)}\n\n")

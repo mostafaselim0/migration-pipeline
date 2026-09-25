@@ -26,9 +26,9 @@ stage find those screens and the generator use the client's own reports.
 
 | difference | what the pipeline does |
 |---|---|
-| different database logic (their own triggers, procedures) | nothing to do: it comes with the dump and runs under the new screens; the delta lists it (NAJD: 62 units differ from SMART) |
+| different database logic (their own triggers, procedures) | nothing to do: it comes with the dump and runs under the new screens; the delta lists it |
 | more modules (systems the knowledge has not seen) | their screens and reports are generated from the registry, dictionary and labels like any other, in a page range of their own; they are listed as a new module in DELTA.md and their screens are NEW |
-| another version of the product (columns missing or added) | tables and screens follow the client's dictionary; reviewed product rules that do not fit are switched off per procedure / rule line and listed (NAJD: 3 procedures, 2 rule lines) |
+| another version of the product (columns missing or added) | tables and screens follow the client's dictionary; reviewed product rules that do not fit are switched off per procedure / rule line and listed |
 | changed Forms logic on a known screen | the delta marks the screen CHANGED (needs the client's Forms folder); rules go to the client's overlay, drafted by hand or by the optional LLM step |
 | installation-specific branches in shared code | `customer_code` in client.json feeds the knowledge packages that test it |
 
@@ -40,19 +40,8 @@ stage find those screens and the generator use the client's own reports.
 3. **Integrations and devices** outside the database (e-invoicing, track-and-trace, printers, scanners) are per
    installation and not migrated by the pipeline.
 
-## Pilot: NAJD (dump only)
+## First full client: Areej
 
-`NAJD_2022-05-21.dmp`, classic exp from Oracle 12.1, legacy schema NAJD_MED, 30 MB; no Forms folder delivered.
-
-| stage | result |
-|---|---|
-| restore | 1,516 tables, 179,870 rows, 0 rejected rows; 4,577 text columns to CHAR semantics; 30 triggers written for the source schema re-created; 3 invalid objects (invalid in the reference too); 115 s |
-| delta | screens 207 SAME / 6 UNVERIFIED (0 changed or new: NAJD runs the same ASCON registry); reports 239 SAME; 9 tables differ; 62 stored units differ, 19 new |
-| build | 696 pages (213 screens, 260 reports), 237 legacy print layouts compiled with 0 errors, English application published; 3 product procedures (lot handling in stock taking and transfers, and the tax statement builder, which calls `GET_SERVICE_VALUE`, a function NAJD's version does not have) and 2 trigger rule lines (NAJD's `ST_TRNS_DET` has no lot / expiry columns) switched off pending review; 169 s |
-| verify | signed in as NAJD's legacy user 0 (legacy password, forced change): 644 pages opened, 0 errors; 132 document pages opened on a real NAJD record, 0 errors (83 screens have no records at NAJD); 1,411 s |
-
-Also reported: 3 legacy print layouts (`ST_INVOICE`, `ST_INVOICE2`, `TX_PRINT_DET`) print with a few formula fields
-empty, because the formulas call code NAJD's version does not have.
-
-Total machine time for the client: about 5 minutes to a working application, plus 23 minutes of browser checks.
-There were no manual steps and no language model.
+Areej (car rentals) is the first installation run through the pipeline with its own Forms/Reports folder: 22 legacy
+systems against the 9 of the reference, 616 registered screens and 521 reports.  Its numbers are in
+`clients/areej/work/REPORT.md` and `DELTA.md` after each run.

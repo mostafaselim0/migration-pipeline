@@ -71,9 +71,15 @@ def main():
         if checks:
             L += [f"- Knowledge DB scripts that did not compile cleanly on this schema ({len(checks)}):"] + [f"  - `{c[:220]}`" for c in checks[:40]]
         dg = load(os.path.join("build", "degraded.json"))
-        if dg and any(dg.values()):
+        sg = load(os.path.join("out", "specs_degraded.json")) or []
+        if (dg and any(dg.values())) or sg:
+            dg = dg or {"isolated_members": [], "skipped_rules": [], "dropped_triggers": [], "invalid_left": []}
             L += ["", "### Reviewed product rules switched off for this installation (they do not fit its database)", ""]
+            L += [f"- screen {s['form']}: {s['what']}" for s in sg]
+            L += [f"- package `{p}`: every member raises ORA-20990 \"needs review\" when used (its package-level declarations "
+                  "do not fit this database)" for p in dg.get("stubbed_packages", [])]
             L += [f"- package member `{m}`: raises ORA-20990 \"needs review\" when used" for m in dg["isolated_members"]]
+            L += [f"- DB script statement failed: {s}" for s in dg.get("script_errors", [])]
             L += [f"- {s}" for s in dg["skipped_rules"]]
             L += [f"- generated trigger dropped: {s}" for s in dg["dropped_triggers"]]
             L += [f"- package still invalid: {s}" for s in dg["invalid_left"]]

@@ -258,6 +258,10 @@ def db_scripts():
         errs = [l for l in out.stdout.splitlines() if l.strip() and "ORA-00955" not in l and "ERROR at line 1" not in l and "No errors" not in l
                 and "ORA-01430" not in l and "ORA-02260" not in l and "ORA-01408" not in l]
         print(f"  {os.path.basename(path):28} {'ok' if not errs else 'CHECK: ' + ' | '.join(errs[:3])}")
+        # statements outside package bodies that failed (a trigger on a table this installation lacks, a missing grant):
+        # recorded for the report; package bodies are repaired afterwards by degrade.isolate_members
+        for l in [l for l in errs if re.match(r"\s*ORA-\d{5}", l) and "compilation errors" not in l]:
+            degrade.LOG["script_errors"].append(f"{os.path.basename(path)}: {l.strip()[:200]}")
 
 
 def rdf_prints():
@@ -298,7 +302,40 @@ def rdf_prints():
     c.commit()
 
 
+def preflight():
+    """The grants the engine runtime needs (the restore stage gives them; a schema loaded by other means may lack them).
+    Granted through MP_ADMIN when it is set up on this server, otherwise only checked."""
+    sys.path.insert(0, os.path.join(APPDIR, "stages"))
+    from db import _env
+    import restore
+    need = restore.OBJ_GRANTS + ["alter session"]
+    c = connect(); cur = c.cursor()
+    cur.execute("select lower(owner || '.' || table_name) from user_tab_privs where grantee = user union all select lower(privilege) from session_privs")
+    have = {r[0] for r in cur.fetchall()}
+    missing = [g for g in need if (g.split(" on ", 1)[1].strip() if " on " in g else g) not in have]
+    if not missing:
+        return
+    pwd = _env("MP_ADMIN_PWD")
+    if not pwd:
+        print("  WARNING: schema lacks grants the runtime needs and MP_ADMIN is not set up to give them:", ", ".join(missing)); return
+    a = oracledb.connect(user="MP_ADMIN", password=pwd, dsn=mp.DSN).cursor()
+    for g in missing:
+        try: a.execute(f"grant {g} to {mp.SCHEMA}"); print("  granted:", g)
+        except oracledb.DatabaseError as e: print("  grant failed:", g, str(e).splitlines()[0])
+
+
+def core_packages():
+    """Names of the packages the engine runtime scripts (engine/db/0*.sql) create: they are never degraded."""
+    import glob
+    names = set()
+    for p in glob.glob(os.path.join(APPDIR, "db", "0[0-9]_*.sql")):
+        names |= {m.upper() for m in re.findall(r"(?i)create\s+or\s+replace\s+package\s+(?:body\s+)?(\w+)", io.open(p, encoding="utf-8").read())}
+    return names
+
+
 def db(data):
+    preflight()
+    degrade.CORE = core_packages()
     db_scripts()
     rdf_prints()
     meta = json.load(io.open(mp.work("cache", "meta.json"), encoding="utf-8"))
@@ -346,6 +383,10 @@ def db(data):
         for tb, code in ((s.get("rules") or {}).get("row_rules") or {}).items():
             if code not in row_rules[tb.upper()]:
                 row_rules[tb.upper()].append(code); tables.add(tb.upper())
+    for t in sorted(tables):                                  # reviewed rules may name a table this installation lacks
+        if t not in meta:
+            degrade.LOG["skipped_rules"].append(f"{t}: key / row rules left out, the table does not exist in this installation")
+    tables = {t for t in tables if t in meta}
     gen = {t: trigger_sql(meta, t, key_exprs.get(t), row_rules.get(t)) for t in sorted(tables)}
     sqls = [x for x in gen.values() if x]
     drop_stale_appx({("APPX_" + t)[:128] for t, x in gen.items() if x})

@@ -43,7 +43,7 @@ stage to the end, `status` shows what ran.  `restore` refuses to overwrite an ex
 |---|---|---|
 | `schema` | the client's Oracle schema on this server | required |
 | `workspace` | its APEX workspace | = schema |
-| `app_id` | APEX application id (the English copy gets `app_id*10+1`) | required |
+| `app_id` | APEX application id (the English copy gets `app_id*10+1`, or `app_id*100+1` when that falls in the 3000-8999 range APEX reserves) | required |
 | `translated_app_id`, `id_offset` | override the two derived values | derived |
 | `app_name`, `app_alias` | application name and URL alias | ASCON ERP, ascon-erp |
 | `knowledge` | the product knowledge folder | ascon |

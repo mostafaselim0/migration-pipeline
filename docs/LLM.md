@@ -3,7 +3,6 @@
 Nothing in the pipeline needs a language model.  The model is a helper for one job only: drafting the reviewed rules
 of screens whose legacy logic the knowledge base has never seen (NEW) or that the client changed (CHANGED logic).  The
 delta stage lists them in `work/llm/worklist.json`; for a client close to the product the list is short or empty
-(the NAJD pilot: 0 screens).
 
 ## Why it stays cheap
 

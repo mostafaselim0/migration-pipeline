@@ -1,0 +1,17 @@
+{
+ "_about": "Areej (car rentals): ASCON installation with 22 systems, live schema exported 2026-08-16 (Data Pump) and imported by hand into ORCLPDB on 2026-09-24/25 as AREEJ (+ ASCON_DOCS, E_INVOICE), so the restore stage is not used. Forms/Reports folder delivered and converted to XML on the legacy server on 2026-09-25 (C:/Smart Transformation, module folders mirror the ASCON folder).",
+ "knowledge": "ascon",
+ "schema": "AREEJ",
+ "workspace": "AREEJ",
+ "app_id": 300,
+ "translated_app_id": 30001,
+ "app_name": "ASCON ERP",
+ "app_alias": "ascon-erp",
+ "customer_code": "FOS",
+ "dsn": "localhost:1521/ORCLPDB",
+ "dump": "C:/dump/AREEJ_DUMP.DMP",
+ "source_schema": "AREEJ",
+ "replace_schema": false,
+ "sources": {"xml": "C:/Smart Transformation", "binaries": "C:/Smart Transformation/ASCON"},
+ "test_user": "0"
+}

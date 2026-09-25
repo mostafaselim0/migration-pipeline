@@ -195,7 +195,7 @@ def failed_statements(text):
 
 
 def replay_remapped(cur, outfile, src):
-    """Classic imp remaps the owner of each object but not schema names written inside DDL (a trigger 'ON NAJD_MED.T').
+    """Classic imp remaps the owner of each object but not schema names written inside DDL (a trigger 'ON LEGACY_OWNER.T').
     Re-run those statements with the source schema replaced by the client's."""
     text = io.open(outfile, encoding="utf-8", errors="replace").read()
     qual = re.compile(r'(?i)"?\b' + re.escape(src) + r'\b"?\s*\.')
