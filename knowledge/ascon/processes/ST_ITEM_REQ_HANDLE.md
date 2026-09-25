@@ -90,3 +90,5 @@ Deliberately not reproduced:
   TO_STORE_BAL are computed columns since wave 3b.
 - Forms-only mechanics (alerts, windows, printing, SET_IP), colour / size (flags 0).
 - The warning sees only lines saved before (generator limitation, see ST_ITEM_REQ.md).
+
+Update 2026-09-25: "تزويد عام" and "أصناف حد الطلب" are reproduced as fill buttons with the selection and quantity of ST_ITEM_REQ's GENERAL_REQ / REC_LIMIT actions (the legacy quantity formula of this screen stays unreadable).

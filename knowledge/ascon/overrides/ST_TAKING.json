@@ -14,7 +14,7 @@
   "columns": {
    "ST_STOCK_TAKING.ST_TAKING_DATE": {"readonly_after_insert": true},
    "ST_STOCK_TAKING.STORE_CODE": {"readonly_after_insert": true},
-   "ST_STOCK_TAKING_DET.UNIT_PRICE": {"readonly": true},
+   "ST_STOCK_TAKING_DET.UNIT_PRICE": {"show_if": "app_rules3_st.can_view_cost = 1", "readonly": true},
    "ST_STOCK_TAKING_DET.ITEM_CONFG_ID": {"widget": "POPUP", "cascade": "ITEM_CODE", "lov": "select c.item_confg_id || ' - ' || c.lot_number || ' - ' || to_char(c.expire_date, 'DD/MM/YYYY') d, c.item_confg_id r from st_item_confg c where c.item_code = :PAGE_ITEM_CODE order by c.expire_date, c.item_confg_id"}
   },
   "where": "(:G_PASSWORD_NUMBER = 0 or STORE_CODE in (select sp.store_code from st_store_password sp where sp.password_number = :G_PASSWORD_NUMBER))",
@@ -42,7 +42,7 @@
   },
   "add_columns": {
    "ST_STOCK_TAKING_DET.SALES_PRICE": {"label_a": "سعر البيع", "label_e": "Sales price"},
-   "ST_STOCK_TAKING_DET.DISC1_RATIO": {"label_a": "نسبة خصم 1 %", "label_e": "Discount 1 %"},
+   "ST_STOCK_TAKING_DET.DISC1_RATIO": {"show_if": "app_rules3_st.can_view_cost = 1", "label_a": "نسبة خصم 1 %", "label_e": "Discount 1 %"},
    "ST_STOCK_TAKING_DET.DISC1_VALUE": {"label_a": "خصم 1", "label_e": "Discount 1"}
   },
   "readonly": [

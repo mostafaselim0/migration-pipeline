@@ -63,6 +63,7 @@
  "update": true,
  "delete": true,
  "rules": {
+  "warnings": [{"name": "البونص أقل من الإتفاقية", "lines": true, "when": "CREATE,SAVE", "plsql": "declare\n  l_msg varchar2(4000);\nbegin\n  for x in (select d.item_code, a.bonus_ratio from st_po_item_supp m, st_po_item_supp_det d, st_supp_agrmnt_det a\n             where m.rowid = chartorowid(:PAGE_ROWID) and d.serial = m.serial and a.serial = m.cntrct_serial\n               and a.group_code = d.item_group_code and a.item_code = d.item_code and nvl(a.bonus_ratio, 0) > 0\n               and nvl(d.percentage, 0) < a.bonus_ratio\n               and not exists (select 1 from st_po_item_supp_det as of timestamp (systimestamp - interval '2' second) o where o.rowid = d.rowid and nvl(o.percentage, 0) = nvl(d.percentage, 0))) loop\n    l_msg := l_msg || case when v('G_LANG') = 'en' then 'Bonus below the agreement: item ' else 'البونص أقل من الإتفاقية: الصنف ' end\n             || x.item_code || ' (' || x.bonus_ratio || '%)' || chr(10);\n  end loop;\n  return rtrim(l_msg, chr(10));\nexception when others then return null;\nend;"}],
   "add_columns": {
    "ST_PO_ITEM_SUPP.SERIAL": {
     "label_a": "مسلسل",

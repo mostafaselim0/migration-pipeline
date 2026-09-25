@@ -111,7 +111,9 @@ on ST_ITEM_REQ, ST_ITEM_REQ_HANDLE and the credit limit of ST_SALES_ORDER.
   column), and may use `:PAGE_<COL>` and the fill's own `items`, which are screen-only fields shown under the header.
 * The rows are added as new, unsaved lines, and nothing is written before Save.
 
-Used on VNDBTRN (*جلب أصناف الفاتورة*, the legacy GET_ITEMS).
+In a fill on a sub-grid, `:PARENT_<COL>` is a value of the selected line of the parent grid.
+Used on VNDBTRN (*جلب أصناف الفاتورة*, the legacy GET_ITEMS), ST_ITEM (*إدراج الفئات* into the class discounts of the
+selected unit) and ST_ITEM_REQ_HANDLE (*تزويد عام*, *أصناف حد الطلب*).
 
 **Detail of a detail.** `rules.sub_details`: `[{"table", "parent", "join": [[COL, PARENT_COL]], "title_a", "title_e",
 "insert", "update", "delete", "order_by"}]`.

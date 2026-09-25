@@ -1,4 +1,28 @@
 {
+ "fills": [
+  {
+   "label_a": "تزويد عام",
+   "label_e": "General supply",
+   "table": "ST_ITEM_REQ_DET",
+   "icon": "fa-download",
+   "items": [
+    {
+     "name": "QUAN_LIMIT",
+     "label_a": "الحد الأدنى للكمية (الأصناف التي رصيدها أقل منه)",
+     "label_e": "Quantity limit (items below it)",
+     "type": "number"
+    }
+   ],
+   "sql": "select it.item_group_code group_code, it.item_code, it.item_code || ' - ' || it.name_a item_code__d, iu.unit_code,\n       (select nvl(max(nvl(s.min_limit, 0)), 0) from st_store_item s where s.store_code = to_number(:PAGE_STORE_CODE) and s.group_code = it.item_group_code and s.item_code = it.item_code) quantity, (select nvl(max(nvl(s.min_limit, 0)), 0) from st_store_item s where s.store_code = to_number(:PAGE_STORE_CODE) and s.group_code = it.item_group_code and s.item_code = it.item_code) req_qty\n  from st_item it, st_item_unit iu, st_item_group sg\n where it.item_code = iu.item_code and it.item_group_code = iu.group_code and iu.basic_unit = 1 and nvl(it.stop_flag, 0) = 0\n   and sg.item_group_code = it.item_group_code and nvl(sg.stop_flag, 0) = 0\n   and (:PAGE_FROM_ITEM_GROUP_CODE is null or it.item_group_code >= to_number(:PAGE_FROM_ITEM_GROUP_CODE))\n   and (:PAGE_TO_ITEM_GROUP_CODE is null or it.item_group_code <= to_number(:PAGE_TO_ITEM_GROUP_CODE))\n   and (:PAGE_FROM_ITEM_CODE is null or it.item_code >= :PAGE_FROM_ITEM_CODE)\n   and (:PAGE_TO_ITEM_CODE is null or it.item_code <= :PAGE_TO_ITEM_CODE)\n   and not exists (select 1 from st_item_req_det x where x.trns_type_code = to_number(:PAGE_TRNS_TYPE_CODE)\n                      and x.trns_serial = to_number(:PAGE_TRNS_SERIAL) and x.group_code = it.item_group_code and x.item_code = it.item_code)\n   and get_balance(to_number(:PAGE_STORE_CODE), it.item_group_code, it.item_code) < to_number(:PAGE_QUAN_LIMIT)\n order by it.item_code"
+  },
+  {
+   "label_a": "أصناف حد الطلب",
+   "label_e": "Items below reorder limit",
+   "table": "ST_ITEM_REQ_DET",
+   "icon": "fa-download",
+   "sql": "select it.item_group_code group_code, it.item_code, it.item_code || ' - ' || it.name_a item_code__d, iu.unit_code,\n       nvl(sgs.min_limit, 0) quantity, nvl(sgs.min_limit, 0) req_qty\n  from st_item it, st_item_unit iu, st_item_group sg, st_store_item sgs\n where it.item_code = iu.item_code and it.item_group_code = iu.group_code and iu.basic_unit = 1 and nvl(it.stop_flag, 0) = 0\n   and sg.item_group_code = it.item_group_code and nvl(sg.stop_flag, 0) = 0\n   and (:PAGE_FROM_ITEM_GROUP_CODE is null or it.item_group_code >= to_number(:PAGE_FROM_ITEM_GROUP_CODE))\n   and (:PAGE_TO_ITEM_GROUP_CODE is null or it.item_group_code <= to_number(:PAGE_TO_ITEM_GROUP_CODE))\n   and (:PAGE_FROM_ITEM_CODE is null or it.item_code >= :PAGE_FROM_ITEM_CODE)\n   and (:PAGE_TO_ITEM_CODE is null or it.item_code <= :PAGE_TO_ITEM_CODE)\n   and not exists (select 1 from st_item_req_det x where x.trns_type_code = to_number(:PAGE_TRNS_TYPE_CODE)\n                      and x.trns_serial = to_number(:PAGE_TRNS_SERIAL) and x.group_code = it.item_group_code and x.item_code = it.item_code)\n   and sgs.group_code = it.item_group_code and sgs.item_code = it.item_code and sgs.store_code = to_number(:PAGE_STORE_CODE)\n   and nvl(get_balance(to_number(:PAGE_STORE_CODE), it.item_group_code, it.item_code), 0) < nvl(sgs.reorder_limit, 0)\n order by it.item_code"
+  }
+ ],
  "pattern": "AUTO",
  "notes": "Material request processing (same tables as ST_ITEM_REQ, open requests only): same save rules (APP_RULES_SA); actions TO_TRANSFER_REQ / TO_PURCHASE_REQ = legacy REQUEST_TRANSFER / REQUEST_ORDER (APP_CONV); outstanding-PO warning, delete refused when converted, item count / project reference (APP_ACT_ST)",
  "rules": {

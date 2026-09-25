@@ -1219,7 +1219,7 @@ def warning_components(pg, spec, items, region_id=None):
     return out
 
 
-def fill_components(fp, spec, grids, items, main_rid=None):
+def fill_components(fp, spec, grids, items, main_rid=None, parents=None):
     """fills: buttons that add rows to a grid for the user to complete, like the legacy buttons that filled block records before
     COMMIT.  Each fill: {"label_a", "label_e", "table", "sql"} - sql returns one row per line, columns named like the grid's
     columns (a column COL__D gives the text shown for a list column COL); :PAGE_<COL> are the document's fields.  Optional
@@ -1263,9 +1263,17 @@ def fill_components(fp, spec, grids, items, main_rid=None):
                             if (p.get("type") or "number").lower() == "number" else attrs(disabled="N", subtype="TEXT", trim_spaces="BOTH"))
         page_items = ",".join("#" + i for i in items + own)
         sql = f["sql"].replace(":PAGE_", f":P{fp}_")
+        # :PARENT_<COL>: a value of the selected line of the parent grid (fill into a sub-grid), sent as JSON in x01
+        pcols = sorted({c.upper() for c in re.findall(r"(?i):PARENT_(\w+)", sql)})
+        pkey = (parents or {}).get((f.get("table") or "").upper())
+        if pcols and not pkey:
+            print(f"   fill {k} of {spec['form']}: :PARENT_ needs a sub-grid target"); continue
+        decl = "".join(f"  pv_{c} varchar2(4000);\n" for c in pcols)
+        init = ("  apex_json.parse(apex_application.g_x01);\n" + "".join(f"  pv_{c} := apex_json.get_varchar2('{c}');\n" for c in pcols)) if pcols else ""
+        sql = re.sub(r"(?i):PARENT_(\w+)", lambda mm: "pv_" + mm.group(1).upper(), sql)
         out += call("wwv_flow_imp_page.create_page_process", id=Id(nid(fp, "p", "fill", k)), process_sequence=10 + k, process_point="ON_DEMAND",
                     process_type="NATIVE_PLSQL", process_name=name,
-                    process_sql_clob=f"declare\n  c sys_refcursor;\nbegin\n  open c for\n{sql};\n  apex_json.open_object;\n"
+                    process_sql_clob=f"declare\n  c sys_refcursor;\n{decl}begin\n{init}  open c for\n{sql};\n  apex_json.open_object;\n"
                                      "  apex_json.write('rows', c);\n  apex_json.close_object;\nend;",
                     process_clob_language="PLSQL", internal_uid=nid(fp, "p", "fill", k) % 10**15)
         out += call("wwv_flow_imp_page.create_page_button", id=Id(nid(fp, "btn", "fill", k)), button_sequence=5 + k, button_plug_id=Id(rid),
@@ -1278,9 +1286,16 @@ def fill_components(fp, spec, grids, items, main_rid=None):
                     triggering_element_type="BUTTON", triggering_button_id=Id(nid(fp, "btn", "fill", k)), bind_type="bind",
                     execution_type="IMMEDIATE", bind_event_type="click")
         confirm = (f.get("confirm_a") or "").replace("'", "\\'")
+        par = ""
+        if pcols:                                           # values of the selected parent line
+            par = (f"  var pr = apex.region('{pkey}'), sel = pr.call('getSelectedRecords') || [], par = {{}};\n"
+                   "  if (!sel.length) { apex.message.alert(en ? 'Select a line first.' : 'اختر سطراً من الجدول أولاً.'); return; }\n"
+                   "  var pm = pr.call('getViews', 'grid').model;\n"
+                   f"  {json.dumps(pcols)}.forEach(function (c) {{ var v = pm.getValue(sel[0], c); par[c] = (v && typeof v === 'object') ? v.v : v; }});\n")
         js = ("var en = document.documentElement.lang === 'en';\n"
-              "var run = function () {\n"
-              f"  apex.server.process('{name}', {{pageItems: '{page_items}'}}, {{dataType: 'json'}}).then(function (d) {{\n"
+              "var run = function () {\n" + par +
+              f"  apex.server.process('{name}', {{pageItems: '{page_items}'" + (", x01: JSON.stringify(par)" if pcols else "")
+              + "}, {dataType: 'json'}).then(function (d) {\n"
               f"    var g = apex.region('{key}').call('getViews', 'grid'), m = g.model, rows = (d && d.rows) || [], n = 0;\n"
               "    rows.forEach(function (r) {\n"
               "      var id = m.insertNewRecord(), rec = (typeof id === 'object') ? id : m.getRecord(id);\n"
@@ -1322,6 +1337,7 @@ def gen_master_detail(spec, lovs):
     detail_ids = []
     grids = {}                                                # table -> (region id, key, block) of the first grid on it
     fill_targets = {(f.get("table") or "").upper() for f in spec.get("fills") or []}
+    fill_parents = {d["parent"] for d in spec["details"] if d.get("parent") and d["table"] in fill_targets}
     for i, d in enumerate(spec["details"]):
         if d.get("parent"):                                   # detail of a detail: a grid under the selected line of its parent grid
             par = grids.get(d["parent"])
@@ -1351,14 +1367,15 @@ def gen_master_detail(spec, lovs):
         title = d.get("title_a") or d.get("title_e") or ("التفاصيل" if len(spec["details"]) == 1 else f"التفاصيل {i + 1}")
         drid, dsrc, editable = ig_region(fp, f"det{i}", title, dict(d, join=join), 30 + 10 * i, lovs, where=where, ajax_items=items,
                                          condition_item=f"P{fp}_ROWID", readonly=readonly, template=T_STANDARD, doc_grid=True,
-                                         static_id=f"det{i}" if d["table"] in fill_targets else None)
+                                         static_id=f"det{i}" if d["table"] in fill_targets | fill_parents else None)
         body += dsrc
         grids.setdefault(d["table"], (drid, f"det{i}", d))
         if editable:
             detail_ids.append((drid, dict(d, join=join), i))
     if not readonly:
         body += fill_components(fp, spec, [(d["table"], f"det{i}", nid(fp, f"det{i}", "region")) for i, d in enumerate(spec["details"])],
-                                [f"P{fp}_{c['name']}" for c in m["cols"] if not c.get("computed")], main_rid=rid)
+                                [f"P{fp}_{c['name']}" for c in m["cols"] if not c.get("computed")], main_rid=rid,
+                                parents={d["table"]: grids[d["parent"]][1] for d in spec["details"] if d.get("parent") in grids})
     if not readonly and "d" in ops_of(m):
         # deleting a document removes its lines first (legacy screens deleted the whole document); rules may still reject it
         stmts = []

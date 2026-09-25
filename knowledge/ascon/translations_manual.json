@@ -165,5 +165,9 @@
  "معايير الطباعة": "Print parameters",
  "لا توجد تفاصيل للسطر المختار - اختر سطراً من الجدول السابق أو أضف تفاصيل له / No details for the selected line: select a line above or add details": "No details for the selected line: select a line above or add details",
  "جلب أصناف الفاتورة": "Get the invoice items",
- "نوع حركة الفاتورة": "Invoice transaction type"
+ "نوع حركة الفاتورة": "Invoice transaction type",
+ "إدراج الفئات": "Insert classes",
+ "تزويد عام": "General supply",
+ "أصناف حد الطلب": "Items below reorder limit",
+ "الحد الأدنى للكمية (الأصناف التي رصيدها أقل منه)": "Quantity limit (items below it)"
 }

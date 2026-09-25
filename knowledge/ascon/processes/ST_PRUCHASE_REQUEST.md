@@ -81,3 +81,5 @@ order-type / supplier / unit lists, item name and outstanding quantity per line 
 
 Not reproduced, with the reason: the per-line "continue?" of CHK_OUTSTANDING_QTY (grid-level warning needs a generator feature; shown
 as a display and, since wave 3b, as the column "كمية لم يتم إستلامها" of each line); services / assets tabs (no logic in the .fmx); the Forms cascade that deleted ST_STORE_ITEM rows (defect).
+
+Update 2026-09-25: The per-line "continue?" of CHK_OUTSTANDING_QTY is reproduced as a line warning on new or changed lines ("هناك كمية X من الصنف Y لم يتم إستلامها"). Tested in a rolled-back transaction (SMART has no request types).

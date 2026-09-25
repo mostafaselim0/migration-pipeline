@@ -129,3 +129,5 @@ Forms2XML dropped the Arabic boilerplate, GN_FORM_ITEM has no row).
   items, read-only-after-insert group / unit / alternative item, per-row names and store balances / costs, the pieces tab flags and filter.
 - Remaining generator limits: one detail level only; no legacy label text for `ACTIVE_MATERIAL_CODE`, `IN_PACK`, `SHELF_LIFE`,
   `INITIAL_SALES_PRICE`, `HS_CODE`, `ST_ITEM_BARCODE.ITEM_BARCODE`, `RSD_ST_ITEM_GTIN.GTIN` (English column names shown).
+
+Update 2026-09-25: INSERT_CLASSES "إدراج الفئات" is reproduced: a fill button on the class discounts of the selected unit (price = the unit's RETAIL_SALE_PRICE, discount 1 = ST_ITEM.MOH_DISC, classes not yet on the item); the user completes and saves.

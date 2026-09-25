@@ -490,7 +490,9 @@ def apply_rules(spec, ov, ctx=None):
                 if opt.get("label_a"): have["label_a"] = opt["label_a"]
                 if opt.get("label_e"): have["label_e"] = opt["label_e"]
             elif ctx is not None and col in ctx.cols(t):
-                b["cols"].append(make_col(ctx, t, col, opt.get("label_a"), opt.get("label_e")))
+                have = make_col(ctx, t, col, opt.get("label_a"), opt.get("label_e")); b["cols"].append(have)
+            if have is not None and opt.get("show_if"):
+                have["show_if"] = opt["show_if"]
     # rules.sub_details: a grid under the selected line of another grid of the screen (detail of a detail)
     for sd in rules.get("sub_details") or []:
         t, parent = sd["table"].upper(), sd["parent"].upper()

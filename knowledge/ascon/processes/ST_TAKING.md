@@ -102,3 +102,5 @@ K1-K10, simulated APEX session of page 20061, rolled back):
    only deleted and re-entered); CALC_COST / loads still update the lines server side.
 5. **Applied** in `val_taking`: legacy text of the duplicate check "تم جرد هذا المخزن من قبل في نفس التاريخ", CHECK_DATE texts, and
    dates before ST_BASIC.MIN_DATE refused (also on ST_TAKING2, which calls CHECK_DATE too).
+
+Update 2026-09-25: UNIT_PRICE and DISC1_RATIO are now hidden for users without USERS.ALLOW_VIEW_COST (show_if app_rules3_st.can_view_cost).

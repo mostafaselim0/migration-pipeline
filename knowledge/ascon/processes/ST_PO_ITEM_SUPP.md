@@ -79,3 +79,5 @@ Not reproduced: average sales, cover, real balance, suggested quantity, store co
 (formulas not visible), bonus-below-agreement warning (warnings on grid rows: generator), navigation / print buttons (reasons above), Forms alerts / toolbar code.
 Question: ST_BASIC DMG_STORE / GNRLZ_STORE / DISTRB_STORE are 2 / 2 / 1 in the build copy, but the store codes of this site have
 12 digits, so those three balances are always 0 — which stores should they be?
+
+Update 2026-09-25: "البونص أقل من الإتفاقية" is reproduced as a line warning: a new or changed line whose bonus % is below the BONUS_RATIO of the header's agreement (ST_SUPP_AGRMNT_DET) asks "save anyway?". Tested in a rolled-back transaction.
