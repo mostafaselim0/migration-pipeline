@@ -1,5 +1,29 @@
--- ASCON ERP on APEX: UI helpers (run as SMART)
+-- ASCON ERP on APEX: UI helpers (run as the client's schema)
 set define off
+-- every error the application shows is also recorded with its technical cause (the browser only says "contact the
+-- administrator" for rendering errors); the verify stage and the review read it
+declare
+  n pls_integer;
+begin
+  select count(*) into n from user_tables where table_name = 'APP_ERROR_LOG';
+  if n = 0 then
+    execute immediate q'[create table app_error_log (
+      id             number generated always as identity primary key,
+      logged_on      date default sysdate not null,
+      app_user       varchar2(255),
+      page_id        number,
+      request        varchar2(255),
+      component_type varchar2(255),
+      component_name varchar2(255),
+      is_internal    varchar2(1),
+      message        varchar2(4000),
+      ora_sqlcode    number,
+      ora_sqlerrm    varchar2(4000),
+      backtrace      varchar2(4000))]';
+    execute immediate 'create index app_error_log_i1 on app_error_log (logged_on, page_id)';
+  end if;
+end;
+/
 create or replace package app_ui authid definer as
   procedure home_cards;      -- system cards on the home page (PL/SQL dynamic content region)
   -- application error handling function: business errors (ORA-20000..20999) without the ORA prefix,
@@ -46,13 +70,31 @@ create or replace package body app_ui as
     htp.p('</ul>');
   end home_cards;
 
+  procedure log_error (p_error in apex_error.t_error) is
+    pragma autonomous_transaction;
+    l_internal varchar2(1) := case when p_error.is_internal_error then 'Y' else 'N' end;   -- booleans cannot go into SQL
+  begin
+    insert into app_error_log (app_user, page_id, request, component_type, component_name, is_internal, message, ora_sqlcode, ora_sqlerrm, backtrace)
+    values (v('APP_USER'), v('APP_PAGE_ID'), substr(v('REQUEST'), 1, 255), substr(p_error.component.type, 1, 255), substr(p_error.component.name, 1, 255),
+            l_internal, substr(p_error.message, 1, 4000), p_error.ora_sqlcode,
+            substr(p_error.ora_sqlerrm, 1, 4000), substr(p_error.error_backtrace, 1, 4000));
+    commit;
+  exception when others then
+    rollback;
+  end log_error;
+
   function handle_error (p_error in apex_error.t_error) return apex_error.t_error_result is
     r     apex_error.t_error_result;
     l_en  boolean := app_sec.lang = 'en';
     l_con varchar2(255);
   begin
+    log_error(p_error);
     r := apex_error.init_error_result(p_error => p_error);
     if p_error.is_internal_error then
+      -- rendering errors: the technical cause is shown to the administrators (everyone else sees APEX's generic text)
+      if app_sec.is_admin and p_error.ora_sqlerrm is not null then
+        r.additional_info := substr(p_error.component.type || ' ' || p_error.component.name || ': ' || p_error.ora_sqlerrm, 1, 4000);
+      end if;
       return r;
     end if;
     if p_error.ora_sqlcode between -20999 and -20000 then

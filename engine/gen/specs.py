@@ -637,6 +637,83 @@ def degraded(form, what, notes=None):
         notes.append("degraded: " + what)
 
 
+def _binds_null(sql):
+    return re.sub(r"(?<![\w:]):[A-Za-z]\w*", "null", sql)
+
+
+_SQLKW = {"where", "on", "join", "left", "right", "inner", "outer", "full", "cross", "group", "order", "union", "select", "and", "or",
+          "start", "connect", "having", "minus", "intersect", "for", "with", "natural", "using"}
+
+
+def _alias_tables(sql):
+    """alias -> TABLE for the 'from T a' / 'join T a' / ', T a' pairs of a fragment (top level or nested, best effort)."""
+    out = {}
+    for m in re.finditer(r"(?i)\b(?:from|join|,)\s*([\w$#]+(?:\.[\w$#]+)?)\s+(?:as\s+)?([A-Za-z_]\w*)\b", sql):
+        t, a = m.group(1).split(".")[-1].upper(), m.group(2).lower()
+        if a not in _SQLKW:
+            out.setdefault(a, t)
+    return out
+
+
+def _sql_fails(cur, sql, table, cols, ctx=None):
+    """None when the SQL parses on this schema; otherwise the reason it must be dropped ('' = keep, cannot judge).
+    Dropped for a missing table / view / function (ORA-00942, ORA-00904 on an unqualified name) or a column that the
+    named table really lacks (ORA-00904 on t.COL, or on an alias resolved to a table of the fragment); other errors are
+    kept (they may be the wrapping's fault, not the rule's)."""
+    try:
+        cur.execute(_binds_null(sql))
+        return None
+    except Exception as e:
+        msg = str(e).splitlines()[0]
+        if "ORA-00942" in msg:
+            return msg
+        m = re.search(r'ORA-00904: (?:"(\w+)"\.)?"(\w+)"', msg)
+        if not m:
+            return ""
+        alias, col = (m.group(1) or "").lower(), m.group(2)
+        if alias in ("", "t"):
+            return msg if col not in cols else ""
+        at = _alias_tables(sql).get(alias)
+        if at and ctx is not None and at in ctx.meta and col not in ctx.cols(at):
+            return msg
+        return ""
+
+
+def check_fragments(ctx, cur, spec):
+    """Reviewed SQL fragments of the rules (filters, computed columns, lists of values, SQL defaults) are parsed against the
+    client's schema; the ones naming a table or column this installation lacks are switched off and listed."""
+    blocks = ([spec.get("master")] if spec.get("master") else []) + spec.get("details", [])
+    for b in blocks:
+        t = b["table"]; cols = set(ctx.cols(t))
+        for key in ("where", "dwhere"):
+            w = b.get(key)
+            if w:
+                why = _sql_fails(cur, f"select 1 from {t} t where ({w}) and 1=0", t, cols, ctx)
+                if why:
+                    degraded(spec["form"], f"filter of {t} dropped ({why[:90]})", spec["notes"]); b[key] = None
+        keep = []
+        for c in b.get("cols", []):
+            drop_col = False
+            if c.get("sql") and c.get("computed"):
+                why = _sql_fails(cur, f"select ({c['sql']}) from {t} t where 1=0", t, cols, ctx)
+                if why:
+                    degraded(spec["form"], f"computed column {t}.{c['name']} dropped ({why[:90]})", spec["notes"]); drop_col = True
+            if c.get("lov_sql"):
+                why = _sql_fails(cur, f"select * from ({c['lov_sql']}) where 1=0", t, cols, ctx)
+                if why:
+                    degraded(spec["form"], f"list of values of {t}.{c['name']} dropped ({why[:90]})", spec["notes"])
+                    c.pop("lov_sql", None); c.pop("cascade", None); c["lov"] = None
+                    if c["widget"] in ("SELECT", "POPUP"): c["widget"] = base_widget(c)
+            d = c.get("default")
+            if isinstance(d, dict) and d.get("type") == "SQL_QUERY" and d.get("value"):
+                why = _sql_fails(cur, f"select * from ({d['value']}) where 1=0", t, cols, ctx)
+                if why:
+                    degraded(spec["form"], f"default of {t}.{c['name']} dropped ({why[:90]})", spec["notes"]); c["default"] = None
+            if not drop_col:
+                keep.append(c)
+        b["cols"] = keep
+
+
 def build_spec(ctx, form, entries):
     ov = load_override(form)
     if ov and ov.get("pattern") != "AUTO":
@@ -766,6 +843,9 @@ def main():
             continue
         by_form.setdefault(name, []).append(f)
     specs = [build_spec(ctx, form, entries) for form, entries in by_form.items()]
+    cur = connect().cursor()
+    for s in specs:
+        check_fragments(ctx, cur, s)
     rep_leaves = [r for r in reports if (r["name_e"] or r["name_a"]) and r["status"] == 1]
     assign_pages(specs, rep_leaves)
     data = {"systems": systems, "files": files, "reports": reports, "report_pages": rep_leaves,

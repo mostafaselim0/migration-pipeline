@@ -40,6 +40,13 @@ def login(p):
             break
     p.wait_for_load_state("networkidle")
     print("after login url:", p.url[:140])
+    if (":LOGIN:" in p.url.upper() or "/LOGIN" in p.url.upper()) and p.locator("#P9999_USERNAME").count():
+        alert = ""
+        try: alert = p.locator(".t-Alert-body, .t-Alert-title, .a-Notification-item").first.inner_text()[:160]
+        except Exception: pass
+        print(f"sign-in failed for legacy user {USER}: {alert or 'still on the login page'}"
+              + (" (password taken from USERS.PASSWORD)" if first else f" (password from env {PWD_VAR})"))
+        sys.exit(2)
     if "9998" in p.url or "change-password" in p.url or p.locator("#P9998_NEW").count():
         new = "Asc" + "".join(random.choice("ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789") for _ in range(9))
         p.fill("#P9998_OLD", pwd); p.fill("#P9998_NEW", new); p.fill("#P9998_CONFIRM", new)
@@ -53,8 +60,23 @@ def login(p):
     return sid
 
 
+DENIED = ("ليس لديك صلاحية", "Access denied by Page security check", "رفض الوصول بواسطة اختبار الأمان")
+
+
+def no_rights(p):
+    """True when the page is the application's own 'you may not open this screen' refusal: the legacy rights of the
+    test user apply in the new system too, so this is expected, not an error."""
+    try:
+        txt = p.content()
+    except Exception:
+        return False
+    return any(d in txt for d in DENIED)
+
+
 def page_errors(p):
     txt = p.content()
+    if any(d in txt for d in DENIED):
+        return []
     errs = []
     for pat in (r"ORA-\d{5}[^<]{0,160}", r"PLS-\d{5}[^<]{0,160}", r"Error processing[^<]{0,160}", r"Unhandled[^<]{0,120}",
                 r"report error:[^<]{0,200}", r"t-Alert--danger", r"ajax_error"):
@@ -69,6 +91,8 @@ def page_errors(p):
 def open_first_row(p, list_page, sid):
     """Open list_page and click the edit link of the first IR row. Returns the frame/page that holds the form, or None."""
     p.goto(app_url(list_page, sid)); p.wait_for_load_state("networkidle")
+    if no_rights(p):
+        return None, "no rights"
     link = p.locator("td.a-IRR-linkCol a, td[headers='LINK'] a").first
     if not link.count():
         return None, "no rows"
@@ -93,7 +117,9 @@ def crawl_forms(p, sid):
     c = connect(); cur = c.cursor()
     cur.execute("select page_id, parent_page_id, pattern, form_name from app_page_map where kind = 'FORMPAGE' order by page_id")
     results = []
-    for fp, lp, pattern, form in cur.fetchall():
+    out = mp.work("verify", "crawl_forms.json")
+    rows = cur.fetchall()
+    for i, (fp, lp, pattern, form) in enumerate(rows):
         try:
             target, status = open_first_row(p, lp, sid)
             errs = frame_errors(target) if target is not None else []
@@ -103,8 +129,9 @@ def crawl_forms(p, sid):
             status, errs = "exception", [str(e)[:200]]
         results.append({"page": fp, "list": lp, "pattern": pattern, "form": form, "status": status, "errors": errs})
         if errs:
-            shot(p, f"errform_{fp}"); print(fp, form, pattern, status, "->", errs[:2])
-    out = mp.work("verify", "crawl_forms.json")
+            shot(p, f"errform_{fp}"); print(fp, form, pattern, status, "->", errs[:2], flush=True)
+        if i and i % 25 == 0:
+            json.dump(results, io.open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     json.dump(results, io.open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     print(f"form pages {len(results)}: opened {sum(1 for r in results if r['status']=='ok')}, "
           f"no rows {sum(1 for r in results if r['status']=='no rows')}, with errors {sum(1 for r in results if r['errors'])}")
@@ -177,24 +204,40 @@ def crawl(p, sid, start=0, n=10000):
                 "and nvl(status, 'GENERATED') <> 'MANUAL' order by page_id")
     pages = cur.fetchall()[start:start + n]
     results = []
-    for pg, kind, pattern, form in pages:
+    out = mp.work("verify", f"crawl_{start}.json")
+
+    def flush():
+        json.dump(results, io.open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+
+    for i, (pg, kind, pattern, form) in enumerate(pages):
         t0 = time.time()
+        status = "ok"
+        if i and i % 25 == 0:
+            flush()                                   # partial results survive a crash of the browser or the run
         try:
             p.goto(app_url(pg, sid)); p.wait_for_load_state("networkidle", timeout=60000)
             p.wait_for_timeout(300)
-            errs = page_errors(p)
+            if no_rights(p):
+                status, errs = "no rights", []
+            else:
+                errs = page_errors(p)
         except Exception as e:
-            errs = ["NAV: " + str(e)[:200]]
+            if "Timeout" in str(e) and "goto" in str(e):
+                status, errs = "timeout", []          # the page runs longer than a minute (report with no filters): a performance item, not a defect
+            else:
+                errs = ["NAV: " + str(e)[:200]]
         if "LOGIN" in p.url.upper() and "9999" not in str(pg):
             errs.append("redirected to login")
-        results.append({"page": pg, "kind": kind, "pattern": pattern, "form": form, "errors": errs, "secs": round(time.time() - t0, 1)})
+        if errs:
+            status = "error"
+        results.append({"page": pg, "kind": kind, "pattern": pattern, "form": form, "status": status, "errors": errs, "secs": round(time.time() - t0, 1)})
         if errs:
             shot(p, f"err_{pg}")
-            print(pg, form, pattern, "->", errs[:2])
-    out = mp.work("verify", f"crawl_{start}.json")
-    json.dump(results, io.open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+            print(pg, form, pattern, "->", errs[:2], flush=True)
+    flush()
     bad = [r for r in results if r["errors"]]
-    print(f"crawled {len(results)} pages, {len(bad)} with errors -> {out}")
+    nr = sum(1 for r in results if r["status"] == "no rights")
+    print(f"crawled {len(results)} pages, {len(bad)} with errors, {nr} not open to user {USER} (legacy rights) -> {out}")
 
 
 if __name__ == "__main__":

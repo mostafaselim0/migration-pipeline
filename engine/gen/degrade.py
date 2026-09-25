@@ -66,6 +66,112 @@ def save():
     json.dump(LOG, io.open(mp.work("build", "degraded.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 
 
+def load():
+    """Merge what an earlier step of this build recorded (build.py db and apex run as separate processes)."""
+    p = mp.work("build", "degraded.json")
+    if os.path.exists(p):
+        for k, v in json.load(io.open(p, encoding="utf-8")).items():
+            LOG.setdefault(k, [])
+            LOG[k] = v + [x for x in LOG[k] if x not in v]
+    return LOG
+
+
+def switched_off_pattern():
+    """Regex matching a call to any package member switched off by isolate_members / stub_body_from_spec, or None."""
+    load()
+    pats = [re.escape(m).replace(r"\.", r"\.") + r"\b" for m in LOG.get("isolated_members", [])]
+    pats += [re.escape(p) + r"\.\w+" for p in LOG.get("stubbed_packages", [])]
+    return re.compile("(?i)\\b(" + "|".join(pats) + ")") if pats else None
+
+
+RUNTIME_ERR = re.compile(r"ORA-(20\d{3}|01403|06502|01422|00942|00904|01476|01722|06503|04063|04068|06550)")
+
+
+def probe_defaults(specs, cur):
+    """Item defaults are evaluated when a page renders; a default that raises (a member of the knowledge that runs but
+    does not fit this data, e.g. 'needs review' or no_data_found) would break the whole page.  Evaluate every SQL and
+    expression default once, with the page items null, and drop the ones that raise a runtime error."""
+    n = 0
+
+    def fails(sql):
+        try:
+            cur.execute(f"select * from ({re.sub(r'(?<![\\w:]):[A-Za-z]\\w*', 'null', sql)}) where rownum <= 1")
+            cur.fetchall()
+            return None
+        except Exception as e:
+            msg = str(e).splitlines()[0]
+            return msg if RUNTIME_ERR.search(msg) else None
+
+    for s in specs:
+        infos = (s.get("rules") or {}).get("info")
+        if infos:
+            keep = []
+            for inf in infos:
+                why = fails(inf.get("sql") or "select null from dual")
+                if why:
+                    LOG["skipped_rules"].append(f"{s['form']}: info value {inf.get('name')} dropped, it fails on this data ({why[:100]})"); n += 1
+                else:
+                    keep.append(inf)
+            s["rules"]["info"] = keep
+        blocks = ([s.get("master")] if s.get("master") else []) + s.get("details", [])
+        for b in blocks:
+            for c in b.get("cols", []):
+                d = c.get("default")
+                if not (isinstance(d, dict) and d.get("value") and d.get("type") in ("SQL_QUERY", "EXPRESSION")):
+                    continue
+                v = str(d["value"])
+                why = fails(v if d["type"] == "SQL_QUERY" else f"select ({v}) from dual")
+                if why:
+                    LOG["skipped_rules"].append(f"{s['form']}: default of {b['table']}.{c['name']} dropped, it fails on this data ({why[:100]})")
+                    c["default"] = None; n += 1
+    return n
+
+
+def scrub_specs(specs):
+    """Rendering-time fragments (defaults, computed columns, lists of values, filters) that call a switched-off member would
+    break the page with ORA-20990 before the user sees it: they are dropped and listed.  Validations and save-time rules keep
+    calling the stub, so a save fails with the explicit 'needs review' message instead of silently skipping the rule."""
+    pat = switched_off_pattern()
+    if not pat:
+        return 0
+    n = 0
+    for s in specs:
+        infos = (s.get("rules") or {}).get("info")
+        if infos:                                    # info panel of a document: one SQL per displayed value
+            keep = []
+            for inf in infos:
+                if pat.search(inf.get("sql") or ""):
+                    LOG["skipped_rules"].append(f"{s['form']}: info value {inf.get('name')} dropped, it calls {pat.search(inf['sql']).group(1)} (switched off)")
+                    n += 1
+                else:
+                    keep.append(inf)
+            s["rules"]["info"] = keep
+        blocks = ([s.get("master")] if s.get("master") else []) + s.get("details", [])
+        for b in blocks:
+            for key in ("where", "dwhere"):
+                if b.get(key) and pat.search(b[key]):
+                    LOG["skipped_rules"].append(f"{s['form']}: filter of {b['table']} dropped, it calls {pat.search(b[key]).group(1)} (switched off)")
+                    b[key] = None; n += 1
+            keep = []
+            for c in b.get("cols", []):
+                d = c.get("default")
+                if isinstance(d, dict) and d.get("value") and pat.search(str(d["value"])):
+                    LOG["skipped_rules"].append(f"{s['form']}: default of {b['table']}.{c['name']} dropped, it calls {pat.search(str(d['value'])).group(1)} (switched off)")
+                    c["default"] = None; n += 1
+                if c.get("lov_sql") and pat.search(c["lov_sql"]):
+                    LOG["skipped_rules"].append(f"{s['form']}: list of values of {b['table']}.{c['name']} dropped, it calls {pat.search(c['lov_sql']).group(1)} (switched off)")
+                    c.pop("lov_sql", None); c.pop("cascade", None); c["lov"] = None
+                    if c.get("widget") in ("SELECT", "POPUP"):
+                        c["widget"] = "NUMBER" if c.get("type") in ("NUMBER", "FLOAT") else "TEXT"
+                    n += 1
+                if c.get("sql") and c.get("computed") and pat.search(c["sql"]):
+                    LOG["skipped_rules"].append(f"{s['form']}: computed column {b['table']}.{c['name']} dropped, it calls {pat.search(c['sql']).group(1)} (switched off)")
+                    n += 1; continue
+                keep.append(c)
+            b["cols"] = keep
+    return n
+
+
 def rule_refs_ok(table, cols, code, what):
     """True when every :new.X / :old.X in the code is a column of the table; otherwise the rule is recorded as skipped."""
     miss = sorted({m.upper() for m in re.findall(r"(?i):(?:new|old)\.(\w+)", code)} - set(cols))

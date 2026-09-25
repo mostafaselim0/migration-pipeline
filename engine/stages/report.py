@@ -87,11 +87,17 @@ def main():
     if vf:
         L += ["## Verification (Edge, signed in as legacy user " + str(vf.get("test_user")) + ")", ""]
         if "pages" in vf:
-            L += [f"- Pages opened: {vf['pages']['opened']}, with errors: {vf['pages']['with_errors']}.",
+            L += [f"- Pages opened: {vf['pages']['opened']}, with errors: {vf['pages']['with_errors']}"
+                  + (f", closed to this user by the legacy rights: {vf['pages'].get('no_rights', 0)}" if vf['pages'].get('no_rights') else "") + ".",
                   f"- Document pages opened on a real record: {vf['documents']['opened_with_record']} of {vf['documents']['pages']} "
-                  f"(no records: {vf['documents']['no_rows']}), with errors: {vf['documents']['with_errors']}."]
+                  f"(no records: {vf['documents']['no_rows']}"
+                  + (f", closed to this user: {vf['documents'].get('no_rights', 0)}" if vf['documents'].get('no_rights') else "")
+                  + f"), with errors: {vf['documents']['with_errors']}."]
             for e in (vf["pages"]["errors"] + vf["documents"]["errors"])[:25]:
                 L.append(f"  - page {e['page']} {e['form']}: {'; '.join(e['errors'])[:200]}")
+            if vf["pages"].get("timeouts"):
+                L.append(f"- Pages slower than a minute without filters (performance review): "
+                         + ", ".join(f"{t['page']} {t['form']}" for t in vf["pages"]["timeouts"][:20]) + ".")
         else:
             L.append(f"- Sign-in failed: {vf['login']}")
         L.append("")

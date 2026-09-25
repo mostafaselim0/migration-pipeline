@@ -91,14 +91,19 @@ create or replace package body app_sec as
     return null;
   end user_code;
 
-  -- the legacy login's password encoding (schema function ENCODE_PASSWORD, wrapped); null when it is not installed
+  -- the legacy login's password encoding: the schema function ENCODE_PASSWORD (wrapped) when it is installed, else the
+  -- same algorithm (legacy/processes/USER_PASSWORD.md): the ASCII codes of the characters, '0' -> '48', '12' -> '4950'
   function legacy_encode (p in varchar2) return varchar2 is
     r varchar2(4000);
   begin
     execute immediate 'begin :r := encode_password(:p); end;' using out r, in p;
     return r;
   exception when others then
-    return null;
+    r := null;
+    for i in 1 .. length(p) loop
+      r := r || ascii(substr(p, i, 1));
+    end loop;
+    return r;
   end legacy_encode;
 
   function authenticate (p_username in varchar2, p_password in varchar2) return boolean is

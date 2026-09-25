@@ -9,9 +9,15 @@ BASE = os.environ.get("APP_BASE") or mp.CFG.get("ords_base", "http://localhost:8
 SHOTS = mp.work("verify", "shots")
 
 def shot(page, name):
+    """Screenshot for the report; never lets a slow page (fonts, animations) kill the run: falls back to the viewport, then to None."""
     p = os.path.join(SHOTS, name + ".png")
-    page.screenshot(path=p, full_page=True)
-    return p
+    for kw in ({"full_page": True, "timeout": 15000, "animations": "disabled"}, {"full_page": False, "timeout": 8000, "animations": "disabled"}):
+        try:
+            page.screenshot(path=p, **kw)
+            return p
+        except Exception:
+            continue
+    return None
 
 def inputs(page):
     """Return visible form fields (id, name, type, label-ish) to learn a page's structure."""

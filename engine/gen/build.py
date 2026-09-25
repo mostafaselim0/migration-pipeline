@@ -411,6 +411,13 @@ def db(data):
     cur.execute("begin dbms_utility.compile_schema(schema => user, compile_all => false); end;")
     degrade.isolate_members(cur)                     # knowledge packages that do not fit: switch off only the failing members
     cur.execute("begin dbms_utility.compile_schema(schema => user, compile_all => false); end;")
+    # knowledge triggers (APP_RULES3_* ...) that still do not compile use columns this installation lacks: an invalid trigger
+    # would block every write to its table, so it is dropped and listed
+    cur.execute(r"""select o.object_name, (select min(text) from user_errors e where e.name = o.object_name and e.type = 'TRIGGER')
+                     from user_objects o where o.object_type = 'TRIGGER' and o.status = 'INVALID' and o.object_name like 'APP\_%' escape '\'""")
+    for name, err in cur.fetchall():
+        cur.execute(f'drop trigger "{name}"')
+        degrade.LOG["dropped_triggers"].append(f"{name}: {(err or '').strip()[:160]}")
     cur.execute("select object_type || ' ' || object_name from user_objects where status = 'INVALID' order by 1")
     print("invalid objects after recompile:", [r[0] for r in cur.fetchall()])
     degrade.save()
@@ -656,6 +663,11 @@ def rdf_print_ok():
 
 
 def apex(data):
+    n = degrade.scrub_specs(data["specs"])          # fragments calling members switched off by the db step
+    n2 = degrade.probe_defaults(data["specs"], connect().cursor())   # defaults that raise on this data
+    if n or n2:
+        print(f"page fragments dropped: {n} call switched-off knowledge members, {n2} defaults fail on this data")
+        degrade.save()
     if os.path.exists(G.BUILD):
         shutil.rmtree(G.BUILD)
     os.makedirs(G.BUILD)
