@@ -1,0 +1,52 @@
+{
+  "pattern": "PROCESS",
+  "notes": "Post AR transactions to GL: port of AR\\FMB\\aracupdt.fmb (EXECUTE_REP + AR_SET_EVERY_ENTRY_AC, DB AR_GET_TRNS_DATA / AR_CREATE_ENTRY_EVERY_ONE) in app_proc_ar.post_to_gl; re-posting of all 661 historical postings reproduced the vouchers.",
+  "proc": {
+    "procedure": "app_proc_ar.post_to_gl",
+    "description_a": "ترحيل حركات العملاء للحسابات العامة: ينشئ قيد يومية مستقل لكل حركة عملاء غير مرحلة في النطاق المحدد (سندات التحصيل والتسويات الدائنة والمدينة) من حسابات نوع الحركة: حساب العميل، حساب الحركة أو تفاصيل حسابات الحركة، الخصم والضريبة ومراكز التكلفة (ومنها مراكز تكلفة المندوب)، ويضع علامة الترحيل على الحركة وتفاصيلها. تؤخذ الحركة بتاريخ الترحيل إن وجد وإلا بتاريخ الحركة، ويكون القيد بنفس التاريخ. فواتير ومرتجعات المبيعات المرتبطة بالمخازن ترحل من شاشة ترحيل حركات المخازن. إذا تعذر ترحيل أي حركة في النطاق (فترة مقفلة أو حساب العميل غير معرف) لا يتم ترحيل أي حركة وتظهر الحركات وأسبابها، ويظهر السبب أيضاً في عمود (ملاحظة) بالجدول قبل الترحيل.",
+    "description_e": "Post customer transactions to the GL: creates one journal voucher per unposted AR transaction of the selection (receipts, credit / debit adjustments) from the accounts of the transaction type (customer account, transaction account or account-detail lines, discount, tax, cost centres incl. the salesman's) and flags the transaction and its details as posted. A transaction is selected and dated by its posting date when present, otherwise by its date. Stock-linked sales invoices and returns are posted from the stock posting screen. If any transaction of the selection cannot be posted (closed period, customer account not defined) nothing is posted and the transactions and reasons are listed; the table shows the reason beforehand in the 'note' column.",
+    "params": [
+      {"name": "FROM_DATE", "arg": "p_from_date", "label_a": "مـن تـاريخ", "label_e": "From date", "type": "date", "required": true,
+       "default": "to_char(trunc(sysdate, 'YYYY'), 'DD/MM/YYYY')", "default_type": "EXPRESSION"},
+      {"name": "TO_DATE", "arg": "p_to_date", "label_a": "إلى تـاريخ", "label_e": "To date", "type": "date", "required": true,
+       "default": "to_char(sysdate, 'DD/MM/YYYY')", "default_type": "EXPRESSION"},
+      {"name": "FROM_TRNS_ID", "arg": "p_from_trns_id", "label_a": "مـن حركه", "label_e": "From transaction", "type": "number", "required": false,
+       "lov_sql": "select t.id || ' - ' || decode(:G_LANG, 'en', nvl(t.description_e, t.description_a), t.description_a) d, t.id r from ar_trnstype t where t.trns_type <> 6 and nvl(t.tot_trns_flag, 0) = 0 and (:G_PASSWORD_NUMBER = 0 or t.id in (select tp.trns_id from ar_trnstype_password tp where tp.flag = 1 and tp.password_number = :G_PASSWORD_NUMBER)) order by t.id"},
+      {"name": "TO_TRNS_ID", "arg": "p_to_trns_id", "label_a": "إلى حركه", "label_e": "To transaction", "type": "number", "required": false,
+       "lov_sql": "select t.id || ' - ' || decode(:G_LANG, 'en', nvl(t.description_e, t.description_a), t.description_a) d, t.id r from ar_trnstype t where t.trns_type <> 6 and nvl(t.tot_trns_flag, 0) = 0 and (:G_PASSWORD_NUMBER = 0 or t.id in (select tp.trns_id from ar_trnstype_password tp where tp.flag = 1 and tp.password_number = :G_PASSWORD_NUMBER)) order by t.id desc"},
+      {"name": "FROM_MAINAREA", "arg": "p_from_mainarea", "label_a": "مـن منطقه", "label_e": "From area", "type": "number", "required": false,
+       "lov_sql": "select a.id || ' - ' || decode(:G_LANG, 'en', nvl(a.name_e, a.name_a), a.name_a) d, a.id r from ar_mainarea a order by a.id"},
+      {"name": "TO_MAINAREA", "arg": "p_to_mainarea", "label_a": "إلى منطقه", "label_e": "To area", "type": "number", "required": false,
+       "lov_sql": "select a.id || ' - ' || decode(:G_LANG, 'en', nvl(a.name_e, a.name_a), a.name_a) d, a.id r from ar_mainarea a order by a.id desc"},
+      {"name": "FROM_SUBAREA", "arg": "p_from_subarea", "label_a": "مـن فرع", "label_e": "From branch", "type": "number", "required": false,
+       "lov_sql": "select s.id || ' - ' || decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) d, s.id r from ar_subarea s order by s.id"},
+      {"name": "TO_SUBAREA", "arg": "p_to_subarea", "label_a": "إلى فرع", "label_e": "To branch", "type": "number", "required": false,
+       "lov_sql": "select s.id || ' - ' || decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) d, s.id r from ar_subarea s order by s.id desc"},
+      {"name": "FROM_SERIAL", "arg": "p_from_serial", "label_a": "مـن مسلسل", "label_e": "From serial", "type": "number", "required": false},
+      {"name": "TO_SERIAL", "arg": "p_to_serial", "label_a": "إلى مسلسل", "label_e": "To serial", "type": "number", "required": false}
+    ],
+    "fixed_args": {"p_company_code": "to_number(:G_COMPANY_CODE)", "p_user_code": "to_number(:G_USER_CODE)",
+                   "p_password_number": "to_number(:G_PASSWORD_NUMBER)"},
+    "button_a": "ترحيل",
+    "button_e": "Post",
+    "confirm_a": "سيتم ترحيل حركات العملاء المحددة للحسابات العامة (قيد لكل حركة). هل تريد الاستمرار؟",
+    "success_a": "تمت عملية الترحيل",
+    "preview_title_a": "الحركات المفترض ترحيلها",
+    "preview_sql": "select q.trns_id, q.trns_desc, q.mainarea_id, q.subarea_id, q.trns_serial, q.trns_date, q.acc_post_date, q.doc_no, q.customer_id, q.customer_name, q.total_value, q.cust_account, case when q.closed = 1 then decode(:G_LANG, 'en', 'closed period', 'تقع فى فترة مقفلة') when nvl(q.cust_account, 0) = 0 then decode(:G_LANG, 'en', 'customer account not defined', 'حساب العميل غير معرف لنوع الحركة') when nvl(q.cash_flag, 0) <> 2 then decode(:G_LANG, 'en', 'cash / cheque: not implemented', 'نقدية/شيكات: غير منفذ') when nvl(q.disc_value, 0) <> 0 and nvl(q.disc_acc, 0) = 0 then decode(:G_LANG, 'en', 'discount without account: skipped', 'خصم بدون حساب: لن ترحل') end note from (select m.trns_id, decode(:G_LANG, 'en', nvl(t.description_e, t.description_a), t.description_a) trns_desc, m.mainarea_id, m.subarea_id, m.trns_serial, m.trns_date, m.acc_post_date, m.doc_no, m.customer_id, decode(:G_LANG, 'en', nvl(c.name_e, c.name_a), c.name_a) customer_name, m.total_value, m.disc_value, m.cash_flag, case t.disc_account_type when 1 then (select a.disc_account from ar_mainarea a where a.id = c.mainarea_id) when 2 then (select a.disc_account from ar_subarea a where a.id = c.subarea_id and a.main_id = c.mainarea_id) when 3 then c.disc_account when 4 then t.disc_account when 5 then m.disc_account end disc_acc, case t.customer_account_type when 1 then (select a.account_no from ar_mainarea a where a.id = c.mainarea_id) when 2 then (select a.account_no from ar_subarea a where a.id = c.subarea_id and a.main_id = c.mainarea_id) when 3 then c.account_no when 4 then t.customer_account when 5 then m.customer_account end cust_account, case when nvl(m.acc_post_date, m.trns_date) <= (select nvl(max(b.close_date), date '2000-01-01') from ac_basic b where b.company_code = to_number(:G_COMPANY_CODE)) then 1 else 0 end closed from ar_maintrns m join ar_trnstype t on t.id = m.trns_id left join customer c on c.code = m.customer_id where nvl(m.post_flag, 0) = 0 and nvl(m.pay_flag, 0) = 0 and t.account_joint = 1 and m.trns_serial_tot is null and (nvl(m.cash_flag, 0) = 2 or (nvl(m.cash_flag, 0) = 1 and exists (select 1 from sys_systems s where s.system_number = 15)) or (nvl(m.cash_flag, 0) in (0, 3) and exists (select 1 from sys_systems s where s.system_number = 13))) and nvl(m.acc_post_date, m.trns_date) between nvl(to_date(v('P' || :APP_PAGE_ID || '_FROM_DATE'), 'DD/MM/YYYY'), trunc(sysdate, 'YYYY')) and nvl(to_date(v('P' || :APP_PAGE_ID || '_TO_DATE'), 'DD/MM/YYYY'), trunc(sysdate)) and m.trns_id between nvl(to_number(v('P' || :APP_PAGE_ID || '_FROM_TRNS_ID')), 0) and nvl(to_number(v('P' || :APP_PAGE_ID || '_TO_TRNS_ID')), 999999999999) and m.mainarea_id between nvl(to_number(v('P' || :APP_PAGE_ID || '_FROM_MAINAREA')), 0) and nvl(to_number(v('P' || :APP_PAGE_ID || '_TO_MAINAREA')), 999999999999) and m.subarea_id between nvl(to_number(v('P' || :APP_PAGE_ID || '_FROM_SUBAREA')), 0) and nvl(to_number(v('P' || :APP_PAGE_ID || '_TO_SUBAREA')), 999999999999) and m.trns_serial between nvl(to_number(v('P' || :APP_PAGE_ID || '_FROM_SERIAL')), 0) and nvl(to_number(v('P' || :APP_PAGE_ID || '_TO_SERIAL')), 999999999999) and (:G_PASSWORD_NUMBER = 0 or m.trns_id in (select tp.trns_id from ar_trnstype_password tp where tp.flag = 1 and tp.password_number = :G_PASSWORD_NUMBER))) q order by q.trns_id, q.trns_serial",
+    "preview_columns": [
+      {"name": "TRNS_ID", "label_a": "كود الحركة", "type": "NUMBER"},
+      {"name": "TRNS_DESC", "label_a": "الحركة", "type": "STRING"},
+      {"name": "MAINAREA_ID", "label_a": "المنطقة", "type": "NUMBER"},
+      {"name": "SUBAREA_ID", "label_a": "الفرع", "type": "NUMBER"},
+      {"name": "TRNS_SERIAL", "label_a": "مسلسل الحركه", "type": "NUMBER"},
+      {"name": "TRNS_DATE", "label_a": "تاريخ الحركة", "type": "DATE"},
+      {"name": "ACC_POST_DATE", "label_a": "تاريخ الترحيل", "type": "DATE"},
+      {"name": "DOC_NO", "label_a": "رقم المستند", "type": "NUMBER"},
+      {"name": "CUSTOMER_ID", "label_a": "رقم العميل", "type": "NUMBER"},
+      {"name": "CUSTOMER_NAME", "label_a": "اسم العميل", "type": "STRING"},
+      {"name": "TOTAL_VALUE", "label_a": "القيمة", "type": "NUMBER"},
+      {"name": "CUST_ACCOUNT", "label_a": "حساب العميل", "type": "NUMBER"},
+      {"name": "NOTE", "label_a": "ملاحظة", "type": "STRING"}
+    ]
+  }
+}

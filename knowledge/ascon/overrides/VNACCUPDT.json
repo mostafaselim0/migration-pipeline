@@ -1,0 +1,41 @@
+{
+  "pattern": "PROCESS",
+  "notes": "Cancel AP posting to GL: rebuilt from the SQL of the compiled vnaccupdt.fmx (cursor on posted VN_MAINTRNS, closed-period check, reset POST_FLAG / ACC_*, delete VN_TRNS_ENTRY(_DET) and AC_YEARLY_TRN(_DET)) in app_proc_vn.cancel_gl_posting.",
+  "proc": {
+    "procedure": "app_proc_vn.cancel_gl_posting",
+    "description_a": "إلغاء ترحيل حركات الموردين للحسابات العامة: يحذف قيد الحسابات الناتج عن ترحيل حركات الموردين المحددة (السداد والتسويات والخصومات) ويلغي ربط الحركة بالقيد ويعيد علامة الترحيل لها ولكل الحركات المرحلة في نفس القيد. الحركات المرتبطة بالمخازن (فواتير ومرتجعات المشتريات) لا تظهر هنا بل يلغى ترحيلها من شاشة إلغاء ترحيل حركات المخازن. لا يمكن إلغاء ترحيل حركة في فترة مقفلة.",
+    "description_e": "Cancel the GL posting of supplier transactions: deletes the GL voucher of the selected AP transactions (payments, adjustments, discounts), unlinks it and resets the posting flag of the transaction and of every transaction posted in the same voucher. Stock-linked transactions (purchase invoices and returns) are cancelled from the stock cancel-posting screen. Closed periods are refused.",
+    "params": [
+      {"name": "FROM_DATE", "arg": "p_from_date", "label_a": "مـن تـاريــخ", "label_e": "From date", "type": "date", "required": true,
+       "default": "to_char(trunc(sysdate, 'YYYY'), 'DD/MM/YYYY')", "default_type": "EXPRESSION"},
+      {"name": "TO_DATE", "arg": "p_to_date", "label_a": "إلى تـاريــخ", "label_e": "To date", "type": "date", "required": true,
+       "default": "to_char(sysdate, 'DD/MM/YYYY')", "default_type": "EXPRESSION"},
+      {"name": "FROM_TRNS_ID", "arg": "p_from_trns_id", "label_a": "مـن رقم حركـة", "label_e": "From transaction", "type": "number", "required": false,
+       "lov_sql": "select t.id || ' - ' || decode(:G_LANG, 'en', nvl(t.description_e, t.description_a), t.description_a) d, t.id r from vn_trnstype t where t.trns_type <> 5 and t.effect in (0, 1) order by t.id"},
+      {"name": "TO_TRNS_ID", "arg": "p_to_trns_id", "label_a": "الى رقم حركــة", "label_e": "To transaction", "type": "number", "required": false,
+       "lov_sql": "select t.id || ' - ' || decode(:G_LANG, 'en', nvl(t.description_e, t.description_a), t.description_a) d, t.id r from vn_trnstype t where t.trns_type <> 5 and t.effect in (0, 1) order by t.id desc"},
+      {"name": "FROM_SERIAL", "arg": "p_from_serial", "label_a": "مـن مـسلسـل", "label_e": "From serial", "type": "number", "required": false},
+      {"name": "TO_SERIAL", "arg": "p_to_serial", "label_a": "إلى مسلســل", "label_e": "To serial", "type": "number", "required": false}
+    ],
+    "fixed_args": {"p_company_code": "to_number(:G_COMPANY_CODE)", "p_user_code": "to_number(:G_USER_CODE)",
+                   "p_password_number": "to_number(:G_PASSWORD_NUMBER)"},
+    "button_a": "إلغاء الترحيل",
+    "button_e": "Cancel posting",
+    "confirm_a": "سيتم حذف قيود الحسابات الخاصة بحركات الموردين المحددة. هل تريد الاستمرار؟",
+    "success_a": "تمت عملية إلغاء الترحيل",
+    "preview_title_a": "عدد الحركات المفترض إلغاء ترحيلها",
+    "preview_sql": "select m.trns_id, decode(:G_LANG, 'en', nvl(t.description_e, t.description_a), t.description_a) trns_desc, m.trns_serial, m.trns_date, m.doc_no, m.supplier_id, decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) supplier_name, m.total_value, case when m.acc_no is not null then m.acc_year || '/' || m.acc_type || '/' || m.acc_no end gl_entry, (select count(*) from vn_maintrns x where x.acc_year = m.acc_year and x.acc_type = m.acc_type and x.acc_no = m.acc_no and x.post_flag = 1) voucher_trns from vn_maintrns m join vn_trnstype t on t.id = m.trns_id left join supplier s on s.code = m.supplier_id where nvl(m.post_flag, 0) = 1 and nvl(m.link_flag, 0) = 0 and m.serial is null and t.trns_type <> 5 and t.effect in (0, 1) and m.trns_date between nvl(to_date(v('P' || :APP_PAGE_ID || '_FROM_DATE'), 'DD/MM/YYYY'), trunc(sysdate, 'YYYY')) and nvl(to_date(v('P' || :APP_PAGE_ID || '_TO_DATE'), 'DD/MM/YYYY'), sysdate) and m.trns_id between nvl(to_number(v('P' || :APP_PAGE_ID || '_FROM_TRNS_ID')), 0) and nvl(to_number(v('P' || :APP_PAGE_ID || '_TO_TRNS_ID')), 999999999999) order by m.trns_date, m.trns_id, m.trns_serial",
+    "preview_columns": [
+      {"name": "TRNS_ID", "label_a": "كود الحركة", "type": "NUMBER"},
+      {"name": "TRNS_DESC", "label_a": "اسم الحركة", "type": "STRING"},
+      {"name": "TRNS_SERIAL", "label_a": "مسلسل", "type": "NUMBER"},
+      {"name": "TRNS_DATE", "label_a": "التاريخ", "type": "DATE"},
+      {"name": "DOC_NO", "label_a": "رقم المستند", "type": "NUMBER"},
+      {"name": "SUPPLIER_ID", "label_a": "رقم المورد", "type": "NUMBER"},
+      {"name": "SUPPLIER_NAME", "label_a": "اسم المورد", "type": "STRING"},
+      {"name": "TOTAL_VALUE", "label_a": "القيمة", "type": "NUMBER"},
+      {"name": "GL_ENTRY", "label_a": "رقم القيد", "type": "STRING"},
+      {"name": "VOUCHER_TRNS", "label_a": "عدد حركات القيد", "type": "NUMBER"}
+    ]
+  }
+}

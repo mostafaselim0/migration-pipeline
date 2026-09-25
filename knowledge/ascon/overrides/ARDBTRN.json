@@ -1,0 +1,227 @@
+{
+  "pattern": "AUTO",
+  "notes": "Customer debit transactions (own, LINK_FLAG=0): type filter/default, legacy numbering, customer/date checks, invoice lines, account link, credit limit, posted-document rules, payment lines of a deleted invoice, GL posting buttons (APP_RULES_AR / APP_ACT_AR, see processes/ARDBTRN.md)",
+  "rules": {
+    "where": "TRNS_ID in (select ID from AR_TRNSTYPE where EFFECT = 0 and TRNS_TYPE <> 6) and nvl(LINK_FLAG, 0) = 0 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (TRNS_ID in (select TRNS_ID from AR_TRNSTYPE_PASSWORD where FLAG = 1 and PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)) and CUSTOMER_ID in (select CUSTOMER_CODE from AR_CUST_PASSWORD where PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)) and SALESMAN_ID in (select SALESMAN_CODE from AR_SALESMAN_PASSWORD where PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER))))",
+    "key_expr": {
+      "AR_MAINTRNS.MAINAREA_ID": "app_rules_ar.cust_mainarea(:new.customer_id)",
+      "AR_MAINTRNS.SUBAREA_ID": "app_rules_ar.cust_subarea(:new.customer_id)",
+      "AR_MAINTRNS.CTGRY_CODE": "case when v('REQUEST') in ('CREATE', 'SAVE') then app_rules_ar.default_ctgry(:new.trns_id, :new.customer_id) end",
+      "AR_MAINTRNS.SALESMAN_ID": "case when v('REQUEST') in ('CREATE', 'SAVE') then app_rules_ar.default_salesman(:new.trns_id, :new.customer_id, :new.ctgry_code) end",
+      "AR_MAINTRNS.TRNS_SERIAL": "app_rules_ar.next_trns_serial(:new.trns_id, :new.mainarea_id, :new.subarea_id, :new.customer_id)",
+      "AR_MAINTRNS_ACCOUNT_DET.SEQ": "app_rules_ar.next_acc_det_seq"
+    },
+    "validations": [
+      {
+        "name": "رأس الحركة: النوع والعميل والتاريخ والمندوب ومعامل التحويل",
+        "plsql": "return app_rules_ar.check_header('ARDBTRN', :PAGE_ROWID, to_number(:PAGE_TRNS_ID), to_number(:PAGE_CUSTOMER_ID), to_date(:PAGE_TRNS_DATE, 'DD/MM/YYYY'), to_number(:PAGE_CTGRY_CODE), to_number(:PAGE_SALESMAN_ID), to_number(:PAGE_CURRENCY_CODE), to_number(:PAGE_CURRENCY_RATE));",
+        "when": "CREATE,SAVE"
+      },
+      {
+        "name": "تاريخ الحركة (الحد الأدنى وتاريخ اليوم)",
+        "plsql": "return app_rules_ar.check_dates('ARDBTRN', to_date(:PAGE_TRNS_DATE, 'DD/MM/YYYY'));",
+        "when": "CREATE,SAVE"
+      },
+      {
+        "name": "الحركة المرحلة أو المسددة: البيانات المقفلة",
+        "plsql": "return app_rules_ar.check_posted_debit(:PAGE_ROWID, to_number(:PAGE_CUSTOMER_ID), to_number(:PAGE_CTGRY_CODE), :PAGE_DESCRIPTION_A, :PAGE_DESCRIPTION_E, :PAGE_BAND_NO, to_date(:PAGE_TRNS_DATE, 'DD/MM/YYYY'), to_number(:PAGE_COST_CODE1), to_number(:PAGE_COST_CODE2), to_number(:PAGE_CURRENCY_RATE));",
+        "when": "SAVE"
+      },
+      {
+        "name": "حفظ الفواتير والربط بالحسابات قبل التعديل (الحركة المرحلة أو المسددة)",
+        "plsql": "return app_rules_ar.snapshot_debit(:PAGE_ROWID);",
+        "when": "SAVE"
+      }
+    ],
+    "after_save": [
+      {
+        "name": "الفواتير والربط بالحسابات والإجماليات وحد الإئتمان",
+        "plsql": "begin\n  app_rules_ar.after_save_debit('ARDBTRN', :PAGE_ROWID, :REQUEST);\nend;",
+        "when": "CREATE,SAVE"
+      }
+    ],
+    "info": [
+      {
+        "name": "CRN_BAL_TOTAL",
+        "label_a": "الرصيد",
+        "label_e": "Customer balance",
+        "sql": "select app_rules_ar.cust_balance(to_number(:PAGE_CUSTOMER_ID)) from dual"
+      },
+      {
+        "name": "TOT_SUBTAX",
+        "label_a": "اجمالي الضريبة",
+        "label_e": "Total tax",
+        "sql": "select app_rules_ar.alloc_info(:PAGE_ROWID, 'SUBTAX') from dual"
+      },
+      {
+        "name": "TRNS_SUM_VALUE",
+        "label_a": "اجمالي القيمة (الربط بالحسابات)",
+        "label_e": "Account lines total",
+        "sql": "select app_rules_ar.alloc_info(:PAGE_ROWID, 'ACCOUNTS') from dual"
+      },
+      {
+        "name": "TOTAL_LOCAL",
+        "label_a": "اجمالى ريال",
+        "label_e": "Total in local currency",
+        "sql": "select app_rules_ar.alloc_info(:PAGE_ROWID, 'LOCAL') from dual"
+      }
+    ],
+    "defaults": {
+      "AR_MAINTRNS.TRNS_ID": {
+        "type": "SQL_QUERY",
+        "value": "select app_rules_ar.default_type('ARDBTRN') from dual"
+      }
+    },
+    "readonly": [
+      "AR_MAINTRNS.TRNS_SERIAL",
+      "AR_MAINTRNS.DOC_NO",
+      "AR_MAINTRNS.MAINAREA_ID",
+      "AR_MAINTRNS.SUBAREA_ID",
+      "AR_MAINTRNS.TOTAL_VALUE",
+      "AR_MAINTRNS.CURRENCY_CODE",
+      "AR_MAINTRNS.POST_FLAG",
+      "AR_MAINTRNS.PAY_FLAG",
+      "AR_MAINTRNS.ACC_YEAR",
+      "AR_MAINTRNS.ACC_TYPE",
+      "AR_MAINTRNS.ACC_NO",
+      "AR_MAINTRNS.ACC_DATE",
+      "AR_MAINTRNS.RP_TRNS_TYPE_CODE",
+      "AR_MAINTRNS.RP_TRNS_SERIAL",
+      "AR_MAINTRNS.CHECK_TRNS_TYPE_CODE",
+      "AR_MAINTRNS.CHECK_TRNS_SERIAL",
+      "AR_SUBTRNS.TOTAL_VALUE",
+      "AR_SUBTRNS.RESIDUAL_VALUE",
+      "AR_SUBTRNS.TAX_VALUE1",
+      "AR_SUBTRNS.TAX_VALUE2"
+    ],
+    "optional": [
+      "AR_MAINTRNS.MAINAREA_ID",
+      "AR_MAINTRNS.SUBAREA_ID"
+    ],
+    "columns": {
+      "AR_MAINTRNS.TRNS_ID": {
+        "lov": "select id || ' - ' || case when app_sec.lang = 'en' then nvl(description_e, description_a) else description_a end d, id r from ar_trnstype where effect = 0 and trns_type in (3, 4) and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or id in (select trns_id from ar_trnstype_password where flag = 1 and password_number = to_number(:G_PASSWORD_NUMBER))) order by id",
+        "widget": "SELECT",
+        "readonly_after_insert": true
+      },
+      "AR_MAINTRNS.CTGRY_CODE": {
+        "lov": "select category_type_code || ' - ' || case when app_sec.lang = 'en' then nvl(category_type_desce, category_type_desca) else category_type_desca end d, category_type_code r from st_category_type order by category_type_code",
+        "widget": "SELECT",
+        "readonly_after_insert": true
+      },
+      "AR_MAINTRNS.SALESMAN_ID": {
+        "lov": "select code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, code r from salesman order by code",
+        "widget": "POPUP",
+        "readonly": true
+      },
+      "AR_MAINTRNS.COST_CODE1": {
+        "lov": "select cost_code || ' - ' || case when app_sec.lang = 'en' then nvl(cost_desc_e, cost_desc) else cost_desc end d, cost_code r from ac_cost_centers where cost_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or cost_code in (select p2.cost_code from ac_password_cost1 p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE))) order by cost_code",
+        "widget": "POPUP"
+      },
+      "AR_MAINTRNS.CUSTOMER_ACCOUNT": {
+        "lov": "select account_number || ' - ' || case when app_sec.lang = 'en' then nvl(account_name_e, account_name) else account_name end d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or account_number in (select p2.account_number from ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE))) order by account_number",
+        "widget": "POPUP"
+      },
+      "AR_MAINTRNS.CASH_FLAG": {
+        "static": [
+          [
+            "شيكات",
+            "0"
+          ],
+          [
+            "نقدية",
+            "1"
+          ],
+          [
+            "حسابات",
+            "2"
+          ]
+        ],
+        "hidden": false,
+        "readonly": true,
+        "default": {
+          "type": "STATIC",
+          "value": "2"
+        },
+        "label_a": "نوع السداد",
+        "label_e": "Payment kind"
+      },
+      "AR_SUBTRNS.INV_VALUE": {
+        "label_a": "القيمة بالعملة",
+        "label_e": "Value (currency)"
+      },
+      "AR_SUBTRNS.BILL_ID1": {
+        "required": true
+      },
+      "AR_MAINTRNS_ACCOUNT_DET.TRNS_ACCOUNT": {
+        "lov": "select account_number || ' - ' || case when app_sec.lang = 'en' then nvl(account_name_e, account_name) else account_name end d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or account_number in (select p2.account_number from ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE))) order by account_number",
+        "widget": "POPUP"
+      },
+      "AR_MAINTRNS_ACCOUNT_DET.COST_CODE1": {
+        "lov": "select cost_code || ' - ' || case when app_sec.lang = 'en' then nvl(cost_desc_e, cost_desc) else cost_desc end d, cost_code r from ac_cost_centers where cost_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or cost_code in (select p2.cost_code from ac_password_cost1 p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE))) order by cost_code",
+        "widget": "POPUP"
+      }
+    },
+    "computed": {
+      "AR_MAINTRNS.MAINAREA_NAME": {
+        "sql": "(select max(a.name_a) from ar_mainarea a where a.id = t.mainarea_id)",
+        "label_a": "اسم المنطقة",
+        "label_e": "Area name"
+      },
+      "AR_MAINTRNS.SUBAREA_NAME": {
+        "sql": "(select max(s.name_a) from ar_subarea s where s.main_id = t.mainarea_id and s.id = t.subarea_id)",
+        "label_a": "اسم الفرع",
+        "label_e": "Branch name"
+      },
+      "AR_SUBTRNS.TOTAL_VALUE_RIYALH": {
+        "sql": "nvl((select max(m.currency_rate) from ar_maintrns m where m.trns_id = t.trns_id and m.mainarea_id = t.mainarea_id and m.subarea_id = t.subarea_id and m.trns_serial = t.trns_serial), 0) * nvl(t.total_value, 0)",
+        "label_a": "القيمة بالريال",
+        "label_e": "Value (local)",
+        "type": "NUMBER"
+      },
+      "AR_SUBTRNS.RESIDUAL_VALUE_RIYALH": {
+        "sql": "nvl((select max(m.currency_rate) from ar_maintrns m where m.trns_id = t.trns_id and m.mainarea_id = t.mainarea_id and m.subarea_id = t.subarea_id and m.trns_serial = t.trns_serial), 0) * nvl(t.residual_value, 0)",
+        "label_a": "القيمة المتبقية بالريال",
+        "label_e": "Residual (local)",
+        "type": "NUMBER"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "POST",
+      "label_a": "ترحيل",
+      "label_e": "Post",
+      "confirm_a": "هل تريد ترحيل الحركة الحالية للحسابات العامة؟",
+      "confirm_e": "Post this transaction to the GL?",
+      "condition": "app_act_ar.can_post(:PAGE_ROWID) = 'Y'",
+      "call": "app_act_ar.post_trns(:PAGE_ROWID)",
+      "message": "app_act_ar.last_message",
+      "success_a": "تم الترحيل",
+      "success_e": "Posted"
+    },
+    {
+      "name": "CANCEL_POST",
+      "label_a": "إلغاء الترحيل",
+      "label_e": "Cancel posting",
+      "confirm_a": "هل تريد إلغاء ترحيل الحركة الحالية؟",
+      "confirm_e": "Cancel the GL posting of this transaction?",
+      "condition": "app_act_ar.can_cancel_post(:PAGE_ROWID) = 'Y'",
+      "params": [
+        {
+          "name": "ALLOW_GROUPED",
+          "label_a": "إلغاء القيد إن كان مشتركاً مع حركات أخرى",
+          "label_e": "Also when the voucher is shared",
+          "type": "number",
+          "default": "0",
+          "default_type": "STATIC",
+          "lov_sql": "select case when app_sec.lang = 'en' then 'No' else 'لا' end d, 0 r from dual union all select case when app_sec.lang = 'en' then 'Yes' else 'نعم' end d, 1 r from dual"
+        }
+      ],
+      "call": "app_act_ar.cancel_post_trns(:PAGE_ROWID, :ALLOW_GROUPED)",
+      "message": "app_act_ar.last_message",
+      "success_a": "تم إلغاء الترحيل",
+      "success_e": "Posting cancelled"
+    }
+  ]
+}

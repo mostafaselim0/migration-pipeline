@@ -1,0 +1,16 @@
+{
+ "pattern": "GRID",
+ "notes": "Payment terms (ST_PAYMENT_TERMS): same table as generated, legacy column order; serial > 0 (next number by the generated key), days > 0, no duplicate; delete refused by the ST_SALES_ORDER foreign key (APP_RULES3_SA)",
+ "master": {
+  "table": "ST_PAYMENT_TERMS",
+  "columns": ["SERIAL", "TYPE_NAME", "TYPE_NAME_E", "NO_OF_DAYS"]
+ },
+ "insert": true,
+ "update": true,
+ "delete": true,
+ "rules": {
+  "row_rules": {
+   "ST_PAYMENT_TERMS": "-- legacy WHEN-VALIDATE-ITEM / PRE-INSERT: serial > 0, number of days > 0, no duplicate\napp_rules3_sa.pay_term_row(inserting, :new.serial, :new.no_of_days);"
+  }
+ }
+}

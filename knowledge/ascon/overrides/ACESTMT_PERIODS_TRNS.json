@@ -1,0 +1,80 @@
+{
+  "pattern": "AUTO",
+  "notes": "Budget preparation: budget header, account lines (AC_ESTIMATE_MAST) and period values (AC_ESTIMATE_DET, linked to the account line by MAST_SERIAL: the generator cannot nest a third level). Account / cost centre / period checks, no duplicates, copy budget and budget from actual buttons (APP_RULES3_GL, see processes/ACESTMT_PERIODS_TRNS.md)",
+  "rules": {
+    "validations": [
+      {
+        "name": "كود الميزانية",
+        "plsql": "return app_rules3_gl.check_budget(:PAGE_EST_CODE);",
+        "when": "CREATE,SAVE"
+      }
+    ],
+    "row_rules": {
+      "AC_ESTIMATE_MAST": "app_rules3_gl.budget_mast_row(:new.account_number, :new.cost_code, :new.cost_code2);",
+      "AC_ESTIMATE_DET": "app_rules3_gl.budget_det_row(:new.period_code);"
+    },
+    "after_save": [
+      {
+        "name": "تكرار الحسابات والفترات",
+        "plsql": "app_rules3_gl.budget_after_save(:PAGE_EST_CODE);",
+        "when": "CREATE,SAVE"
+      }
+    ],
+    "add_columns": {
+      "AC_ESTIMATE_MAST.SERIAL": {
+        "label_a": "مسلسل الحساب",
+        "label_e": "Account line"
+      }
+    },
+    "readonly": [
+      "AC_ESTIMATE_MAST.SERIAL"
+    ],
+    "columns": {
+      "AC_ESTIMATE_DET.MAST_SERIAL": {
+        "lov": "select m.serial || ' - ' || m.account_number || ' ' || (select max(a.account_name) from ac_master a where a.account_number = m.account_number) d, m.serial r from ac_estimate_mast m where m.est_code = :PAGE_EST_CODE order by m.serial",
+        "widget": "SELECT",
+        "cascade": "EST_CODE"
+      }
+    },
+    "computed": {
+      "AC_ESTIMATE_DET.FROM_DATE": {
+        "sql": "(select max(p.from_date) from ac_estimate_periods p where p.period_code = t.period_code)",
+        "label_a": "من تاريخ",
+        "label_e": "Frm. Dt.",
+        "type": "DATE"
+      },
+      "AC_ESTIMATE_DET.TILL_DATE": {
+        "sql": "(select max(p.till_date) from ac_estimate_periods p where p.period_code = t.period_code)",
+        "label_a": "الى تاريخ",
+        "label_e": "To Dt.",
+        "type": "DATE"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "COPY",
+      "label_a": "نسخ الموازنة",
+      "label_e": "Copy Budget",
+      "confirm_a": "هل تريد نسخ الموازنة؟",
+      "confirm_e": "Copy this budget?",
+      "call": "app_rules3_gl.copy_budget(:PAGE_ROWID, 0)",
+      "message": "app_rules3_gl.last_message",
+      "target_form": "ACESTMT_PERIODS_TRNS",
+      "success_a": "تم نسخ الميزانية",
+      "success_e": "Budget copied"
+    },
+    {
+      "name": "ACTUAL",
+      "label_a": "عمل موازنة جديده مقارنة مع الفعلي",
+      "label_e": "Create new Budget compared with Actual",
+      "confirm_a": "هل تريد عمل موازنة جديدة مقارنة مع الفعلي؟",
+      "confirm_e": "Create a new budget compared with the actual figures?",
+      "call": "app_rules3_gl.copy_budget(:PAGE_ROWID, 1)",
+      "message": "app_rules3_gl.last_message",
+      "target_form": "ACESTMT_PERIODS_TRNS",
+      "success_a": "تم عمل الميزانية",
+      "success_e": "Budget created"
+    }
+  ]
+}

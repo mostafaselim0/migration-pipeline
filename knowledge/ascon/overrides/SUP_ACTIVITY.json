@@ -1,0 +1,9 @@
+{
+  "pattern": "AUTO",
+  "notes": "Supplier activities: code table (ACT_CODE max+1 as the legacy WHEN-CREATE-RECORD), code > 0 with the legacy message (APP_RULES3_VN).",
+  "rules": {
+    "row_rules": {
+      "SUP_ACTIVITY": "app_rules3_vn.positive_code(:new.act_code, 'رقم النشاط يجب ان يكون اكبر من الصفر', 'the activity number should be over than zero');"
+    }
+  }
+}

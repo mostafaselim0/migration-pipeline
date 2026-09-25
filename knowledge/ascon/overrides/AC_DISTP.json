@@ -1,0 +1,148 @@
+{
+  "pattern": "AUTO",
+  "notes": "Cost centre distribution: source cost centres get their balance, target lines split it by percentage / amount, totals must match, equal-ratio / post (GL entry in the distribution journal of AC_BASIC) / cancel-posting buttons, posted distributions locked (APP_RULES3_GL, see processes/AC_DISTP.md)",
+  "rules": {
+    "key_expr": {
+      "AC_DISTP_DET.DET_SERIAL": "app_rules3_gl.next_distp_det_serial(:new.dis_serial)"
+    },
+    "row_rules": {
+      "AC_DISTP": "if :new.account_type = 1 then\n  :new.acc_number := null;\nend if;",
+      "AC_DISTP_FROM": "if inserting or nvl(:old.cost_code, -1) != nvl(:new.cost_code, -1) then\n  app_rules3_gl.distp_from_row(:new.dis_serial, :new.cost_code, :new.acc_value);\nend if;",
+      "AC_DISTP_DET": "app_rules3_gl.distp_det_row(inserting, :new.dis_serial, :old.det_prcnt, :old.det_val, :new.det_prcnt, :new.det_val);"
+    },
+    "after_save": [
+      {
+        "name": "مجموع النسب ومجموع مبالغ التوزيع",
+        "plsql": "app_rules3_gl.distp_after_save(:PAGE_ROWID);",
+        "when": "CREATE,SAVE"
+      }
+    ],
+    "defaults": {
+      "AC_DISTP.ACCOUNT_TYPE": {
+        "type": "STATIC",
+        "value": "0"
+      }
+    },
+    "add_columns": {
+      "AC_DISTP.ACCOUNT_TYPE": {
+        "label_a": "نوع الحساب (0 اختيار حساب / 1 مصروف)",
+        "label_e": "Account type (0 choose account / 1 expense)"
+      }
+    },
+    "optional": [
+      "AC_DISTP_DET.DET_SERIAL"
+    ],
+    "readonly": [
+      "AC_DISTP.DIS_SERIAL",
+      "AC_DISTP.POST_FLAG",
+      "AC_DISTP.ENTRY_YEAR",
+      "AC_DISTP.ENTRY_TYPE",
+      "AC_DISTP.ENTRY_NO",
+      "AC_DISTP_DET.DET_SERIAL",
+      "AC_DISTP_FROM.DET_SERIAL",
+      "AC_DISTP_FROM.ACC_VALUE"
+    ],
+    "info": [
+      {
+        "name": "FROM",
+        "label_a": "إجمالي أرصدة المراكز المصدر",
+        "label_e": "Source balances total",
+        "sql": "select to_char(app_rules3_gl.distp_totals(to_number(:PAGE_DIS_SERIAL), 'FROM'), 'FM999G999G999G990D00') from dual"
+      },
+      {
+        "name": "DET",
+        "label_a": "إجمالي مبالغ التوزيع",
+        "label_e": "Distributed total",
+        "sql": "select to_char(app_rules3_gl.distp_totals(to_number(:PAGE_DIS_SERIAL), 'DET'), 'FM999G999G999G990D00') from dual"
+      },
+      {
+        "name": "PRCNT",
+        "label_a": "إجمالي النسب",
+        "label_e": "Ratios total",
+        "sql": "select to_char(app_rules3_gl.distp_totals(to_number(:PAGE_DIS_SERIAL), 'PRCNT'), 'FM990D00') from dual"
+      },
+      {
+        "name": "SIDE",
+        "label_a": "طبيعة الرصيد",
+        "label_e": "Balance side",
+        "sql": "select app_rules3_gl.side_text(app_rules3_gl.distp_totals(to_number(:PAGE_DIS_SERIAL), 'FROM')) from dual"
+      }
+    ],
+    "columns": {
+      "AC_DISTP.ACCOUNT_TYPE": {
+        "static": [
+          [
+            "اختيار حساب",
+            "0",
+            "Account"
+          ],
+          [
+            "مصروف",
+            "1",
+            "Expense"
+          ]
+        ],
+        "readonly_after_insert": true,
+        "label_a": "نوع الحساب",
+        "label_e": "Account type"
+      },
+      "AC_DISTP.DIS_DATE": {
+        "readonly_after_insert": true
+      },
+      "AC_DISTP.ACC_NUMBER": {
+        "readonly_after_insert": true
+      },
+      "AC_DISTP.DESC_A": {
+        "readonly_after_insert": true
+      },
+      "AC_DISTP.DESC_E": {
+        "readonly_after_insert": true
+      }
+    },
+    "computed": {
+      "AC_DISTP.ACC_CURRENCY": {
+        "sql": "(select max(m.currency_code || ' - ' || c.currency_desc) from ac_master m, ac_currency c where m.account_number = t.acc_number and c.currency_code = m.currency_code)",
+        "label_a": "عملة الحساب",
+        "label_e": "Acc. Crncy"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "EQUAL",
+      "label_a": "نسب ثابتة",
+      "label_e": "Fixed Ratio",
+      "confirm_a": "هل تريد توزيع النسب بالتساوي على مراكز التكلفة؟",
+      "confirm_e": "Distribute equal ratios over the cost centres?",
+      "condition": "nvl(to_number(:PAGE_POST_FLAG), 0) = 0",
+      "call": "app_rules3_gl.distp_equal(:PAGE_ROWID)",
+      "message": "app_rules3_gl.last_message",
+      "success_a": "تم توزيع النسب",
+      "success_e": "Ratios distributed"
+    },
+    {
+      "name": "POST",
+      "label_a": "ترحيل السجل",
+      "label_e": "Post Record",
+      "confirm_a": "هل تريد ترحيل حركة التوزيع؟",
+      "confirm_e": "Post the distribution?",
+      "condition": "nvl(to_number(:PAGE_POST_FLAG), 0) = 0",
+      "call": "app_rules3_gl.distp_post(:PAGE_ROWID)",
+      "message": "app_rules3_gl.last_message",
+      "success_a": "تم ترحيل حركة التوزيع بنجاح",
+      "success_e": "The Trns Is Posted"
+    },
+    {
+      "name": "UNPOST",
+      "label_a": "إلغاء الترحيل",
+      "label_e": "Cancel Posting",
+      "confirm_a": "هل تريد إلغاء ترحيل حركة التوزيع؟",
+      "confirm_e": "Cancel the posting of the distribution?",
+      "condition": "nvl(to_number(:PAGE_POST_FLAG), 0) = 1",
+      "call": "app_rules3_gl.distp_unpost(:PAGE_ROWID)",
+      "message": "app_rules3_gl.last_message",
+      "success_a": "تم إلغاء ترحيل حركة التوزيع بنجاح",
+      "success_e": "The Trns Is Canceled Posted"
+    }
+  ]
+}

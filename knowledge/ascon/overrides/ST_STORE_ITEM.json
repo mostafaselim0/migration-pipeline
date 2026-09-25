@@ -1,0 +1,170 @@
+{
+ "pattern": "PROCESS",
+ "notes": "store balances display (ST_STORE_ITEM.fmx, a query screen): a transaction store, optional group / item; the items of the store (ST_STORE_ITEM) with basic unit, current balance, total and average cost (USERS.ALLOW_VIEW_COST), limits, reserved quantity and received / issued / returned quantities; with an item chosen also its lots (lot number, expiry, supplier, lot price, lot balance and cost); the store limits of the chosen item (REORDER / MIN / MAX_LIMIT of ST_STORE_ITEM) are changed when typed (legacy block was updatable: 'الحد الاقصى يجب ان يكون اكبر من الحد الادنى')",
+ "proc": {
+  "procedure": "app_rules3_st.show_store_items",
+  "run_right": "query",
+  "description_a": "عرض أرصدة المخازن: اختر المخزن (ويمكن تحديد المجموعة أو الصنف) ثم اضغط عرض. يظهر الجدول أصناف المخزن مع الوحدة الأساسية والرصيد الجاري والتكلفة الكلية والمتوسطة (لمن له صلاحية رؤية التكلفة) وحدود الطلب والكمية المحجوزة والوارد والمنصرف والمردود. عند تحديد صنف تظهر أيضاً شحنات الصنف ورصيد وتكلفة كل شحنة. لتعديل حدود الطلب للصنف في هذا المخزن: اختر الصنف وأدخل حد الطلب و/أو الحد الأدنى و/أو الحد الأقصى ثم اضغط عرض.",
+  "description_e": "Store balances: choose the store (optionally a group or an item) and press Show. The table lists the items of the store with basic unit, current balance, total and average cost (users allowed to see costs), limits, reserved quantity and received / issued / returned quantities. With an item chosen its lots are listed too. To change the store limits of an item: choose the item, type the reorder point and / or min / max limit and press Show.",
+  "params": [
+   {
+    "name": "STORE_CODE",
+    "arg": "p_store",
+    "label_a": "رقم المخزن",
+    "label_e": "Store",
+    "type": "number",
+    "required": true,
+    "lov_sql": "select s.store_code || ' - ' || decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) d, s.store_code r from st_store s where s.store_status = 1 and nvl(s.stop_flag, 0) = 0 and app_rules3_st.store_allowed(s.store_code) = 1 order by s.store_code"
+   },
+   {
+    "name": "GROUP_CODE",
+    "arg": "p_group",
+    "label_a": "رقم المجموعة",
+    "label_e": "Group",
+    "type": "number",
+    "required": false,
+    "lov_sql": "select g.item_group_code || ' - ' || decode(:G_LANG, 'en', nvl(g.name_e, g.name_a), g.name_a) d, g.item_group_code r from st_item_group g where nvl(g.stop_flag, 0) = 0 and g.group_status = 1 and app_rules3_st.group_allowed(g.item_group_code) = 1 order by g.item_group_code"
+   },
+   {
+    "name": "ITEM_CODE",
+    "arg": "p_item",
+    "label_a": "رقم الصنف",
+    "label_e": "Item",
+    "type": "text",
+    "required": false,
+    "lov_sql": "select i.item_code || ' - ' || decode(:G_LANG, 'en', nvl(i.name_e, i.name_a), i.name_a) d, i.item_code r from st_item i where nvl(i.stop_flag, 0) = 0 and app_rules3_st.group_allowed(i.item_group_code) = 1 order by i.item_group_code, i.item_code"
+   },
+   {
+    "name": "REORDER_LIMIT",
+    "arg": "p_reorder",
+    "label_a": "حد الطلب",
+    "label_e": "Reorder point",
+    "type": "number",
+    "required": false
+   },
+   {
+    "name": "MIN_LIMIT",
+    "arg": "p_min",
+    "label_a": "الحد الادنى",
+    "label_e": "Min limit",
+    "type": "number",
+    "required": false
+   },
+   {
+    "name": "MAX_LIMIT",
+    "arg": "p_max",
+    "label_a": "الحد الاقصى",
+    "label_e": "Max limit",
+    "type": "number",
+    "required": false
+   }
+  ],
+  "button_a": "عرض",
+  "button_e": "Show",
+  "success_a": "تم عرض الأرصدة",
+  "preview_title_a": "أرصدة المخزن",
+  "preview_sql": "select s.row_kind, s.group_code, s.item_code, s.item_name, s.unit_name, s.item_confg_id, s.lot_number, s.expire_date, s.supplier, s.balance, s.total_cost, round(s.avg_cost, 4) avg_cost, s.sales_price, s.reorder_limit, s.min_limit, s.max_limit, s.reserved_qty, s.received, s.issued, s.returned from table(app_rules3_st.store_items(to_number(v('P' || :APP_PAGE_ID || '_STORE_CODE')), to_number(v('P' || :APP_PAGE_ID || '_GROUP_CODE')), v('P' || :APP_PAGE_ID || '_ITEM_CODE'))) s",
+  "preview_columns": [
+   {
+    "name": "ROW_KIND",
+    "label_a": "النوع",
+    "type": "STRING"
+   },
+   {
+    "name": "GROUP_CODE",
+    "label_a": "المجموعة",
+    "type": "NUMBER"
+   },
+   {
+    "name": "ITEM_CODE",
+    "label_a": "الصنف",
+    "type": "STRING"
+   },
+   {
+    "name": "ITEM_NAME",
+    "label_a": "اسم الصنف",
+    "type": "STRING"
+   },
+   {
+    "name": "UNIT_NAME",
+    "label_a": "الوحدة",
+    "type": "STRING"
+   },
+   {
+    "name": "ITEM_CONFG_ID",
+    "label_a": "رقم شحنة الصنف",
+    "type": "NUMBER"
+   },
+   {
+    "name": "LOT_NUMBER",
+    "label_a": "رقم التشغيلة",
+    "type": "STRING"
+   },
+   {
+    "name": "EXPIRE_DATE",
+    "label_a": "تاريخ الصلاحية",
+    "type": "DATE"
+   },
+   {
+    "name": "SUPPLIER",
+    "label_a": "اسم المورد",
+    "type": "STRING"
+   },
+   {
+    "name": "BALANCE",
+    "label_a": "رصيد جارى",
+    "type": "NUMBER"
+   },
+   {
+    "name": "TOTAL_COST",
+    "label_a": "تكلفة كلية",
+    "type": "NUMBER"
+   },
+   {
+    "name": "AVG_COST",
+    "label_a": "تكلفة متوسطة",
+    "type": "NUMBER"
+   },
+   {
+    "name": "SALES_PRICE",
+    "label_a": "سعر البيع",
+    "type": "NUMBER"
+   },
+   {
+    "name": "REORDER_LIMIT",
+    "label_a": "حد الطلب",
+    "type": "NUMBER"
+   },
+   {
+    "name": "MIN_LIMIT",
+    "label_a": "الحد الادنى",
+    "type": "NUMBER"
+   },
+   {
+    "name": "MAX_LIMIT",
+    "label_a": "الحد الاقصى",
+    "type": "NUMBER"
+   },
+   {
+    "name": "RESERVED_QTY",
+    "label_a": "الكمية المحجوزة",
+    "type": "NUMBER"
+   },
+   {
+    "name": "RECEIVED",
+    "label_a": "وارد",
+    "type": "NUMBER"
+   },
+   {
+    "name": "ISSUED",
+    "label_a": "منصرف",
+    "type": "NUMBER"
+   },
+   {
+    "name": "RETURNED",
+    "label_a": "مردود",
+    "type": "NUMBER"
+   }
+  ]
+ }
+}

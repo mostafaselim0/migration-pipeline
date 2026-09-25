@@ -1,0 +1,105 @@
+{
+ "pattern": "AUTO",
+ "notes": "Supplier quotations (PR_QUOT_MAST / PR_QUOT_DET under PR_REQ_MAST; unused): price-line checks, reply / accept flags, one accepted supplier, header discount and arrival dates, REQ_STATUS 1-3 (APP_RULES_SA); lowest-price, create / delete PO buttons not reproduced Wave 3b: supplier lists; each price line shows its item and requested quantity (read through REQ_DET_SERIAL).",
+ "rules": {
+  "where": "TRNS_TYPE_CODE IN (SELECT T.QUOT_TRNS_TYPE FROM ST_TRNS_TYPE T WHERE T.EFFECT = 7 AND T.TRNS_TYPE = 13 AND T.QUOT_TRNS_TYPE IS NOT NULL) AND (NVL(:G_PASSWORD_NUMBER,0) = 0 OR TRNS_TYPE_CODE IN (SELECT TP.TRNS_TYPE_CODE FROM ST_TRNSTYPE_PASSWORD TP WHERE NVL(TP.FLAG,0) = 1 AND TP.PASSWORD_NUMBER = :G_PASSWORD_NUMBER)) AND (TRNS_TYPE_CODE, TRNS_SERIAL) IN (SELECT Q.TRNS_TYPE_CODE, Q.TRNS_SERIAL FROM PR_QUOT_MAST Q)",
+  "readonly": [
+   "PR_REQ_MAST.PR_TRNS_TYPE_CODE",
+   "PR_REQ_MAST.PR_TRNS_SERIAL",
+   "PR_REQ_MAST.STORE_CODE",
+   "PR_REQ_MAST.REQ_DATE"
+  ],
+  "row_rules": {
+   "PR_QUOT_MAST": "app_rules_sa.quot_mast_row(inserting, :new.trns_type_code, :new.trns_serial, :new.supplier_id, :new.quot_serial, :new.currency_code, :new.currency_rate, :new.disc_val, :new.date_send, :new.accept_flag, :old.accept_flag, :new.quot_flag, :old.quot_flag, :old.disc_val);",
+   "PR_QUOT_DET": "app_rules_sa.quot_det_row(inserting, :new.trns_type_code, :new.trns_serial, :new.supplier_id, :new.req_det_serial, :new.unit_price, :old.unit_price, :new.det_disc, :new.exp_arrv_date, :new.color_code, :new.size_code);"
+  },
+  "validations": [
+   {
+    "name": "لقطة الموردين",
+    "when": "CREATE,SAVE",
+    "plsql": "return app_rules_sa.rfq_validate(:REQUEST, :PAGE_ROWID);"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "حالة عروض الأسعار",
+    "when": "CREATE,SAVE",
+    "plsql": "app_rules_sa.quot_after_save(:REQUEST, :PAGE_ROWID);"
+   }
+  ],
+  "columns": {
+   "PR_QUOT_MAST.SUPPLIER_ID": {
+    "widget": "POPUP",
+    "lov": "select code || ' - ' || name_a d, code r from supplier where nvl(stopflag, 0) = 0 order by code"
+   },
+   "PR_QUOT_DET.SUPPLIER_ID": {
+    "widget": "POPUP",
+    "lov": "select code || ' - ' || name_a d, code r from supplier where nvl(stopflag, 0) = 0 order by code"
+   }
+  },
+  "computed": {
+   "PR_QUOT_DET.ITEM_NAME_A": {
+    "sql": "(select max(r.item_code || ' - ' || (select nvl(i.name_a, i.name_e) from st_item i where i.item_code = r.item_code and i.item_group_code = r.item_group_code)) from pr_req_det r where r.trns_type_code = t.trns_type_code and r.trns_serial = t.trns_serial and r.req_det_serial = t.req_det_serial)",
+    "label_a": "الصنف",
+    "label_e": "Item"
+   },
+   "PR_QUOT_DET.RFQ_QUANTITY": {
+    "sql": "(select max(r.quantity) from pr_req_det r where r.trns_type_code = t.trns_type_code and r.trns_serial = t.trns_serial and r.req_det_serial = t.req_det_serial)",
+    "label_a": "الكمية المطلوبة",
+    "label_e": "Requested quantity",
+    "type": "NUMBER"
+   }
+  }
+ },
+ "actions": [
+  {
+   "name": "LOWEST",
+   "label_a": "اختيار آلي لأقل سعر",
+   "label_e": "Auto. Select Lowest Prc",
+   "confirm_a": "هل تريد اختيار أقل عرض سعر آلياً؟",
+   "confirm_e": "Select the lowest quotation?",
+   "condition": "app_act_pr.quot_can(:PAGE_ROWID, 'LOWEST') = 'Y'",
+   "call": "app_act_pr.quot_lowest_price(:PAGE_ROWID)",
+   "message": "app_act_pr.last_message",
+   "success_a": "تم اختيار أقل عرض سعر",
+   "success_e": "The lowest quotation was selected",
+   "icon": "fa-sort-amount-asc"
+  },
+  {
+   "name": "MAKE_PO",
+   "label_a": "تكوين أمر الشراء",
+   "label_e": "Create Purchase Order",
+   "confirm_a": "هل تريد تكوين أمر الشراء من العرض المقبول؟",
+   "confirm_e": "Create the purchase order from the accepted quotation?",
+   "condition": "app_act_pr.quot_can(:PAGE_ROWID, 'MAKE_PO') = 'Y'",
+   "call": "app_act_pr.quot_make_po(:PAGE_ROWID)",
+   "message": "app_act_pr.last_message",
+   "success_a": "تم تحويل عرض الاسعار إلى أمر شراء",
+   "success_e": "Price List has been transfered to a parchase order",
+   "icon": "fa-share"
+  },
+  {
+   "name": "DELETE_PO",
+   "label_a": "حذف أمر الشراء",
+   "label_e": "Delete Purchase Order",
+   "confirm_a": "هل تريد حذف أمر الشراء الحالى .......؟",
+   "confirm_e": "you want to delete PR Order the current record ?",
+   "condition": "app_act_pr.quot_can(:PAGE_ROWID, 'DELETE_PO') = 'Y'",
+   "params": [
+    {
+     "name": "SUPPLIER",
+     "label_a": "المورد المقبول",
+     "label_e": "Accepted supplier",
+     "type": "number",
+     "required": true,
+     "lov_sql": "select q.supplier_id || ' - ' || decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) d, q.supplier_id r from pr_quot_mast q, supplier s, pr_req_mast m where s.code = q.supplier_id and m.rowid = chartorowid(:PAGE_ROWID) and q.trns_type_code = m.trns_type_code and q.trns_serial = m.trns_serial and nvl(q.accept_flag, 0) = 1 order by q.supplier_id"
+    }
+   ],
+   "call": "app_act_pr.quot_delete_po(:PAGE_ROWID, :SUPPLIER)",
+   "message": "app_act_pr.last_message",
+   "success_a": " تم حذف أمر الشراء ",
+   "success_e": "Materials request has been Delete ",
+   "icon": "fa-trash"
+  }
+ ]
+}

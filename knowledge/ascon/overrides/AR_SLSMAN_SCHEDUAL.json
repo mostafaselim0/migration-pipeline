@@ -1,0 +1,179 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "SALESMAN",
+    "columns": [
+      "CODE",
+      "NAME_A",
+      "NAME_E"
+    ]
+  },
+  "details": [
+    {
+      "table": "AR_SALESMAN_SCHEDUAL",
+      "join": [
+        [
+          "SALESMAN_ID",
+          "CODE"
+        ]
+      ],
+      "title_a": "المخطط",
+      "title_e": "Planned visits"
+    },
+    {
+      "table": "AR_SALESMAN_VISITS",
+      "join": [
+        [
+          "SALESMAN_ID",
+          "CODE"
+        ]
+      ],
+      "title_a": "الفعلي",
+      "title_e": "Actual visits"
+    }
+  ],
+  "where": null,
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Salesman visit plan: the legacy blocks SALESMAN (navigation only), AR_SALESMAN_SCHEDUAL (plan) and AR_SALESMAN_VISITS (actual visits); the generated grid on AR_SALESMAN_SCHEDUAL alone was corrected; rules in APP_RULES3_AR.",
+  "rules": {
+    "where": "nvl(STOP_FLAG, 0) = 0 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or CODE in (select SALESMAN_CODE from AR_SALESMAN_PASSWORD where PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)))",
+    "row_rules": {
+      "SALESMAN": "if app_rules3_ar.is_form('AR_SLSMAN_SCHEDUAL') then app_rules3_ar.readonly_master; end if;",
+      "AR_SALESMAN_SCHEDUAL": "app_rules3_ar.schedule_row(inserting, :new.salesman_id, :new.customer_id, :new.schedual_date, :new.customer_order);",
+      "AR_SALESMAN_VISITS": "app_rules3_ar.visit_row(:new.salesman_id, :new.customer_id, :new.visit_time, :new.visit_time_end);"
+    },
+    "readonly": [
+      "SALESMAN.CODE",
+      "SALESMAN.NAME_A",
+      "SALESMAN.NAME_E"
+    ],
+    "blocks": {
+      "SALESMAN": {
+        "insert": false,
+        "delete": false
+      }
+    },
+    "hidden": [
+      "AR_SALESMAN_VISITS.ALT_KEY"
+    ],
+    "optional": [
+      "AR_SALESMAN_VISITS.ALT_KEY"
+    ],
+    "add_columns": {
+      "AR_SALESMAN_SCHEDUAL.CUSTOMER_ID": {
+        "label_a": "العميل",
+        "label_e": "Customer"
+      },
+      "AR_SALESMAN_SCHEDUAL.CUSTOMER_ORDER": {
+        "label_a": "ترتيب الزيارة",
+        "label_e": "Visit order"
+      },
+      "AR_SALESMAN_SCHEDUAL.SCHEDUAL_DATE": {
+        "label_a": "التاريخ",
+        "label_e": "Date"
+      },
+      "AR_SALESMAN_SCHEDUAL.VISIT_DONE": {
+        "label_a": "تمت الزيارة",
+        "label_e": "Visited"
+      },
+      "AR_SALESMAN_SCHEDUAL.R_SCHEDUAL_DATE": {
+        "label_a": "اعادة جدولة",
+        "label_e": "Rescheduled to"
+      },
+      "AR_SALESMAN_VISITS.CUSTOMER_ID": {
+        "label_a": "العميل",
+        "label_e": "Customer"
+      },
+      "AR_SALESMAN_VISITS.VISIT_DATE": {
+        "label_a": "التاريخ",
+        "label_e": "Date"
+      },
+      "AR_SALESMAN_VISITS.VISIT_TIME": {
+        "label_a": "بداية",
+        "label_e": "Start"
+      },
+      "AR_SALESMAN_VISITS.VISIT_TIME_END": {
+        "label_a": "نهاية",
+        "label_e": "End"
+      },
+      "AR_SALESMAN_VISITS.SALES_FLAG": {
+        "label_a": "مبيعات",
+        "label_e": "Sales"
+      },
+      "AR_SALESMAN_VISITS.SALES_DESC": {
+        "label_a": "وصف المبيعات",
+        "label_e": "Sales remarks"
+      },
+      "AR_SALESMAN_VISITS.COL_FLAG": {
+        "label_a": "تحصيل",
+        "label_e": "Collection"
+      },
+      "AR_SALESMAN_VISITS.COL_DESC": {
+        "label_a": "وصف التحصيل",
+        "label_e": "Collection remarks"
+      },
+      "AR_SALESMAN_VISITS.RET_FLAG": {
+        "label_a": "مرتجع",
+        "label_e": "Return"
+      },
+      "AR_SALESMAN_VISITS.RET_DESC": {
+        "label_a": "وصف المرتجع",
+        "label_e": "Return remarks"
+      },
+      "AR_SALESMAN_VISITS.SORDER_FLAG": {
+        "label_a": "امربيع",
+        "label_e": "Sales order"
+      },
+      "AR_SALESMAN_VISITS.SORDER_DESC": {
+        "label_a": "وصف امرالبيع",
+        "label_e": "Sales order remarks"
+      },
+      "AR_SALESMAN_VISITS.SCOUNT_FLAG": {
+        "label_a": "جرد",
+        "label_e": "Stock count"
+      },
+      "AR_SALESMAN_VISITS.SCOUNT_DESC": {
+        "label_a": "وصف الجرد",
+        "label_e": "Stock count remarks"
+      },
+      "AR_SALESMAN_VISITS.SUCC_FLAG": {
+        "label_a": "ناجحة",
+        "label_e": "Successful"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "LOAD_ROUTE",
+      "label_a": "خط السير",
+      "label_e": "Load route",
+      "confirm_a": "هل تريد جدولة زيارات عملاء خط السير لهذا اليوم؟",
+      "confirm_e": "Schedule the visits of the route customers for this day?",
+      "params": [
+        {
+          "name": "GROUP_ID",
+          "label_a": "رقم خط السير",
+          "label_e": "Route",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select group_id || ' - ' || group_desc d, group_id r from ar_customer_group_mast where salesman_id = to_number(:PAGE_CODE) order by group_id"
+        },
+        {
+          "name": "VISIT_DATE",
+          "label_a": "التاريخ",
+          "label_e": "Date",
+          "type": "date",
+          "required": true,
+          "default": "to_char(sysdate + 1, 'DD/MM/YYYY')",
+          "default_type": "EXPRESSION"
+        }
+      ],
+      "call": "app_rules3_ar.load_route(:PAGE_ROWID, :GROUP_ID, :VISIT_DATE)",
+      "success_a": "تمت جدولة زيارات خط السير",
+      "success_e": "Route visits scheduled",
+      "icon": "fa-map-marker"
+    }
+  ]
+}

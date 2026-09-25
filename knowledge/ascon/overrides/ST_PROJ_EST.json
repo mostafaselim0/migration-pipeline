@@ -1,0 +1,85 @@
+{
+ "pattern": "AUTO",
+ "notes": "Material request estimates (ST_PROJ_EST_MAST / ST_PROJ_EST_DET): serial max + 1 per store, date serial, store / date / one estimate per store and date / no later estimate, lines (item, unit, quantity > 0, basic quantity, not below the requested quantity), lines required, delete refused while the store has requests, button to copy the store's last estimate (APP_RULES3_PR). Wave 3b: legacy store / item / unit lists (units of the item as a cascading list), item name on the lines.",
+ "rules": {
+  "key_expr": {
+   "ST_PROJ_EST_MAST.TRNS_SERIAL": "app_rules3_pr.next_est_serial(:new.store_code)"
+  },
+  "row_rules": {
+   "ST_PROJ_EST_MAST": "-- legacy PRE-INSERT: DATE_SERIAL = max + 1 per store and date\napp_rules3_pr.est_mast_row(inserting, :new.store_code, :new.est_date, :new.date_serial);",
+   "ST_PROJ_EST_DET": "-- legacy line WHEN-VALIDATE-ITEM / PRE-INSERT: item, group, unit, quantity > 0, basic quantity, colour / size, requested quantity\napp_rules3_pr.est_det_row(inserting, :new.trns_serial, :new.store_code, :new.group_code, :new.item_code, :new.unit_code,\n                          :new.quantity, :new.basic_qty, :new.color_code, :new.size_code, :new.date_serial);"
+  },
+  "defaults": {
+   "ST_PROJ_EST_MAST.EST_DATE": {
+    "type": "EXPRESSION",
+    "value": "to_char(sysdate, 'DD/MM/YYYY')"
+   }
+  },
+  "readonly": [
+   "ST_PROJ_EST_MAST.TRNS_SERIAL",
+   "ST_PROJ_EST_DET.BASIC_QTY"
+  ],
+  "hidden": [
+   "ST_PROJ_EST_MAST.DATE_SERIAL"
+  ],
+  "optional": [
+   "ST_PROJ_EST_MAST.TRNS_SERIAL",
+   "ST_PROJ_EST_MAST.DATE_SERIAL",
+   "ST_PROJ_EST_DET.GROUP_CODE",
+   "ST_PROJ_EST_DET.UNIT_CODE",
+   "ST_PROJ_EST_DET.BASIC_QTY"
+  ],
+  "validations": [
+   {
+    "name": "تقدير طلبات المواد: المخزن والتاريخ",
+    "when": "CREATE,SAVE",
+    "plsql": "return app_rules3_pr.est_validate(:REQUEST, :PAGE_ROWID, :PAGE_STORE_CODE, :PAGE_EST_DATE);"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "أصناف التقدير",
+    "when": "CREATE,SAVE",
+    "plsql": "app_rules3_pr.est_after_save(:REQUEST, :PAGE_ROWID);"
+   }
+  ],
+  "columns": {
+   "ST_PROJ_EST_MAST.STORE_CODE": {
+    "widget": "SELECT",
+    "lov": "select store_code || ' - ' || name_a d, store_code r from st_store where store_status = 1 and nvl(stop_flag, 0) = 0 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or store_code in (select sp.store_code from st_store_password sp where sp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2"
+   },
+   "ST_PROJ_EST_DET.ITEM_CODE": {
+    "widget": "POPUP",
+    "lov": "select it.item_code || ' - ' || nvl(it.name_a, it.name_e) d, it.item_code r from st_item it where nvl(it.stop_flag, 0) = 0 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or it.item_group_code in (select gp.group_code from st_group_password gp where gp.password_number = to_number(:G_PASSWORD_NUMBER))) order by to_number(it.item_code)"
+   },
+   "ST_PROJ_EST_DET.UNIT_CODE": {
+    "widget": "SELECT",
+    "lov": "select u.unit_code || ' - ' || u.name_a || decode(iu.basic_unit, 1, ' (وحدة أساسية)', '') d, u.unit_code r from st_item_unit iu, st_unit u where iu.item_code = :PAGE_ITEM_CODE and (iu.group_code = :PAGE_GROUP_CODE or :PAGE_GROUP_CODE is null) and iu.unit_code = u.unit_code order by 2",
+    "cascade": [
+     "ITEM_CODE",
+     "GROUP_CODE"
+    ]
+   }
+  },
+  "computed": {
+   "ST_PROJ_EST_DET.ITEM_NAME": {
+    "sql": "(select max(nvl(i.name_a, i.name_e)) from st_item i where i.item_code = t.item_code and i.item_group_code = t.group_code)",
+    "label_a": "إســم الصنـــف",
+    "label_e": "Item Name"
+   }
+  }
+ },
+ "actions": [
+  {
+   "name": "COPY_LAST",
+   "label_a": "إنزال أصناف اخر تقدير على المخزن",
+   "label_e": "Get the last estimate's items of the store",
+   "confirm_a": "هل تريد إنزال أصناف آخر تقدير سابق لهذا المخزن؟",
+   "confirm_e": "Copy the items of the store's last earlier estimate?",
+   "call": "app_rules3_pr.est_copy_last(:PAGE_ROWID)",
+   "message": "app_rules3_pr.last_message",
+   "success_a": "تم إنزال الأصناف",
+   "success_e": "The items were copied"
+  }
+ ]
+}

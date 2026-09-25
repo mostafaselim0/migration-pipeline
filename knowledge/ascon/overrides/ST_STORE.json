@@ -1,0 +1,78 @@
+{
+ "pattern": "AUTO",
+ "notes": "stores: 12-digit code by the store structure (level, parent, parent without transactions, duplicate), new store is a leaf and its parent a classification store, stop date, propagation of accounts / cost centre / stop flag to the sub-stores; delete refused with items or sub-stores (APP_RULES3_ST_STORE_DEL); buttons add sub-store and total cost",
+ "rules": {
+  "where": "app_rules3_st.store_allowed(STORE_CODE) = 1",
+  "key_expr": {
+   "ST_STORE.STORE_CODE": "app_rules3_st.code_required(1)"
+  },
+  "row_rules": {
+   "ST_STORE": "app_rules3_st.store_row(inserting, updating, :new.store_code, :new.store_level, :new.store_status, :new.stop_flag, :new.stop_date, :new.stop_reason, :new.account_number1, :new.account_number2, :new.account_number3, :new.account_number4, :new.cost_code, :new.cost_code2, :old.account_number1, :old.account_number2, :old.account_number3, :old.account_number4, :old.cost_code, :old.cost_code2, :old.stop_flag);"
+  },
+  "validations": [
+   {
+    "name": "رقم المخزن: الهيكل والمخزن الرئيسي والتكرار",
+    "plsql": "return app_rules3_st.val_store(:PAGE_ROWID, :REQUEST, :PAGE_STORE_CODE);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "المخزن الرئيسي ونقل الحسابات والإيقاف إلى المخازن الفرعية",
+    "plsql": "app_rules3_st.store_after(:PAGE_ROWID, :REQUEST);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "add_columns": {
+   "ST_STORE.DEAL_TYPE": {"label_a": "نوع التعامل (1 جملة / 2 مفرق / 3 تكلفة)", "label_e": "Dealing type (1 wholesale / 2 retail / 3 cost)"},
+   "ST_STORE.STORE_LEVEL": {"label_a": "مستوى المخزن", "label_e": "Store level"},
+   "ST_STORE.STORE_STATUS": {"label_a": "مخزن حركات (1) / تصنيف (0)", "label_e": "Leaf store (1) / parent store (0)"}
+  },
+  "readonly": ["ST_STORE.STORE_LEVEL", "ST_STORE.STORE_STATUS", "ST_STORE.STOP_DATE"],
+  "hidden": ["ST_STORE.OPEN_BAL_TYPE"],
+  "columns": {
+   "ST_STORE.STORE_CODE": {"readonly_after_insert": true, "required": true},
+   "ST_STORE.NAME_A": {"required": true},
+   "ST_STORE.DEAL_TYPE": {"static": [["جملة", "1", "Wholesale"], ["مفرق", "2", "Retail"], ["تكلفة", "3", "Cost"]], "label_a": "نوع التعامل", "label_e": "Dealing type"},
+   "ST_STORE.STORE_STATUS": {"static": [["مخزن حركــات", "1", "Leaf store"], ["مخزن تصنيـف", "0", "Parent store"]], "label_a": "مخزن حركات / تصنيف", "label_e": "Leaf / parent store"},
+   "ST_STORE.ACCOUNT_NUMBER1": {"widget": "POPUP", "lov": "select a.account_number || ' - ' || a.account_name d, a.account_number r from ac_master a where a.account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or a.account_number in (select m2.account_number from ac_master m2, ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE) and rpad(substr(to_char(p2.account_number), 1, p2.account_end_pos), 12, '0') = rpad(substr(to_char(m2.account_number), 1, p2.account_end_pos), 12, '0'))) order by a.account_number"},
+   "ST_STORE.ACCOUNT_NUMBER2": {"widget": "POPUP", "lov": "select a.account_number || ' - ' || a.account_name d, a.account_number r from ac_master a where a.account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or a.account_number in (select m2.account_number from ac_master m2, ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE) and rpad(substr(to_char(p2.account_number), 1, p2.account_end_pos), 12, '0') = rpad(substr(to_char(m2.account_number), 1, p2.account_end_pos), 12, '0'))) order by a.account_number"},
+   "ST_STORE.ACCOUNT_NUMBER3": {"widget": "POPUP", "lov": "select a.account_number || ' - ' || a.account_name d, a.account_number r from ac_master a where a.account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or a.account_number in (select m2.account_number from ac_master m2, ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE) and rpad(substr(to_char(p2.account_number), 1, p2.account_end_pos), 12, '0') = rpad(substr(to_char(m2.account_number), 1, p2.account_end_pos), 12, '0'))) order by a.account_number"},
+   "ST_STORE.ACCOUNT_NUMBER4": {"widget": "POPUP", "lov": "select a.account_number || ' - ' || a.account_name d, a.account_number r from ac_master a where a.account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or a.account_number in (select m2.account_number from ac_master m2, ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE) and rpad(substr(to_char(p2.account_number), 1, p2.account_end_pos), 12, '0') = rpad(substr(to_char(m2.account_number), 1, p2.account_end_pos), 12, '0'))) order by a.account_number"},
+   "ST_STORE.COST_CODE": {"widget": "SELECT", "lov": "select c.cost_code || ' - ' || c.cost_desc d, c.cost_code r from ac_cost_centers c where c.cost_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or c.cost_code in (select m2.cost_code from ac_cost_centers m2, ac_password_cost1 p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE) and rpad(substr(to_char(p2.cost_code), 1, p2.cost_end_pos), 9, '0') = rpad(substr(to_char(m2.cost_code), 1, p2.cost_end_pos), 9, '0') and m2.cost_status = 1)) order by c.cost_code"},
+   "ST_STORE.COST_CODE2": {"widget": "SELECT", "lov": "select c.cost_code || ' - ' || c.cost_desc d, c.cost_code r from ac_cost_centers2 c where c.cost_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or c.cost_code in (select m2.cost_code from ac_cost_centers2 m2, ac_password_cost2 p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE) and rpad(substr(to_char(p2.cost_code), 1, p2.cost_end_pos), 9, '0') = rpad(substr(to_char(m2.cost_code), 1, p2.cost_end_pos), 9, '0') and m2.cost_status = 1)) order by c.cost_code"},
+   "ST_STORE.MAINAREA_ID": {"required": true, "widget": "SELECT", "lov": "select m.id || ' - ' || m.name_a d, m.id r from ar_mainarea m order by m.id"},
+   "ST_STORE.SUBAREA_ID": {"required": true, "widget": "SELECT", "cascade": "MAINAREA_ID", "lov": "select d.id || ' - ' || d.name_a d, d.id r from ar_subarea d where d.main_id = :PAGE_MAINAREA_ID order by d.id"},
+   "ST_STORE.CATEGORY_TYPE_CODE": {"required": true}
+  }
+ },
+ "actions": [
+  {
+   "name": "ADD_SON",
+   "label_a": "إضافة مخزن فرعي",
+   "label_e": "Add sub-store",
+   "confirm_a": "هل تريد إضافة مخزن فرعي لهذا المخزن؟",
+   "confirm_e": "Add a sub-store under this store?",
+   "params": [
+    {"name": "NAME_A", "label_a": "اسم المخزن الفرعي", "label_e": "Sub-store name", "type": "text", "required": true},
+    {"name": "NAME_E", "label_a": "الاسم لاتيني", "label_e": "English name", "type": "text"},
+    {"name": "STORE_TYPE", "label_a": "نوع المخزن", "label_e": "Store type", "type": "number", "required": true,
+     "default": "select store_type from st_store where rowid = chartorowid(:PAGE_ROWID)", "default_type": "SQL_QUERY",
+     "lov_sql": "select store_type || ' - ' || decode(:G_LANG, 'en', nvl(desc_e, desc_a), desc_a) d, store_type r from st_store_type order by 2"}
+   ],
+   "call": "app_rules3_st.add_child_store(:PAGE_ROWID, :NAME_A, :NAME_E, :STORE_TYPE)",
+   "message": "app_rules3_st.last_message",
+   "success_a": "تم إضافة المخزن الفرعي",
+   "success_e": "Sub-store created"
+  },
+  {
+   "name": "CALC_COST",
+   "label_a": "حساب التكلفة",
+   "label_e": "Calculate cost",
+   "call": "app_rules3_st.store_cost_action(:PAGE_ROWID)",
+   "message": "app_rules3_st.last_message",
+   "success_a": "تم حساب التكلفة",
+   "success_e": "Cost calculated"
+  }
+ ]
+}

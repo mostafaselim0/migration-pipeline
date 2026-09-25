@@ -1,0 +1,156 @@
+{
+  "pattern": "PROCESS",
+  "notes": "item transaction status (ST_TRNS_SLS_PU_STAT.fmx, a query screen over the view ST_TRNS_DET_SLS_PU): item, date range and store range all required; the movements of the item with in / out quantity (quantity + bonus + extra bonus) and running balance from the opening balance before the first date; types limited by ST_TRNSTYPE_PASSWORD FLAG = 1; KIND = the legacy total categories (purchases, sales, returns, opening balances, other receipts / issues) with quantity / bonus / extra bonus, to total them in the report like the legacy summary",
+  "proc": {
+    "procedure": "app_rules3_st.show_item_trns",
+    "description_a": "متابعة حركات الصنف: أدخل الصنف والفترة ونطاق المخازن ثم اضغط تنفيذ الاستعلام. يبدأ الجدول برصيد أول المدة للصنف ثم حركات الصنف (المشتريات والمبيعات والمرتجعات والأرصدة الافتتاحية والتسويات والتحويلات) مع الوارد والمنصرف والرصيد بعد كل حركة. مجاميع الأعمدة تعطي إجمالي الوارد والصادر.",
+    "description_e": "Item transactions: enter the item, the period and the store range and press Run query. The table starts with the opening balance of the item, then its movements (purchases, sales, returns, opening balances, adjustments, transfers) with in / out quantities and the balance after each movement.",
+    "params": [
+      {
+        "name": "ITEM_CODE",
+        "arg": "p_item",
+        "label_a": "كود الصنف",
+        "label_e": "Item code",
+        "type": "text",
+        "required": true,
+        "lov_sql": "select i.item_code || ' - ' || decode(:G_LANG, 'en', nvl(i.name_e, i.name_a), i.name_a) d, i.item_code r from st_item i order by i.item_group_code, i.item_code"
+      },
+      {
+        "name": "FROM_DATE",
+        "arg": "p_from_date",
+        "label_a": "من تاريخ",
+        "label_e": "From date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "name": "TO_DATE",
+        "arg": "p_to_date",
+        "label_a": "الى تاريخ",
+        "label_e": "To date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "name": "FROM_STORE",
+        "arg": "p_from_store",
+        "label_a": "من مخزن",
+        "label_e": "From store",
+        "type": "number",
+        "required": true,
+        "lov_sql": "select s.store_code || ' - ' || decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) d, s.store_code r from st_store s where nvl(s.store_status, 0) = 1 and nvl(s.stop_flag, 0) = 0 and (:G_PASSWORD_NUMBER = 0 or s.store_code in (select sp.store_code from st_store_password sp where sp.password_number = :G_PASSWORD_NUMBER)) order by 2"
+      },
+      {
+        "name": "TO_STORE",
+        "arg": "p_to_store",
+        "label_a": "الى مخزن",
+        "label_e": "To store",
+        "type": "number",
+        "required": true,
+        "lov_sql": "select s.store_code || ' - ' || decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) d, s.store_code r from st_store s where nvl(s.store_status, 0) = 1 and nvl(s.stop_flag, 0) = 0 and (:G_PASSWORD_NUMBER = 0 or s.store_code in (select sp.store_code from st_store_password sp where sp.password_number = :G_PASSWORD_NUMBER)) order by 2 desc"
+      }
+    ],
+    "button_a": "تنفيذ الاستعلام",
+    "button_e": "Run query",
+    "success_a": "تم تنفيذ الاستعلام",
+    "preview_title_a": "حركات الصنف",
+    "preview_sql": "with p as (select v('P' || :APP_PAGE_ID || '_ITEM_CODE') item, to_date(v('P' || :APP_PAGE_ID || '_FROM_DATE'), 'DD/MM/YYYY') fd, to_date(v('P' || :APP_PAGE_ID || '_TO_DATE'), 'DD/MM/YYYY') td, to_number(v('P' || :APP_PAGE_ID || '_FROM_STORE')) fs, to_number(v('P' || :APP_PAGE_ID || '_TO_STORE')) ts from dual), ob as (select app_rules3_st.item_open_balance(null, p.item, p.fd, p.fs, p.ts) qty from p where p.item is not null and p.fd is not null), mv as (select t.*, case when t.effect in (1, 4, 6) then t.total_qty end in_qty, case when t.effect in (2, 3, 5) then t.total_qty end out_qty from st_trns_det_sls_pu t, p where t.item_code = p.item and t.trns_date between p.fd and p.td and t.store_code between nvl(p.fs, 0) and nvl(p.ts, 999999999999) and app_rules3_st.trns_type_allowed(t.trns_type_code) = 1) select 0 line_no, (select fd from p) trns_date, null trns_type_code, decode(:G_LANG, 'en', 'Opening balance of the item', 'رصيد أول المدة للصنف') type_desc, null kind, null trns_serial, null doc_no, null store_code, null store_name, null from_code, null from_name, null desc_a, null quantity, null bonus, null extra_bonus, null in_qty, null out_qty, ob.qty balance_qty from ob union all select row_number() over (order by mv.trns_date, mv.date_serial, mv.trns_type_code, mv.trns_serial, mv.item_serial), mv.trns_date, mv.trns_type_code, decode(:G_LANG, 'en', nvl(mv.type_desc_e, mv.type_desc_a), mv.type_desc_a), case when mv.effect = 1 and mv.trns_type = 8 then decode(:G_LANG, 'en', 'Opening balances', 'أرصدة أفتتاحية') when mv.effect = 1 and mv.trns_type = 1 then decode(:G_LANG, 'en', 'Purchases', 'مشتريات') when mv.effect = 3 and mv.trns_type = 3 then decode(:G_LANG, 'en', 'Purchase returns', 'م مشتريات') when mv.effect = 2 and mv.trns_type = 2 then decode(:G_LANG, 'en', 'Sales', 'مبيعات') when mv.effect = 4 and mv.trns_type = 4 then decode(:G_LANG, 'en', 'Sales returns', 'م مبيعات') when mv.effect = 1 and mv.trns_type = 7 then decode(:G_LANG, 'en', 'Other receipts', 'وارد') when mv.effect = 2 and mv.trns_type = 7 then decode(:G_LANG, 'en', 'Other issues', 'صادر') end, mv.trns_serial, mv.doc_no, mv.store_code, (select decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) from st_store s where s.store_code = mv.store_code), mv.from_code, case when mv.customer_code is not null then (select decode(:G_LANG, 'en', nvl(c.name_e, c.name_a), c.name_a) from customer c where c.code = mv.customer_code) when mv.supplier_code is not null then (select decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) from supplier s where s.code = mv.supplier_code) else (select decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) from st_store s where s.store_code = mv.from_code) end, decode(:G_LANG, 'en', nvl(mv.desc_e, mv.desc_a), mv.desc_a), mv.quantity, mv.bonus, mv.extra_bonus, mv.in_qty, mv.out_qty, (select qty from ob) + sum(nvl(mv.in_qty, 0) - nvl(mv.out_qty, 0)) over (order by mv.trns_date, mv.date_serial, mv.trns_type_code, mv.trns_serial, mv.item_serial) from mv order by 1",
+    "preview_columns": [
+      {
+        "name": "LINE_NO",
+        "label_a": "م",
+        "type": "NUMBER"
+      },
+      {
+        "name": "TRNS_DATE",
+        "label_a": "تاريخ الحركة",
+        "type": "DATE"
+      },
+      {
+        "name": "TRNS_TYPE_CODE",
+        "label_a": "رقم الحركه",
+        "type": "NUMBER"
+      },
+      {
+        "name": "TYPE_DESC",
+        "label_a": "الشرح",
+        "type": "STRING"
+      },
+      {
+        "name": "KIND",
+        "label_a": "نوع الإجمالي",
+        "label_e": "Total category",
+        "type": "STRING"
+      },
+      {
+        "name": "TRNS_SERIAL",
+        "label_a": "م الحركه",
+        "type": "NUMBER"
+      },
+      {
+        "name": "DOC_NO",
+        "label_a": "رقم الفاتورة",
+        "type": "NUMBER"
+      },
+      {
+        "name": "STORE_CODE",
+        "label_a": "رقم المخزن",
+        "type": "NUMBER"
+      },
+      {
+        "name": "STORE_NAME",
+        "label_a": "اسم المخزن",
+        "type": "STRING"
+      },
+      {
+        "name": "FROM_CODE",
+        "label_a": "العميل / المورد / المخزن المحول عليه",
+        "type": "NUMBER"
+      },
+      {
+        "name": "FROM_NAME",
+        "label_a": "الاسم",
+        "type": "STRING"
+      },
+      {
+        "name": "DESC_A",
+        "label_a": "البيان",
+        "type": "STRING"
+      },
+      {
+        "name": "QUANTITY",
+        "label_a": "الكمية",
+        "label_e": "Quantity",
+        "type": "NUMBER"
+      },
+      {
+        "name": "BONUS",
+        "label_a": "البونص",
+        "label_e": "Bonus",
+        "type": "NUMBER"
+      },
+      {
+        "name": "EXTRA_BONUS",
+        "label_a": "بونص إضافي",
+        "label_e": "Extra bonus",
+        "type": "NUMBER"
+      },
+      {
+        "name": "IN_QTY",
+        "label_a": "وارد",
+        "type": "NUMBER"
+      },
+      {
+        "name": "OUT_QTY",
+        "label_a": "صادر",
+        "type": "NUMBER"
+      },
+      {
+        "name": "BALANCE_QTY",
+        "label_a": "الرصيد",
+        "type": "NUMBER"
+      }
+    ],
+    "run_right": "query"
+  }
+}

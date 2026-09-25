@@ -1,0 +1,15 @@
+{
+ "pattern": "AUTO",
+ "notes": "Contract types (ST_CNTRCT_TYPES): number max + 1 (generated key, legacy NVL(MAX)+1), Arabic or English name required, no duplicate, delete refused while a supplier agreement uses the type (APP_RULES3_PR); CNTRCT_ORDER is not on the legacy screen",
+ "rules": {
+  "row_rules": {
+   "ST_CNTRCT_TYPES": "-- legacy PRE-INSERT / WHEN-VALIDATE-RECORD: a name is required, no duplicate (delete check: trigger APP_R3_ST_CNTRCT_TYPES_BD)\napp_rules3_pr.cntrct_row(inserting, :new.cntrct_code, :new.name_a, :new.name_e);"
+  },
+  "add_columns": {
+   "ST_CNTRCT_TYPES.CNTRCT_CODE": {"label_a": "رقم النوع", "label_e": "Type No"},
+   "ST_CNTRCT_TYPES.NAME_A": {"label_a": "الاسم العربي", "label_e": "Arabic Name"},
+   "ST_CNTRCT_TYPES.NAME_E": {"label_a": "الاسم اللاتيني", "label_e": "English Name"}
+  },
+  "hidden": ["ST_CNTRCT_TYPES.CNTRCT_ORDER"]
+ }
+}

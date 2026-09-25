@@ -1,0 +1,188 @@
+{
+ "pattern": "AUTO",
+ "notes": "stocktaking adjustment in: types EFFECT 1 / TRNS_TYPE 7, GET_NEXT_DOC_NO numbering, lot creation, account per STACLNK; wave 3: expiry date for new lots, soft delete, duplicate DOC_NO question, total (APP_ACT_ST)",
+ "rules": {
+  "computed": {
+   "ST_TRNS_DET.ITEM_NAME": {"sql": "(select max(nvl(i.name_e, i.name_a)) from st_item i where i.item_group_code = t.group_code and i.item_code = t.item_code)", "label_a": "إســم الصنـــف", "label_e": "Item Nm"},
+   "ST_TRNS_DET.EXPIRE_DATE": {"sql": "app_ui.lot_expiry(t.item_confg_id)", "label_a": "تاريخ صلاحية الشحنة", "label_e": "Lot expiry", "type": "DATE"},
+   "ST_TRNS_DET.STORE_BALANCE": {"sql": "round(nvl(get_balance_confg(t.store_code, t.group_code, t.item_code, t.item_confg_id, t.trns_date, t.date_serial, t.item_serial), 0) / nvl((select max(u.factor) from st_item_unit u where u.group_code = t.group_code and u.item_code = t.item_code and u.unit_code = t.unit_code), 1), 3)", "label_a": "رصيد المخزن قبل الحركة", "label_e": "Store Bal.bf Trns", "type": "NUMBER"},
+   "ST_TRNS_DET.STORE_COST": {"sql": "case when (nvl(to_number(v('G_PASSWORD_NUMBER')), 0) = 0 or ((select nvl(max(b.show_cost), 0) from st_basic b) = 1 and (select nvl(max(u.allow_view_cost), 0) from users u where u.users_code = to_number(v('G_USER_CODE'))) = 1)) then get_unit_cost_confg(t.store_code, t.group_code, t.item_code, t.item_confg_id, t.trns_date, t.date_serial, t.item_serial) * nvl((select max(u.factor) from st_item_unit u where u.group_code = t.group_code and u.item_code = t.item_code and u.unit_code = t.unit_code), 1) end", "label_a": "تكلفة الصنف", "label_e": "Item cost", "type": "NUMBER"},
+   "ST_TRNS_DET.LINE_TOTAL": {"sql": "nvl(t.quantity, 0) * (nvl(t.unit_price, 0) - nvl(t.disc1_value, 0))", "label_a": "الاجمالى", "label_e": "Total", "type": "NUMBER"}
+  },
+  "columns": {
+   "ST_TRNS_DET.ITEM_CONFG_ID": {"widget": "POPUP", "cascade": "ITEM_CODE", "lov": "select c.item_confg_id || ' - ' || c.lot_number || ' - ' || to_char(c.expire_date, 'DD/MM/YYYY') d, c.item_confg_id r from st_item_confg c where c.item_code = :PAGE_ITEM_CODE order by c.expire_date, c.item_confg_id"}
+  },
+  "where": "TRNS_TYPE_CODE in (select t.trns_type_code from st_trns_type t where t.effect = 1 and t.trns_type = 7) and nvl(DELETE_FLAG, 0) = 0 and (:G_PASSWORD_NUMBER = 0 or TRNS_TYPE_CODE in (select tp.trns_type_code from st_trnstype_password tp where tp.password_number = :G_PASSWORD_NUMBER))",
+  "defaults": {
+   "ST_TRNS_MAST.TRNS_TYPE_CODE": {
+    "type": "EXPRESSION",
+    "value": "app_rules_st.default_type('ST_ADJUST_IN')"
+   },
+   "ST_TRNS_MAST.STORE_CODE": {
+    "type": "EXPRESSION",
+    "value": "app_rules_st.type_store(app_rules_st.default_type('ST_ADJUST_IN'))"
+   },
+   "ST_TRNS_MAST.DELETE_FLAG": {
+    "type": "STATIC",
+    "value": "0"
+   },
+   "ST_TRNS_MAST.POST_FLAG": {
+    "type": "STATIC",
+    "value": "0"
+   }
+  },
+  "validations": [
+   {
+    "name": "legacy header rules (type of the screen, CHECK_DATE, store, account, transfer, posted)",
+    "plsql": "return app_rules_st.val_trns('ST_ADJUST_IN', :PAGE_ROWID, :REQUEST, :PAGE_TRNS_TYPE_CODE, :PAGE_TRNS_DATE, :PAGE_STORE_CODE, :PAGE_DOC_NO, :PAGE_ACCOUNT_NUMBER1, null, null, null, :PAGE_CURRENCY_CODE, :PAGE_CURRENCY_RATE);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "legacy commit rules (lines required, balances)",
+    "plsql": "app_rules_st.after_trns('ST_ADJUST_IN', :REQUEST, :PAGE_ROWID);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "row_rules": {
+   "ST_TRNS_MAST": "app_rules_st.mast_row(inserting, updating, :new.trns_type_code, :new.trns_serial, :new.trns_date, :new.store_code, :new.doc_no, :new.desc_a, :new.desc_e, :new.delete_flag, :new.post_flag, :new.account_number1, :new.trnsfer_type, :new.trnsfer_serial, :new.trnsfer_from_store, :new.trnsfer_to_store, :old.trns_date, :old.trnsfer_serial, :old.trnsfer_from_store, :old.store_code);",
+   "ST_TRNS_DET": "app_rules_st.det_row(inserting, updating, :new.trns_type_code, :new.trns_serial, :new.item_serial, :new.group_code, :new.item_code, :new.unit_code, :new.item_confg_id, :new.quantity, :new.bonus, :new.basic_qty, :new.unit_price, :new.unit_cost, :new.cost_flag, :new.lot_number, :new.expiry_date, :new.disc1_ratio, :old.group_code, :old.item_code, :old.unit_code, :old.item_confg_id, :old.quantity, :old.basic_qty, :old.unit_price, :old.unit_cost, :new.trnsfer_serial, :new.trnsfer_from_store, :new.trnsfer_to_store);"
+  },
+  "readonly": [
+   "ST_TRNS_MAST.TRNS_SERIAL",
+   "ST_TRNS_MAST.DATE_SERIAL",
+   "ST_TRNS_MAST.POST_FLAG",
+   "ST_TRNS_MAST.AC_ENTRY_NO",
+   "ST_TRNS_MAST.AC_ENTRY_YEAR",
+   "ST_TRNS_MAST.AC_ENTRY_TYPE"
+  ],
+  "hidden": [
+   "ST_TRNS_MAST.DATE_SERIAL",
+   "ST_TRNS_MAST.DELETE_FLAG",
+   "ST_TRNS_DET.BASIC_QTY",
+   "ST_TRNS_DET.COST_FLAG"
+  ],
+  "optional": [
+   "ST_TRNS_MAST.DATE_SERIAL",
+   "ST_TRNS_MAST.DELETE_FLAG",
+   "ST_TRNS_DET.BASIC_QTY",
+   "ST_TRNS_DET.COST_FLAG",
+   "ST_TRNS_DET.GROUP_CODE",
+   "ST_TRNS_DET.UNIT_CODE",
+   "ST_TRNS_DET.ITEM_CONFG_ID"
+  ],
+  "add_columns": {
+   "ST_TRNS_DET.EXPIRY_DATE": {
+    "label_a": "تاريخ الصلاحيه",
+    "label_e": "Expiry Dt."
+   }
+  },
+  "soft_delete": {
+   "set": {
+    "DELETE_FLAG": "1"
+   },
+   "lines": "keep",
+   "check": "return app_act_st.adi_delete_check(:PAGE_ROWID);",
+   "message_a": "تم حذف المستند"
+  },
+  "warnings": [
+   {
+    "name": "رقم المستند مكرر (هل تريد الإستمرار)",
+    "plsql": "return app_act_st.adi_doc_warn(:PAGE_ROWID, :PAGE_TRNS_TYPE_CODE, :PAGE_DOC_NO);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "info": [
+   {
+    "name": "TOTAL",
+    "label_a": "الاجمالى",
+    "label_e": "Total",
+    "sql": "select app_act_st.adi_total(:PAGE_ROWID) from dual"
+   }
+  ]
+ },
+ "actions": [
+  {
+   "name": "LOT_LINE",
+   "label_a": "إضافة صنف بمحددات الشحنة",
+   "label_e": "Add an item with its lot parameters",
+   "condition": "app_act_st.adi_can_add(:PAGE_ROWID) = 'Y'",
+   "params": [
+    {
+     "name": "ITEM_CODE",
+     "label_a": "رقم الصنف",
+     "label_e": "Item code",
+     "type": "text",
+     "required": true,
+     "lov_sql": "select i.item_code || ' - ' || decode(:G_LANG, 'en', i.name_e, i.name_a) d, i.item_code r from st_item i where nvl(i.stop_flag, 0) = 0 and (nvl(:G_PASSWORD_NUMBER, 0) = 0 or i.item_group_code in (select gp.group_code from st_group_password gp where gp.password_number = :G_PASSWORD_NUMBER)) order by i.item_code"
+    },
+    {
+     "name": "UNIT_CODE",
+     "label_a": "الوحدة (فارغ = الوحدة الأساسية)",
+     "label_e": "Unit (empty = basic unit)",
+     "type": "number"
+    },
+    {
+     "name": "QTY",
+     "label_a": "الكمية",
+     "label_e": "Quantity",
+     "type": "number",
+     "required": true
+    },
+    {
+     "name": "LOT_NO",
+     "label_a": "رقم التشغيلة",
+     "label_e": "Lot number",
+     "type": "text",
+     "required": true
+    },
+    {
+     "name": "EXP_DATE",
+     "label_a": "تاريخ الصلاحية",
+     "label_e": "Expiry date",
+     "type": "date",
+     "required": true
+    },
+    {
+     "name": "PROD_DATE",
+     "label_a": "تاريخ الإنتاج",
+     "label_e": "Production date",
+     "type": "date",
+     "required": true
+    },
+    {
+     "name": "PRICE",
+     "label_a": "سعر البيع",
+     "label_e": "Sales price",
+     "type": "number",
+     "required": true
+    },
+    {
+     "name": "DISC",
+     "label_a": "نسبة الخصم",
+     "label_e": "Discount ratio",
+     "type": "number",
+     "required": true,
+     "default": "0",
+     "default_type": "STATIC"
+    },
+    {
+     "name": "COST",
+     "label_a": "تكلفة الوحدة (فارغ = متوسط التكلفة)",
+     "label_e": "Unit cost (empty = average cost)",
+     "type": "number",
+     "required": false
+    }
+   ],
+   "icon": "fa-plus",
+   "call": "app_act_st.adi_add_line(p_rowid => :PAGE_ROWID, p_item => :ITEM_CODE, p_unit => :UNIT_CODE, p_qty => :QTY, p_lot => :LOT_NO, p_expiry => :EXP_DATE, p_price => :PRICE, p_cost => :COST, p_disc => :DISC, p_prod => :PROD_DATE)",
+   "message": "app_act_st.last_message",
+   "success_a": "تم إضافة الصنف",
+   "success_e": "The item was added"
+  }
+ ],
+ "links": [
+  {"label_a": "ترحيل السند", "label_e": "Post transaction", "form": "ST_POSTING_CPOSTING", "icon": "fa-send", "items": {"FROM_TYPE": "TRNS_TYPE_CODE", "TO_TYPE": "TRNS_TYPE_CODE", "FROM_SERIAL": "TRNS_SERIAL", "TO_SERIAL": "TRNS_SERIAL", "FROM_DATE": "TRNS_DATE", "TO_DATE": "TRNS_DATE"}}
+ ]
+}

@@ -1,0 +1,59 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "USERS",
+    "columns": [
+      "USERS_CODE",
+      "USERS_NAME",
+      "USERS_NAME_E"
+    ]
+  },
+  "details": [
+    {
+      "table": "SYS_SYSTEMS_USERS",
+      "join": [
+        [
+          "USERS_CODE",
+          "USERS_CODE"
+        ]
+      ],
+      "title_a": "الأنظمة",
+      "title_e": "Systems"
+    }
+  ],
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Systems of a user (legacy master USERS + detail SYS_SYSTEMS_USERS, was generated as a grid on USERS); all systems button (APP_RULES3_SE, see processes/ACUSERS_SYSTEMS.md)",
+  "rules": {
+    "hidden": [
+      "USERS.PASSWORD"
+    ],
+    "optional": [
+      "USERS.PASSWORD"
+    ],
+    "row_rules": {
+      "SYS_SYSTEMS_USERS": "app_rules3_se.sys_systems_users_row(:new.system_number);"
+    },
+    "columns": {
+      "SYS_SYSTEMS_USERS.SYSTEM_NUMBER": {
+        "lov": "select system_number || ' - ' || case when app_sec.lang = 'en' then nvl(system_desc_e, system_desc_a) else system_desc_a end d, system_number r from sys_systems order by system_number",
+        "widget": "SELECT"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "ALL_SYSTEMS",
+      "label_a": "جميع الأنظمة",
+      "label_e": "All systems",
+      "confirm_a": "سيتم استبدال أنظمة المستخدم بجميع الأنظمة. هل تريد الاستمرار؟",
+      "confirm_e": "Replace the systems of the user by all systems?",
+      "call": "app_rules3_se.all_systems(:PAGE_ROWID)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "تمت إضافة الأنظمة",
+      "success_e": "Systems added",
+      "icon": "fa-cubes"
+    }
+  ]
+}

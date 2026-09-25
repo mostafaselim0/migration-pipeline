@@ -1,0 +1,121 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "PASSWORD"
+  },
+  "details": [
+    {
+      "table": "GROUP_COMPANY",
+      "join": [
+        [
+          "PASSWORD_NUMBER",
+          "PASSWORD_NUMBER"
+        ]
+      ],
+      "title_a": "الشركات",
+      "title_e": "Companies"
+    }
+  ],
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Groups (PASSWORD, legacy block on the GROUPS view) and their companies; one default company, all companies / copy group privileges buttons, deleting a group removes its data grants of every system (APP_RULES3_SE, see processes/ACGROUP_COMPANY.md)",
+  "rules": {
+    "row_rules": {
+      "GROUP_COMPANY": "app_rules3_se.group_company_row(inserting, :new.company_code, :new.password_number, :new.isdefault);"
+    },
+    "after_save": [
+      {
+        "name": "شركة أساسية واحدة للمجموعة",
+        "plsql": "declare\n  l number;\nbegin\n  select password_number into l from password where rowid = chartorowid(:PAGE_ROWID);\n  app_rules3_se.fix_default_company(l);\nend;",
+        "when": "CREATE,SAVE"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "name": "ALL_COMPANIES",
+      "label_a": "جميع الشركات",
+      "label_e": "All companies",
+      "call": "app_rules3_se.all_companies(:PAGE_ROWID)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "تمت إضافة الشركات",
+      "success_e": "Companies added",
+      "icon": "fa-building"
+    },
+    {
+      "name": "COPY_GROUP",
+      "label_a": "نسخ صلاحيات",
+      "label_e": "Copy privileges",
+      "confirm_a": "سيتم استبدال صلاحيات هذه المجموعة فى كل الأنظمة بصلاحيات المجموعة المختارة. هل تريد الاستمرار؟",
+      "confirm_e": "The data grants of this group in every system will be replaced by those of the chosen group. Continue?",
+      "params": [
+        {
+          "name": "FROM_GROUP",
+          "label_a": "من مجموعة",
+          "label_e": "From group",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select password_number || ' - ' || nvl(group_desc, group_desc_e) d, password_number r from password where password_number <> to_number(:PAGE_PASSWORD_NUMBER) order by password_number"
+        }
+      ],
+      "call": "app_rules3_se.copy_group_rights(:PAGE_ROWID, :FROM_GROUP)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "تم نسخ صلاحية المجموعة",
+      "success_e": "Group privileges copied",
+      "icon": "fa-copy"
+    }
+  ],
+  "links": [
+    {
+      "label_a": "نظام العملاء",
+      "label_e": "Receivables privileges",
+      "form": "ARPASS",
+      "doc": true,
+      "items": {
+        "ROWID": "ROWID"
+      },
+      "icon": "fa-key"
+    },
+    {
+      "label_a": "نظام الموردين",
+      "label_e": "Payables privileges",
+      "form": "VNPASS",
+      "doc": true,
+      "items": {
+        "ROWID": "ROWID"
+      },
+      "icon": "fa-key"
+    },
+    {
+      "label_a": "نظام المخزون",
+      "label_e": "Stock privileges",
+      "form": "SEPASS_TRN",
+      "doc": true,
+      "items": {
+        "ROWID": "ROWID"
+      },
+      "icon": "fa-key"
+    },
+    {
+      "label_a": "نظام شئون الموظفين",
+      "label_e": "Payroll privileges",
+      "form": "PYPASS",
+      "doc": true,
+      "items": {
+        "ROWID": "ROWID"
+      },
+      "icon": "fa-key"
+    },
+    {
+      "label_a": "نظام الحسابات",
+      "label_e": "Accounts privileges",
+      "form": "ACPASS_ADMIN",
+      "doc": true,
+      "items": {
+        "ROWID": "ROWID"
+      },
+      "icon": "fa-key"
+    }
+  ]
+}

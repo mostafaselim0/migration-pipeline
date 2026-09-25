@@ -1,0 +1,71 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "AR_CUSTOMER_ATTR_STRUCT"
+  },
+  "details": [
+    {
+      "table": "AR_CUSTOMER_ATTR_LOCKUPS",
+      "join": [
+        [
+          "TAB_PARENT",
+          "CHR_STRU_LEVEL"
+        ]
+      ],
+      "title_a": "الرموز",
+      "title_e": "Codes"
+    }
+  ],
+  "where": null,
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Customer attribute structure (24 positions) with its codes per level (legacy block AR_CUSTOMER_ATTR_LOCKUPS); lock, start/end/length, bottom-up delete, code length (APP_RULES3_AR).",
+  "rules": {
+    "row_rules": {
+      "AR_CUSTOMER_ATTR_STRUCT": "app_rules3_ar.struct_row('ATTR', inserting, :new.chr_stru_level, :new.chr_stru_start, :new.chr_stru_end, :new.length, :old.chr_stru_start, :old.chr_stru_end, :old.length);",
+      "AR_CUSTOMER_ATTR_LOCKUPS": "app_rules3_ar.lockup_row('ATTR', :new.tab_parent, :new.tab_no);"
+    },
+    "readonly": [
+      "AR_CUSTOMER_ATTR_STRUCT.CHR_STRU_START",
+      "AR_CUSTOMER_ATTR_STRUCT.LENGTH"
+    ],
+    "optional": [
+      "AR_CUSTOMER_ATTR_STRUCT.CHR_STRU_START",
+      "AR_CUSTOMER_ATTR_STRUCT.LENGTH"
+    ],
+    "add_columns": {
+      "AR_CUSTOMER_ATTR_STRUCT.CHR_STRU_LEVEL": {
+        "label_a": "رقم التوصيف",
+        "label_e": "Level"
+      },
+      "AR_CUSTOMER_ATTR_STRUCT.CHR_STRU_DESCA": {
+        "label_a": "إسم التوصيف عربى",
+        "label_e": "Arabic name"
+      },
+      "AR_CUSTOMER_ATTR_STRUCT.CHR_STRU_DESCE": {
+        "label_a": "إسم التوصيف لاتيني",
+        "label_e": "English name"
+      },
+      "AR_CUSTOMER_ATTR_LOCKUPS.TAB_NO": {
+        "label_a": "الرمز",
+        "label_e": "Code"
+      },
+      "AR_CUSTOMER_ATTR_LOCKUPS.TAB_NAME_A": {
+        "label_a": "الأسم العربى",
+        "label_e": "Arabic name"
+      },
+      "AR_CUSTOMER_ATTR_LOCKUPS.TAB_NAME_E": {
+        "label_a": "الأسم الإنجليزى",
+        "label_e": "English name"
+      }
+    },
+    "warnings": [
+      {
+        "name": "structure complete",
+        "when": "CREATE,SAVE",
+        "plsql": "return app_rules3_ar.struct_warning('ATTR', :PAGE_CHR_STRU_LEVEL, :PAGE_CHR_STRU_END);"
+      }
+    ]
+  }
+}

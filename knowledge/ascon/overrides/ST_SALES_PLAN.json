@@ -1,0 +1,54 @@
+{
+ "pattern": "AUTO",
+ "notes": "Sales plan per period (ST_SALES_PLAN + ST_SALES_PLAN_DET): period / store / sales type from the legacy lists, lines need an active item, quantity and price (retail price by default) (APP_RULES3_SA). The legacy form also used area / branch columns that do not exist in this database (see ST_SALES_PLAN.md) Wave 3b: legacy store / sales-type / item lists.",
+ "rules": {
+  "add_columns": {
+   "ST_SALES_PLAN.PERIOD_CODE": {
+    "label_a": "الفترة",
+    "label_e": "Period"
+   },
+   "ST_SALES_PLAN.STORE_CODE": {
+    "label_a": "المستودع",
+    "label_e": "Store"
+   },
+   "ST_SALES_PLAN.TRNS_TYPE_CODE": {
+    "label_a": "حركة المبيعات",
+    "label_e": "Sales transaction"
+   },
+   "ST_SALES_PLAN_DET.PRICE": {
+    "label_a": "السعر",
+    "label_e": "Price"
+   }
+  },
+  "defaults": {
+   "ST_SALES_PLAN.TRNS_TYPE_CODE": {
+    "type": "SQL_QUERY",
+    "value": "select app_rules_sa.first_type('SI') from dual"
+   }
+  },
+  "row_rules": {
+   "ST_SALES_PLAN_DET": "-- legacy line: active item with a basic unit, retail price by default, quantity and price required\napp_rules3_sa.plan_det_row(:new.item_code, :new.qty, :new.price);"
+  },
+  "validations": [
+   {
+    "name": "خطة المبيعات: الفترة والمستودع وحركة المبيعات",
+    "when": "CREATE,SAVE",
+    "plsql": "return app_rules3_sa.plan_validate(:REQUEST, :PAGE_PERIOD_CODE, :PAGE_STORE_CODE, :PAGE_TRNS_TYPE_CODE);"
+   }
+  ],
+  "columns": {
+   "ST_SALES_PLAN.STORE_CODE": {
+    "widget": "SELECT",
+    "lov": "select store_code || ' - ' || name_a d, store_code r from st_store where store_status = 1 and stop_flag = 0 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or store_code in (select sp.store_code from st_store_password sp where sp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2"
+   },
+   "ST_SALES_PLAN.TRNS_TYPE_CODE": {
+    "widget": "SELECT",
+    "lov": "select trns_type_code || ' - ' || desc_a d, trns_type_code r from st_trns_type where effect = 2 and trns_type = 2 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or trns_type_code in (select tp.trns_type_code from st_trnstype_password tp where tp.flag = 1 and tp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2"
+   },
+   "ST_SALES_PLAN_DET.ITEM_CODE": {
+    "widget": "POPUP",
+    "lov": "select it.item_code || ' - ' || nvl(it.name_a, it.name_e) d, it.item_code r from st_item it, st_item_unit iu where nvl(it.stop_flag, 0) = 0 and it.item_group_code = iu.group_code and it.item_code = iu.item_code and nvl(iu.basic_unit, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or it.item_group_code in (select gp.group_code from st_group_password gp where gp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2"
+   }
+  }
+ }
+}

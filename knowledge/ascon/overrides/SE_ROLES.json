@@ -1,0 +1,7 @@
+{
+  "pattern": "AUTO",
+  "notes": "Role numbers: ROLE_ID = NVL(MAX(ROLE_ID), 10) + 1 (legacy), not the generated max+1 (see processes/SE_ROLES.md)",
+  "rules": {
+    "key_expr": {"SE_ROLES.ROLE_ID": "app_rules3_se.next_role_id"}
+  }
+}

@@ -1,0 +1,230 @@
+{
+  "pattern": "PROCESS",
+  "notes": "The fmb-sourced combined screen (list item FILTER: 1 post / 2 cancel, buttons AC_BTN / AR_BTN / VN_BTN) is a process screen, not a data grid on ST_TRNS_MAST: app_proc_st.post_cancel runs the same ported engine as ST_POSTING / ST_CPOSTING.",
+  "proc": {
+    "procedure": "app_proc_st.post_cancel",
+    "description_a": "ترحيل / إلغاء ترحيل حركات المخازن للأنظمة الأخرى (الحسابات العامة - العملاء - الموردين). اختر العملية (ترحيل أو إلغاء الترحيل)، الفترة ونطاق أنواع الحركات ثم الأنظمة المطلوبة. نفس قواعد شاشتي ترحيل حركات المخازن وإلغاء ترحيلها: لا ترحيل ولا إلغاء في فترة مقفلة، والحركات التي بها خطأ تظهر رسالتها في الجدول أدناه.",
+    "description_e": "Post / cancel the posting of stock transactions to GL, AR and AP. Choose the operation, the period and the transaction types, then the systems. Same rules as the screens Posting Stores Transactions and Cancel Posting: nothing in a closed period, transactions with errors are listed below.",
+    "params": [
+      {
+        "name": "MODE",
+        "arg": "p_mode",
+        "label_a": "العملية",
+        "label_e": "Operation",
+        "type": "number",
+        "required": true,
+        "lov_sql": "select decode(:G_LANG, 'en', 'Posting', 'ترحيل') d, 1 r from dual union all select decode(:G_LANG, 'en', 'Cancel posting', 'إلغاء الترحيل') d, 2 r from dual",
+        "default": "1",
+        "default_type": "STATIC"
+      },
+      {
+        "name": "FROM_DATE",
+        "arg": "p_from_date",
+        "label_a": "من تاريخ",
+        "label_e": "From date",
+        "type": "date",
+        "required": true,
+        "default": "to_char(trunc(sysdate, 'YYYY'), 'DD/MM/YYYY')",
+        "default_type": "EXPRESSION"
+      },
+      {
+        "name": "TO_DATE",
+        "arg": "p_to_date",
+        "label_a": "إلى تاريخ",
+        "label_e": "To date",
+        "type": "date",
+        "required": true,
+        "default": "to_char(sysdate, 'DD/MM/YYYY')",
+        "default_type": "EXPRESSION"
+      },
+      {
+        "name": "FROM_TYPE",
+        "arg": "p_from_type",
+        "label_a": "من رقم حركة",
+        "label_e": "From transaction type",
+        "type": "number",
+        "required": true,
+        "lov_sql": "select t.trns_type_code || ' - ' || decode(:G_LANG, 'en', nvl(t.desc_e, t.desc_a), t.desc_a) d, t.trns_type_code r from st_trns_type t where nvl(t.join_type, 1) <> 1 and (:G_PASSWORD_NUMBER = 0 or t.trns_type_code in (select tp.trns_type_code from st_trnstype_password tp where tp.flag = 1 and tp.password_number = :G_PASSWORD_NUMBER)) order by t.trns_type_code"
+      },
+      {
+        "name": "TO_TYPE",
+        "arg": "p_to_type",
+        "label_a": "إلى رقم حركة",
+        "label_e": "To transaction type",
+        "type": "number",
+        "required": true,
+        "lov_sql": "select t.trns_type_code || ' - ' || decode(:G_LANG, 'en', nvl(t.desc_e, t.desc_a), t.desc_a) d, t.trns_type_code r from st_trns_type t where nvl(t.join_type, 1) <> 1 and (:G_PASSWORD_NUMBER = 0 or t.trns_type_code in (select tp.trns_type_code from st_trnstype_password tp where tp.flag = 1 and tp.password_number = :G_PASSWORD_NUMBER)) order by t.trns_type_code desc"
+      },
+      {
+        "name": "FROM_SERIAL",
+        "arg": "p_from_serial",
+        "label_a": "من مسلسل حركة",
+        "label_e": "From serial",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "TO_SERIAL",
+        "arg": "p_to_serial",
+        "label_a": "إلى مسلسل حركة",
+        "label_e": "To serial",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "FROM_CUSTOMER",
+        "arg": "p_from_customer",
+        "label_a": "من عميل",
+        "label_e": "From customer",
+        "type": "number",
+        "required": false,
+        "lov_sql": "select c.code || ' - ' || decode(:G_LANG, 'en', nvl(c.name_e, c.name_a), c.name_a) d, c.code r from customer c where nvl(c.customer_status, 0) = 1 and (:G_PASSWORD_NUMBER = 0 or c.code in (select cp.customer_code from ar_cust_password cp where cp.password_number = :G_PASSWORD_NUMBER)) order by c.code"
+      },
+      {
+        "name": "TO_CUSTOMER",
+        "arg": "p_to_customer",
+        "label_a": "إلى عميل",
+        "label_e": "To customer",
+        "type": "number",
+        "required": false,
+        "lov_sql": "select c.code || ' - ' || decode(:G_LANG, 'en', nvl(c.name_e, c.name_a), c.name_a) d, c.code r from customer c where nvl(c.customer_status, 0) = 1 and (:G_PASSWORD_NUMBER = 0 or c.code in (select cp.customer_code from ar_cust_password cp where cp.password_number = :G_PASSWORD_NUMBER)) order by c.code desc"
+      },
+      {
+        "name": "FROM_SALESMAN",
+        "arg": "p_from_salesman",
+        "label_a": "من مندوب",
+        "label_e": "From salesman",
+        "type": "number",
+        "required": false,
+        "lov_sql": "select s.code || ' - ' || decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) d, s.code r from salesman s where (:G_PASSWORD_NUMBER = 0 or s.code in (select sp.salesman_code from ar_salesman_password sp where sp.password_number = :G_PASSWORD_NUMBER)) order by s.code"
+      },
+      {
+        "name": "TO_SALESMAN",
+        "arg": "p_to_salesman",
+        "label_a": "إلى مندوب",
+        "label_e": "To salesman",
+        "type": "number",
+        "required": false,
+        "lov_sql": "select s.code || ' - ' || decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) d, s.code r from salesman s where (:G_PASSWORD_NUMBER = 0 or s.code in (select sp.salesman_code from ar_salesman_password sp where sp.password_number = :G_PASSWORD_NUMBER)) order by s.code desc"
+      },
+      {
+        "name": "GL",
+        "arg": "p_gl",
+        "label_a": "الحسابات العامة",
+        "label_e": "GL",
+        "type": "check",
+        "required": false,
+        "default": "1",
+        "default_type": "STATIC"
+      },
+      {
+        "name": "AR",
+        "arg": "p_ar",
+        "label_a": "العملاء",
+        "label_e": "AR",
+        "type": "check",
+        "required": false,
+        "default": "1",
+        "default_type": "STATIC"
+      },
+      {
+        "name": "AP",
+        "arg": "p_ap",
+        "label_a": "الموردين",
+        "label_e": "AP",
+        "type": "check",
+        "required": false,
+        "default": "1",
+        "default_type": "STATIC"
+      },
+      {
+        "name": "ALLOW_GROUPED",
+        "arg": "p_allow_grouped",
+        "label_a": "إلغاء القيود المجمعة",
+        "label_e": "Cancel collected vouchers",
+        "type": "check",
+        "required": false,
+        "default": "0",
+        "default_type": "STATIC"
+      }
+    ],
+    "fixed_args": {
+      "p_company_code": "to_number(:G_COMPANY_CODE)",
+      "p_user_code": "to_number(:G_USER_CODE)",
+      "p_password_number": "to_number(:G_PASSWORD_NUMBER)"
+    },
+    "button_a": "تنفيذ",
+    "button_e": "Execute",
+    "confirm_a": "هل تريد تنفيذ العملية المختارة على الحركات المحددة؟",
+    "success_a": "انتهت العملية - راجع رسائل الحركات في الجدول",
+    "preview_title_a": "الحركات ورسائل الترحيل",
+    "preview_sql": "select m.trns_type_code, decode(:G_LANG, 'en', nvl(t.desc_e, t.desc_a), t.desc_a) type_desc, m.trns_serial, m.trns_date, m.doc_no, m.store_code, coalesce(m.customer_code, m.supplier_code) partner_code, nvl(m.post_flag, 0) gl_posted, case when t.join_type = 3 then nvl(m.cust_post_flag, 0) end ar_posted, case when t.join_type = 4 then nvl(m.supp_post_flag, 0) end ap_posted, case when m.ac_entry_no is not null then m.ac_entry_year || '/' || m.ac_entry_type || '/' || m.ac_entry_no end gl_entry, (select count(*) from st_trns_mast x where x.ac_entry_year = m.ac_entry_year and x.ac_entry_type = m.ac_entry_type and x.ac_entry_no = m.ac_entry_no and nvl(x.post_flag, 0) = 1 and nvl(x.delete_flag, 0) = 0) voucher_trns, (select listagg(p.message, ' | ') within group (order by p.message) from st_post_msg p where p.trns_type_code = m.trns_type_code and p.trns_serial = m.trns_serial) post_message from st_trns_mast m join st_trns_type t on t.trns_type_code = m.trns_type_code where nvl(m.delete_flag, 0) = 0 and t.join_type in (2, 3, 4) and (:G_PASSWORD_NUMBER = 0 or m.trns_type_code in (select tp.trns_type_code from st_trnstype_password tp where tp.flag = 1 and tp.password_number = :G_PASSWORD_NUMBER)) and m.trns_date between nvl(to_date(v('P' || :APP_PAGE_ID || '_FROM_DATE'), 'DD/MM/YYYY'), trunc(sysdate, 'YYYY')) and nvl(to_date(v('P' || :APP_PAGE_ID || '_TO_DATE'), 'DD/MM/YYYY'), sysdate) and m.trns_type_code between nvl(to_number(v('P' || :APP_PAGE_ID || '_FROM_TYPE')), 0) and nvl(to_number(v('P' || :APP_PAGE_ID || '_TO_TYPE')), 999999999999) and (v('P' || :APP_PAGE_ID || '_FROM_SERIAL') is null or m.trns_serial >= to_number(v('P' || :APP_PAGE_ID || '_FROM_SERIAL'))) and (v('P' || :APP_PAGE_ID || '_TO_SERIAL') is null or m.trns_serial <= to_number(v('P' || :APP_PAGE_ID || '_TO_SERIAL'))) and ((nvl(to_number(v('P' || :APP_PAGE_ID || '_MODE')), 1) = 1 and (nvl(m.post_flag, 0) = 0 or (t.join_type = 3 and nvl(m.cust_post_flag, 0) = 0) or (t.join_type = 4 and nvl(m.supp_post_flag, 0) = 0))) or (nvl(to_number(v('P' || :APP_PAGE_ID || '_MODE')), 1) = 2 and (nvl(m.post_flag, 0) = 1 or nvl(m.cust_post_flag, 0) = 1 or nvl(m.supp_post_flag, 0) = 1)) or exists (select 1 from st_post_msg p where p.trns_type_code = m.trns_type_code and p.trns_serial = m.trns_serial)) order by m.trns_type_code, m.trns_serial",
+    "preview_columns": [
+      {
+        "name": "TRNS_TYPE_CODE",
+        "label_a": "رقم الحركة",
+        "type": "NUMBER"
+      },
+      {
+        "name": "TYPE_DESC",
+        "label_a": "نوع الحركة",
+        "type": "STRING"
+      },
+      {
+        "name": "TRNS_SERIAL",
+        "label_a": "مسلسل",
+        "type": "NUMBER"
+      },
+      {
+        "name": "TRNS_DATE",
+        "label_a": "التاريخ",
+        "type": "DATE"
+      },
+      {
+        "name": "DOC_NO",
+        "label_a": "رقم المستند",
+        "type": "NUMBER"
+      },
+      {
+        "name": "STORE_CODE",
+        "label_a": "المخزن",
+        "type": "NUMBER"
+      },
+      {
+        "name": "PARTNER_CODE",
+        "label_a": "العميل / المورد",
+        "type": "NUMBER"
+      },
+      {
+        "name": "GL_POSTED",
+        "label_a": "مرحل للحسابات",
+        "type": "NUMBER"
+      },
+      {
+        "name": "AR_POSTED",
+        "label_a": "مرحل للعملاء",
+        "type": "NUMBER"
+      },
+      {
+        "name": "AP_POSTED",
+        "label_a": "مرحل للموردين",
+        "type": "NUMBER"
+      },
+      {
+        "name": "GL_ENTRY",
+        "label_a": "رقم القيد",
+        "type": "STRING"
+      },
+      {
+        "name": "VOUCHER_TRNS",
+        "label_a": "عدد حركات القيد",
+        "type": "NUMBER"
+      },
+      {
+        "name": "POST_MESSAGE",
+        "label_a": "رسالة",
+        "type": "STRING"
+      }
+    ]
+  }
+}

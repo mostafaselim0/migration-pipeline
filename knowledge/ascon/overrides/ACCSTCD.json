@@ -1,0 +1,69 @@
+{
+  "pattern": "GRID",
+  "master": {
+    "table": "AC_COST_CENTERS"
+  },
+  "details": [],
+  "order_by": "COST_CODE",
+  "insert": false,
+  "update": true,
+  "delete": true,
+  "notes": "Cost centres 1: grid for names / project data; new cost centres are created with the button (legacy tree insert: next child of the chosen parent or a typed code checked against the structure), with parent status and grants; delete rules (APP_RULES3_GL, see processes/ACCSTCD.md)",
+  "rules": {
+    "where": "(nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or COST_CODE in (select m2.cost_code from ac_cost_centers m2, ac_password_cost1 p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE) and rpad(substr(to_char(p2.cost_code), 1, p2.cost_end_pos), 9, '0') = rpad(substr(to_char(m2.cost_code), 1, p2.cost_end_pos), 9, '0')))",
+    "row_rules": {
+      "AC_COST_CENTERS": "app_rules3_gl.cost_center_row(:new.max_limit);"
+    },
+    "readonly": [
+      "AC_COST_CENTERS.COST_CODE",
+      "AC_COST_CENTERS.COST_LEVEL"
+    ],
+    "columns": {
+      "AC_COST_CENTERS.COST_CODE": {
+        "lov": null
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "ADD",
+      "label_a": "إضافة مركز تكلفة",
+      "label_e": "Add cost centre",
+      "confirm_a": "هل تريد إضافة مركز التكلفة؟",
+      "confirm_e": "Add the cost centre?",
+      "condition": "app_sec.can_page(to_number(v('APP_PAGE_ID')), 'I')",
+      "params": [
+        {
+          "name": "PARENT",
+          "label_a": "المركز الأب (رقم تالي تلقائي)",
+          "label_e": "Parent (next number)",
+          "type": "number",
+          "lov_sql": "select cost_code || ' - ' || cost_desc d, cost_code r from ac_cost_centers order by cost_code"
+        },
+        {
+          "name": "CODE",
+          "label_a": "أو رقم مركز التكلفة",
+          "label_e": "or cost centre number",
+          "type": "number"
+        },
+        {
+          "name": "NAME_A",
+          "label_a": "البيان عربي",
+          "label_e": "Arabic description",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "NAME_E",
+          "label_a": "البيان لاتيني",
+          "label_e": "English description",
+          "type": "text"
+        }
+      ],
+      "call": "app_rules3_gl.add_cost_center(1, :PARENT, :CODE, :NAME_A, :NAME_E)",
+      "message": "app_rules3_gl.last_message",
+      "success_a": "تم إنشاء مركز التكلفة",
+      "success_e": "Cost centre created"
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "pattern": "AUTO",
+  "notes": "Target ranges and commissions per year and period: serial max+1, FROM = previous TO + 1, TO > FROM, only the last range may be changed or deleted (APP_RULES3_AR).",
+  "rules": {
+    "row_rules": {
+      "AR_TARGET_RANGES": "app_rules3_ar.trange_row(inserting, :new.t_year, :new.t_qurt, :old.serial, :new.from_t, :new.to_t);"
+    },
+    "readonly": [
+      "AR_TARGET_RANGES.FROM_T",
+      "AR_TARGET_RANGES.SERIAL"
+    ],
+    "optional": [
+      "AR_TARGET_RANGES.FROM_T"
+    ],
+    "add_columns": {
+      "AR_TARGET_RANGES.T_YEAR": {
+        "label_a": "السنة",
+        "label_e": "Year"
+      },
+      "AR_TARGET_RANGES.T_QURT": {
+        "label_a": "رقم الفترة",
+        "label_e": "Period"
+      },
+      "AR_TARGET_RANGES.PRCNT": {
+        "label_a": "نسبة العمولة 100%",
+        "label_e": "Commission % (100%)"
+      },
+      "AR_TARGET_RANGES.PRCNT2": {
+        "label_a": "نسبة العمولة 110%",
+        "label_e": "Commission % (110%)"
+      }
+    }
+  }
+}

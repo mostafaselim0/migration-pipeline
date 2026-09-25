@@ -1,0 +1,44 @@
+{
+  "pattern": "GRID",
+  "master": {
+    "table": "AC_YEARLY_TRN"
+  },
+  "details": [],
+  "order_by": "ENTRY_YEAR, ENTRY_TYPE, ENTRY_NO",
+  "insert": false,
+  "update": true,
+  "delete": false,
+  "notes": "Entries revision: posted entries of the current year (AC_BASIC.CURRENT_YEAR) when entries revision is switched on (AC_BASIC.REV_FLAG = 1); only the 'reviewed' flag REV1 can be changed (both menu entries: revision and cancel revision). See processes/AC_YEARLY_REV.md",
+  "rules": {
+    "where": "ENTRY_YEAR = (select current_year from ac_basic where company_code = to_number(:G_COMPANY_CODE) and nvl(rev_flag, 0) = 1)",
+    "add_columns": {
+      "AC_YEARLY_TRN.POST_SYSTEM": {
+        "label_a": "النظام",
+        "label_e": "System"
+      }
+    },
+    "readonly": [
+      "AC_YEARLY_TRN.ENTRY_YEAR",
+      "AC_YEARLY_TRN.ENTRY_TYPE",
+      "AC_YEARLY_TRN.ENTRY_NO",
+      "AC_YEARLY_TRN.ENTRY_DATE",
+      "AC_YEARLY_TRN.ENTRY_DESC",
+      "AC_YEARLY_TRN.POST_SYSTEM"
+    ],
+    "columns": {
+      "AC_YEARLY_TRN.POST_SYSTEM": {
+        "lov": "select case when app_sec.lang = 'en' then nvl(system_desc_e, system_desc_a) else system_desc_a end d, system_number r from sys_systems where system_number not in (0, 99) order by system_number",
+        "widget": "SELECT"
+      },
+      "AC_YEARLY_TRN.ENTRY_NO": {
+        "link": {
+          "form": "ACYRTR",
+          "doc": true,
+          "items": {
+            "ROWID": "ROWID"
+          }
+        }
+      }
+    }
+  }
+}

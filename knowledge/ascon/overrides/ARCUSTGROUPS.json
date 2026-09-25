@@ -1,0 +1,67 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "AR_CUSTOMER_GROUP_MAST"
+  },
+  "details": [
+    {
+      "table": "AR_CUSTOMER_GROUP_DET",
+      "join": [
+        [
+          "GROUP_ID",
+          "GROUP_ID"
+        ]
+      ],
+      "title_a": "عملاء خط السير",
+      "title_e": "Route customers"
+    }
+  ],
+  "where": null,
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Salesman route with its customers, visit order and visit day; wave 3: salesman / customer / day checks, visit order max+1, group filter (APP_RULES3_AR).",
+  "rules": {
+    "where": "(nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or SALESMAN_ID in (select SALESMAN_CODE from AR_SALESMAN_PASSWORD where PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)))",
+    "key_expr": {
+      "AR_CUSTOMER_GROUP_DET.CUSTOMER_ID": "app_rules3_ar.need_num('يجب إدخال رقم العميل', 'Enter the customer')"
+    },
+    "row_rules": {
+      "AR_CUSTOMER_GROUP_MAST": "app_rules3_ar.route_mast_row(:new.salesman_id);",
+      "AR_CUSTOMER_GROUP_DET": "app_rules3_ar.route_det_row(inserting, :new.group_id, :new.customer_id, :new.customer_order, :new.visit_day, :new.day_visit);"
+    },
+    "readonly": [
+      "AR_CUSTOMER_GROUP_DET.DAY_VISIT"
+    ],
+    "add_columns": {
+      "AR_CUSTOMER_GROUP_MAST.GROUP_ID": {
+        "label_a": "رقم خط السير",
+        "label_e": "Route no."
+      },
+      "AR_CUSTOMER_GROUP_MAST.GROUP_DESC": {
+        "label_a": "الأسم العربى",
+        "label_e": "Arabic name"
+      },
+      "AR_CUSTOMER_GROUP_MAST.GROUP_DESC_E": {
+        "label_a": "الأسم الإنجليزى",
+        "label_e": "English name"
+      },
+      "AR_CUSTOMER_GROUP_MAST.SALESMAN_ID": {
+        "label_a": "مندوب",
+        "label_e": "Salesman"
+      },
+      "AR_CUSTOMER_GROUP_DET.CUSTOMER_ORDER": {
+        "label_a": "ترتيب الزيارة",
+        "label_e": "Visit order"
+      },
+      "AR_CUSTOMER_GROUP_DET.VISIT_DAY": {
+        "label_a": "اليوم (Sat Sun Mon Tue Wed Thu Fri)",
+        "label_e": "Day (Sat .. Fri)"
+      },
+      "AR_CUSTOMER_GROUP_DET.DAY_VISIT": {
+        "label_a": "اليوم",
+        "label_e": "Day name"
+      }
+    }
+  }
+}

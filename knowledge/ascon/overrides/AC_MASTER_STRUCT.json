@@ -1,0 +1,28 @@
+{
+  "pattern": "GRID",
+  "master": {"table": "AC_CHART_STRUCTURES"},
+  "details": [],
+  "order_by": "CHR_STRU_LEVEL",
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Chart of accounts structure (levels of the 12-digit account number): AC_CHART_STRUCTURES, not AC_MASTER (the name match chose the wrong table). Level / start defaults, end <= 12, length derived, locked while accounts exist, delete from the bottom up (APP_RULES3_GL, see processes/AC_MASTER_STRUCT.md)",
+  "rules": {
+    "key_expr": {
+      "AC_CHART_STRUCTURES.CHR_STRU_LEVEL": "app_rules3_gl.next_chart_level"
+    },
+    "row_rules": {
+      "AC_CHART_STRUCTURES": "app_rules3_gl.chart_struct_row(inserting, :old.chr_stru_level, :old.chr_stru_start, :old.chr_stru_end, :old.length, :new.chr_stru_level, :new.chr_stru_desca, :new.chr_stru_start, :new.chr_stru_end, :new.length);"
+    },
+    "optional": ["AC_CHART_STRUCTURES.CHR_STRU_LEVEL", "AC_CHART_STRUCTURES.CHR_STRU_START", "AC_CHART_STRUCTURES.LENGTH"],
+    "readonly": ["AC_CHART_STRUCTURES.LENGTH"],
+    "add_columns": {
+      "AC_CHART_STRUCTURES.CHR_STRU_LEVEL": {"label_a": "المسلسل", "label_e": "Level"},
+      "AC_CHART_STRUCTURES.CHR_STRU_DESCA": {"label_a": "مسمى الدرجه", "label_e": "Level name (Ar)"},
+      "AC_CHART_STRUCTURES.CHR_STRU_DESCE": {"label_a": "مسمى الدرجه لاتيني", "label_e": "Level name (En)"},
+      "AC_CHART_STRUCTURES.CHR_STRU_START": {"label_a": "حقل البداية", "label_e": "Start position"},
+      "AC_CHART_STRUCTURES.CHR_STRU_END": {"label_a": "حقل النهاية", "label_e": "End position"},
+      "AC_CHART_STRUCTURES.LENGTH": {"label_a": "الطول", "label_e": "Length"}
+    }
+  }
+}

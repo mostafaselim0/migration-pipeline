@@ -1,0 +1,66 @@
+{
+  "pattern": "AUTO",
+  "notes": "Cheque-management grants of a group (BANK_PASSWORD banks, CHECK_TRNS_PASSWORD transaction types); duplicate-bank message, all banks / all types / select all / none buttons (APP_RULES3_SE, see processes/CHECKPASS.md)",
+  "rules": {
+    "key_expr": {
+      "BANK_PASSWORD.BANK_CODE": "app_rules3_se.required('رقم البنك', 'Bank')"
+    },
+    "row_rules": {
+      "BANK_PASSWORD": "if inserting then app_rules3_se.dup_row('BANK_PASSWORD', :new.password_number, :new.bank_code); end if;"
+    },
+    "columns": {
+      "BANK_PASSWORD.BANK_CODE": {
+        "lov": "select code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, code r from bank order by 1",
+        "widget": "SELECT"
+      },
+      "CHECK_TRNS_PASSWORD.TRNS_TYPE_CODE": {
+        "lov": "select trns_type_code || ' - ' || case when app_sec.lang = 'en' then nvl(desc_e, desc_a) else desc_a end d, trns_type_code r from check_trns_type order by 1",
+        "widget": "SELECT"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "ALL_BANKS",
+      "label_a": "كل البنوك",
+      "label_e": "All banks",
+      "call": "app_rules3_se.check_all_banks(:PAGE_ROWID)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "تمت إضافة البنوك",
+      "success_e": "Banks added",
+      "icon": "fa-bank"
+    },
+    {
+      "name": "ALL_TRNS",
+      "label_a": "كل الحركات",
+      "label_e": "All transactions",
+      "confirm_a": "سيتم استبدال حركات المجموعة بكل الحركات. هل تريد الاستمرار؟",
+      "confirm_e": "Replace the group's transaction types by all types?",
+      "call": "app_rules3_se.check_all_trns(:PAGE_ROWID)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "تمت إضافة الحركات",
+      "success_e": "Types added",
+      "icon": "fa-list"
+    },
+    {
+      "name": "FLAGS",
+      "label_a": "إختيار الكل / استبعاد الكل",
+      "label_e": "Select all / deselect all",
+      "params": [
+        {
+          "name": "FLAG",
+          "label_a": "اساسي",
+          "label_e": "Basic",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select case when app_sec.lang = 'en' then e else a end d, r from (select 'إختيار الكل' a, 'Select all' e, 1 r from dual union all select 'استبعاد الكل', 'Deselect all', 0 from dual) order by r desc"
+        }
+      ],
+      "call": "app_rules3_se.set_flags(:PAGE_ROWID, 'CHECK_TRNS_PASSWORD', :FLAG)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "تم التعديل",
+      "success_e": "Updated",
+      "icon": "fa-check-square-o"
+    }
+  ]
+}

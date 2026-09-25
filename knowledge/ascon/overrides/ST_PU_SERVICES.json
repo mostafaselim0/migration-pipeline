@@ -1,0 +1,31 @@
+{
+ "pattern": "AUTO",
+ "notes": "Purchase services chart (ST_PU_SERVICES): 12-digit codes structured by the ST_CHART_SERVICES levels; level derived, parent must exist and be unused, parent LEAF flag, delete refused for used services or services with sub-services (APP_RULES3_PR, compound trigger APP_R3_ST_PU_SERVICES_CT)",
+ "rules": {
+  "row_rules": {
+   "ST_PU_SERVICES": "-- legacy PRE-INSERT: chart structure required, level from the code, parent exists and has no transactions, no duplicate;\n-- account from the detail accounts (LOV ACCOUNT_STATUS = 1). Parent LEAF and delete checks: trigger APP_R3_ST_PU_SERVICES_CT\napp_rules3_pr.service_row(inserting, :new.service_code, :new.service_level, :new.leaf, :new.account_no);"
+  },
+  "add_columns": {
+   "ST_PU_SERVICES.SERVICE_LEVEL": {
+    "label_a": "المستوى",
+    "label_e": "Level"
+   }
+  },
+  "readonly": [
+   "ST_PU_SERVICES.SERVICE_LEVEL"
+  ],
+  "columns": {
+   "ST_PU_SERVICES.ACCOUNT_NO": {
+    "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or account_number in (select p.account_number from ac_password_master p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by account_number",
+    "widget": "POPUP"
+   }
+  },
+  "computed": {
+   "ST_PU_SERVICES.SERVICE_LEVEL_DESC": {
+    "sql": "(select max(s.chr_stru_desca) from st_chart_services s where s.chr_stru_level = t.service_level)",
+    "label_a": "بيان المستوى",
+    "label_e": "Level description"
+   }
+  }
+ }
+}

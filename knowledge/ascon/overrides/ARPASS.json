@@ -1,0 +1,55 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {"table": "PASSWORD"},
+  "details": [
+    {"table": "AR_TRNSTYPE_PASSWORD", "join": [["PASSWORD_NUMBER", "PASSWORD_NUMBER"]], "title_a": "الحركات", "title_e": "Transaction types"},
+    {"table": "AR_CUSTOMER_PASSWORD", "join": [["PASSWORD_NUMBER", "PASSWORD_NUMBER"]], "title_a": "العملاء (مدى)", "title_e": "Customer ranges"},
+    {"table": "AR_CUST_PASSWORD", "join": [["PASSWORD_NUMBER", "PASSWORD_NUMBER"]], "title_a": "صلاحيات العملاء", "title_e": "Customers"},
+    {"table": "AR_SALESMAN_PASSWORD", "join": [["PASSWORD_NUMBER", "PASSWORD_NUMBER"]], "title_a": "صلاحية المناديب", "title_e": "Salesmen"}
+  ],
+  "insert": true, "update": true, "delete": true,
+  "notes": "Receivable grants of a group (AR_TRNSTYPE_PASSWORD, AR_CUSTOMER_PASSWORD ranges, AR_CUST_PASSWORD customers and AR_SALESMAN_PASSWORD salesmen of the SE version of the form; read by APP_RULES_AR / SA / APP_PROC_AR); all types / customers / salesmen and select all / none buttons (APP_RULES3_SE, see processes/ARPASS.md)",
+  "rules": {
+    "readonly": ["PASSWORD.GROUP_DESC", "PASSWORD.GROUP_DESC_E"],
+    "add_columns": {
+      "PASSWORD.GROUP_DESC": {"label_a": "إسم المجموعة", "label_e": "Group name"},
+      "PASSWORD.GROUP_DESC_E": {"label_a": "إسم المجموعة (لاتينى)", "label_e": "Group name (En)"},
+      "AR_CUSTOMER_PASSWORD.FROM_SALESMAN": {"label_a": "من رقم مندوب", "label_e": "From salesman"},
+      "AR_CUSTOMER_PASSWORD.TO_SALESMAN": {"label_a": "إلى رقم مندوب", "label_e": "To salesman"},
+      "AR_CUSTOMER_PASSWORD.TO_CUSTOMER_CODE": {"label_a": "إلى رقم عميل", "label_e": "To customer"}
+    },
+    "key_expr": {
+      "AR_CUSTOMER_PASSWORD.TO_CUSTOMER_CODE": "app_rules3_se.required('إلى رقم عميل', 'To customer')"
+    }
+  },
+  "actions": [
+    {"name": "ALL_TRNS", "label_a": "كل الحركات", "label_e": "All transaction types",
+     "call": "app_rules3_se.ar_all_trns(:PAGE_ROWID)", "message": "app_rules3_se.last_message",
+     "success_a": "تمت إضافة الحركات", "success_e": "Types added", "icon": "fa-list"},
+    {"name": "FLAGS", "label_a": "إختيار الكل / استبعاد الكل", "label_e": "Select all / deselect all",
+     "params": [{"name": "FLAG", "label_a": "الصلاحية", "label_e": "Privilege", "type": "number", "required": true,
+                 "lov_sql": "select case when app_sec.lang = 'en' then e else a end d, r from (select 'إختيار الكل' a, 'Select all' e, 1 r from dual union all select 'استبعاد الكل', 'Deselect all', 0 from dual) order by r desc"}],
+     "call": "app_rules3_se.set_flags(:PAGE_ROWID, 'AR_TRNSTYPE_PASSWORD', :FLAG)", "message": "app_rules3_se.last_message",
+     "success_a": "تم التعديل", "success_e": "Updated", "icon": "fa-check-square-o"},
+    {"name": "ALL_CUST", "label_a": "كل العملاء", "label_e": "All customers",
+     "params": [
+       {"name": "MAINAREA", "label_a": "المنطقة الرئيسية", "label_e": "Main area", "type": "number",
+        "lov_sql": "select d.id || ' - ' || case when app_sec.lang = 'en' then nvl(d.name_e, d.name_a) else d.name_a end d, d.id r from ar_mainarea d order by d.id"},
+       {"name": "SUBAREA", "label_a": "المنطقة الفرعية", "label_e": "Sub area", "type": "number",
+        "lov_sql": "select d.id || ' - ' || case when app_sec.lang = 'en' then nvl(d.name_e, d.name_a) else d.name_a end d, d.id r from ar_subarea d order by d.id"},
+       {"name": "CTGRY", "label_a": "الفئة", "label_e": "Category", "type": "number",
+        "lov_sql": "select category_type_code || ' - ' || case when app_sec.lang = 'en' then nvl(category_type_desce, category_type_desca) else category_type_desca end d, category_type_code r from st_category_type order by category_type_code"},
+       {"name": "SALESMAN", "label_a": "المندوب", "label_e": "Salesman", "type": "number",
+        "lov_sql": "select code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, code r from salesman order by code"}],
+     "call": "app_rules3_se.ar_all_customers(:PAGE_ROWID, :MAINAREA, :SUBAREA, :CTGRY, :SALESMAN)", "message": "app_rules3_se.last_message",
+     "success_a": "تمت إضافة العملاء", "success_e": "Customers added", "icon": "fa-users"},
+    {"name": "ALL_SALESMEN", "label_a": "كل المناديب", "label_e": "All salesmen",
+     "params": [
+       {"name": "SUBAREA", "label_a": "المنطقة الفرعية", "label_e": "Sub area", "type": "number",
+        "lov_sql": "select d.id || ' - ' || case when app_sec.lang = 'en' then nvl(d.name_e, d.name_a) else d.name_a end d, d.id r from ar_subarea d order by d.id"},
+       {"name": "CTGRY", "label_a": "الفئة", "label_e": "Category", "type": "number",
+        "lov_sql": "select category_type_code || ' - ' || case when app_sec.lang = 'en' then nvl(category_type_desce, category_type_desca) else category_type_desca end d, category_type_code r from st_category_type order by category_type_code"}],
+     "call": "app_rules3_se.ar_all_salesmen(:PAGE_ROWID, :SUBAREA, :CTGRY)", "message": "app_rules3_se.last_message",
+     "success_a": "تمت إضافة المناديب", "success_e": "Salesmen added", "icon": "fa-user-plus"}
+  ]
+}

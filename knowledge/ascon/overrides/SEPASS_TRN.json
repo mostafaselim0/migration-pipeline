@@ -1,0 +1,82 @@
+{
+  "pattern": "AUTO",
+  "notes": "Stock / sales / purchasing grants of a group (ST_STORE_PASSWORD, ST_TRNSTYPE_PASSWORD, ST_GROUP_PASSWORD; read by APP_RULES_ST / SA / PR / APP_CONV); show-cost flag, all stores / types / item groups and select all / none buttons (APP_RULES3_SE, see processes/SEPASS_TRN.md)",
+  "rules": {
+    "add_columns": {
+      "PASSWORD.SHOW_COST": {
+        "label_a": "إظهار التكلفة والربح بالتقارير",
+        "label_e": "Show cost in reports"
+      },
+      "ST_STORE_PASSWORD.SALES_PRICE_FLAG": {
+        "label_a": "صلاحية سعر البيع",
+        "label_e": "Sales price right"
+      },
+      "ST_STORE_PASSWORD.DISC_PRICE_FLAG": {
+        "label_a": "صلاحية الخصم",
+        "label_e": "Discount right"
+      },
+      "ST_STORE_PASSWORD.BONUS_FLAG": {
+        "label_a": "صلاحية المجاني",
+        "label_e": "Free goods right"
+      }
+    },
+    "columns": {
+      "ST_GROUP_PASSWORD.GROUP_CODE": {
+        "lov": "select item_group_code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, item_group_code r from st_item_group where nvl(group_status, 0) = 1 order by item_group_code",
+        "widget": "SELECT"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "ALL_ROWS",
+      "label_a": "كل المخازن / الحركات / المجموعات",
+      "label_e": "All stores / types / groups",
+      "confirm_a": "سيتم استبدال صلاحيات المجموعة من هذا النوع بكل السجلات. هل تريد الاستمرار؟",
+      "confirm_e": "The group's grants of this kind will be replaced by all rows. Continue?",
+      "params": [
+        {
+          "name": "KIND",
+          "label_a": "النوع",
+          "label_e": "Kind",
+          "type": "text",
+          "required": true,
+          "lov_sql": "select case when app_sec.lang = 'en' then e else a end d, r from (select 'كل المخازن' a, 'All stores' e, 'STORE' r, 1 s from dual union all select 'كل الحركات', 'All transaction types', 'TRNS', 2 from dual union all select 'كل المجموعات', 'All item groups', 'GROUP', 3 from dual) order by s"
+        }
+      ],
+      "call": "app_rules3_se.st_all(:PAGE_ROWID, :KIND)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "تمت الإضافة",
+      "success_e": "Added",
+      "icon": "fa-plus-square"
+    },
+    {
+      "name": "FLAGS",
+      "label_a": "إختيار الكل / استبعاد الكل",
+      "label_e": "Select all / deselect all",
+      "params": [
+        {
+          "name": "TBL",
+          "label_a": "الجدول",
+          "label_e": "Grid",
+          "type": "text",
+          "required": true,
+          "lov_sql": "select case when app_sec.lang = 'en' then e else a end d, r from (select 'المخازن' a, 'Stores' e, 'ST_STORE_PASSWORD' r, 1 s from dual union all select 'الحركات', 'Transaction types', 'ST_TRNSTYPE_PASSWORD', 2 from dual union all select 'المجموعات', 'Item groups', 'ST_GROUP_PASSWORD', 3 from dual) order by s"
+        },
+        {
+          "name": "FLAG",
+          "label_a": "الصلاحية",
+          "label_e": "Privilege",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select case when app_sec.lang = 'en' then e else a end d, r from (select 'إختيار الكل' a, 'Select all' e, 1 r from dual union all select 'استبعاد الكل', 'Deselect all', 0 from dual) order by r desc"
+        }
+      ],
+      "call": "app_rules3_se.set_flags(:PAGE_ROWID, :TBL, :FLAG)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "تم التعديل",
+      "success_e": "Updated",
+      "icon": "fa-check-square-o"
+    }
+  ]
+}

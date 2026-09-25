@@ -1,0 +1,48 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "ST_CATEGORY_TYPE"
+  },
+  "details": [
+    {
+      "table": "AR_CTGRY_DSCNT",
+      "join": [
+        [
+          "CTGRY_CODE",
+          "CATEGORY_TYPE_CODE"
+        ]
+      ],
+      "title_a": "شرائح الخصم",
+      "title_e": "Discount levels"
+    }
+  ],
+  "where": null,
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Legacy form: department block (ST_CATEGORY_TYPE) with its discount levels (AR_CTGRY_DSCNT); the generated grid on AR_CTGRY_DSCNT alone was corrected (APP_RULES3_AR).",
+  "rules": {
+    "row_rules": {
+      "ST_CATEGORY_TYPE": "app_rules3_ar.ctgry_type_row(:new.category_type_code);",
+      "AR_CTGRY_DSCNT": "app_rules3_ar.dscnt_row('CTGRY', inserting, :new.ctgry_code, :new.period_serial, :new.dscnt_prcnt, :new.dscnt_value);"
+    },
+    "add_columns": {
+      "ST_CATEGORY_TYPE.CATEGORY_TYPE_CODE": {
+        "label_a": "رقم القســم",
+        "label_e": "Department No."
+      },
+      "ST_CATEGORY_TYPE.CATEGORY_TYPE_DESCA": {
+        "label_a": "البيــان عربي",
+        "label_e": "Arabic description"
+      },
+      "ST_CATEGORY_TYPE.CATEGORY_TYPE_DESCE": {
+        "label_a": "البيــان لاتيني",
+        "label_e": "English description"
+      },
+      "ST_CATEGORY_TYPE.ST_COMMISSION": {
+        "label_a": "عموله القسم",
+        "label_e": "Department commission"
+      }
+    }
+  }
+}

@@ -1,0 +1,93 @@
+{
+ "pattern": "AUTO",
+ "notes": "items (ST_ITEM.fmb): code = NVL(MAX(ITEM_CODE),0)+1 per group (first SUBSTR(group,1,5)||'0001'), transaction group allowed for the user group, stop flag from the group, uniqueness of alternative / Lemon / SMC codes, VAT 0 or 15 -> TX_TAXES_ITEMS, min/max limits, M.O.H discount, exactly one basic unit with factor 1, unique factors, units used in transactions locked, unique barcodes, alternative items; delete refused with transactions (lots, locations, balances rows removed); balance / cost panel",
+ "rules": {
+  "where": "app_rules3_st.group_allowed(ITEM_GROUP_CODE) = 1",
+  "key_expr": {
+   "ST_ITEM.ITEM_CODE": "app_rules3_st.next_item_code(:new.item_group_code)",
+   "ST_SUB_ITEM.SUB_ITEM_GROUP_CODE": "app_rules3_st.item_group(:new.sub_item_code)",
+   "ST_ITEM_PIECES.DELETE_FLAG": "0"
+  },
+  "row_rules": {
+   "ST_ITEM": "app_rules3_st.item_row(inserting, updating, :new.item_group_code, :new.item_code, :new.stop_flag, :new.stop_reason, :new.stand_flag, :new.vat_value, :new.min_limit, :new.max_limit, :new.moh_flag, :new.moh_disc, :old.vat_value, :old.min_limit, :old.max_limit, :old.moh_flag, :old.moh_disc);",
+   "ST_ITEM_UNIT": "app_rules3_st.unit_item_row(inserting, updating, :new.group_code, :new.item_code, :new.unit_code, :new.factor, :new.basic_unit, :old.unit_code, :old.factor, :old.basic_unit);",
+   "ST_ITEM_BARCODE": "app_rules3_st.barcode_row(:new.item_barcode, :new.group_code, :new.item_code);",
+   "ST_SUB_ITEM": "app_rules3_st.sub_item_row(:new.item_code, :new.item_group_code, :new.sub_item_code, :new.sub_item_group_code);"
+  },
+  "validations": [
+   {
+    "name": "بيانات الصنف: المجموعة والاسم والأرقام البديلة",
+    "plsql": "return app_rules3_st.val_item('ST_ITEM', :PAGE_ROWID, :REQUEST, :PAGE_ITEM_GROUP_CODE, :PAGE_ITEM_CODE, :PAGE_NAME_A, :PAGE_PEICE_NO, :PAGE_LEMON_CODE, :PAGE_SMC_CODE);",
+    "when": "CREATE,SAVE"
+   },
+   {
+    "name": "حقول إلزامية للصنف الجديد: نسبة الضريبة وسعر البيع المبدئي",
+    "plsql": "if :PAGE_VAT_VALUE is null then return case when app_sec.lang = 'en' then 'VAT % must be entered' else 'يجب إدخال نسبة الضريبة' end; end if; if :PAGE_INITIAL_SALES_PRICE is null then return case when app_sec.lang = 'en' then 'Initial sales price must be entered' else 'يجب إدخال سعر البيع المبدئي' end; end if; return null;",
+    "when": "CREATE"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "الوحدة الأساسية ومعاملات التحويل وضريبة الصنف",
+    "plsql": "app_rules3_st.item_after('ST_ITEM', :PAGE_ROWID, :REQUEST);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "info": [
+   {"name": "BAL", "label_a": "الرصيد الحالي", "label_e": "Current balance",
+    "sql": "select app_rules3_st.item_info('BAL', :PAGE_ITEM_GROUP_CODE, :PAGE_ITEM_CODE) from dual"},
+   {"name": "COST", "label_a": "التكلفة الكلية", "label_e": "Whole cost",
+    "sql": "select app_rules3_st.item_info('COST', :PAGE_ITEM_GROUP_CODE, :PAGE_ITEM_CODE) from dual"},
+   {"name": "AVG", "label_a": "متوسط التكلفة", "label_e": "Average cost",
+    "sql": "select app_rules3_st.item_info('AVG', :PAGE_ITEM_GROUP_CODE, :PAGE_ITEM_CODE) from dual"},
+   {"name": "MIN_PROFIT", "label_a": "التكلفة مع التكاليف الأخرى", "label_e": "Cost with other costs",
+    "sql": "select app_rules3_st.item_info('MIN_PROFIT', :PAGE_ITEM_GROUP_CODE, :PAGE_ITEM_CODE) from dual"},
+   {"name": "LAST_PUR", "label_a": "آخر سعر شراء", "label_e": "Last purchase price",
+    "sql": "select app_rules3_st.item_info('LAST_PUR', :PAGE_ITEM_GROUP_CODE, :PAGE_ITEM_CODE) from dual"},
+   {"name": "STORES", "label_a": "أرصدة المخازن", "label_e": "Store balances",
+    "sql": "select app_rules3_st.item_info('STORES', :PAGE_ITEM_GROUP_CODE, :PAGE_ITEM_CODE) from dual"}
+  ],
+  "readonly": ["ST_ITEM.ITEM_CODE"],
+  "optional": ["ST_ITEM.ITEM_CODE", "ST_ITEM_PIECES.DELETE_FLAG", "ST_SUB_ITEM.SUB_ITEM_GROUP_CODE"],
+  "columns": {
+   "ST_ITEM.ITEM_GROUP_CODE": {"readonly_after_insert": true, "widget": "POPUP",
+    "lov": "select g.item_group_code || ' - ' || g.name_a d, g.item_group_code r from st_item_group g where g.group_status = 1 and app_rules3_st.group_allowed(g.item_group_code) = 1 order by g.item_group_code"},
+   "ST_ITEM.ITEM_STATUS": {"static": [["نشط", "1", "Active"], ["غير نشط", "2", "Inactive"]], "default": {"type": "STATIC", "value": "1"}},
+   "ST_ITEM.ITEM_TYPE": {"static": [["وصفية", "1", "Prescribed"], ["غير وصفية", "2", "Non-prescribed"]], "default": {"type": "STATIC", "value": "1"},
+                         "hidden": false, "label_a": "نوع الصنف", "label_e": "Item Type"},
+   "ST_ITEM.CLASS_CODE": {"lov": "select c.class_code || ' - ' || c.desc_a d, c.class_code r from st_item_classes c order by c.class_code", "widget": "SELECT", "required": true},
+   "ST_ITEM.COUNTRY_CODE": {"lov": "select c.country_code || ' - ' || c.name_a d, to_char(c.country_code) r from st_org_country c order by c.country_code", "widget": "SELECT"},
+   "ST_ITEM.ACTIVE_MATERIAL_CODE": {"lov": "select m.serial || ' - ' || m.name_a d, m.serial r from st_active_material m order by m.serial", "widget": "POPUP", "required": true},
+   "ST_ITEM.DOSAGE_FORM_CODE": {"required": true},
+   "ST_ITEM.NAME_A": {"required": true},
+   "ST_ITEM.NAME_E": {"required": true},
+   "ST_ITEM.MODEL_NO": {"required": true},
+   "ST_ITEM.SUPPLIER": {"required": true},
+   "ST_ITEM.HS_CODE": {"required": true},
+   "ST_ITEM.MOH_FLAG": {"default": {"type": "STATIC", "value": "1"}},
+   "ST_ITEM.STOP_FLAG": {"default": {"type": "STATIC", "value": "0"}},
+   "ST_ITEM_UNIT.UNIT_CODE": {"readonly_after_insert": true},
+   "ST_ITEM_STORE_LOCATIONS.LOCATION_LABEL": {"widget": "POPUP", "cascade": "STORE_CODE",
+    "lov": "select l.location_label || ' - ' || l.desc_a d, l.location_label r from st_store_locations l where l.store_code = :PAGE_STORE_CODE order by l.location_label"},
+   "ST_SUB_ITEM.SUB_ITEM_CODE": {"readonly_after_insert": true, "widget": "POPUP",
+    "lov": "select i.item_code || ' - ' || i.name_a d, i.item_code r from st_item i order by i.item_group_code, i.item_code"}
+  },
+  "computed": {
+   "ST_ITEM_STORE_LOCATIONS.STAND_NAME": {"sql": "(select max(l.desc_a) from st_store_locations l where l.store_code = t.store_code and l.location_label = t.location_label)",
+                                          "label_a": "وصف الاستاند", "label_e": "Stand Desc"},
+   "ST_SUB_ITEM.SUB_ITEM_NAME": {"sql": "(select max(i.name_a) from st_item i where i.item_group_code = t.sub_item_group_code and i.item_code = t.sub_item_code)",
+                                 "label_a": "اسم الصنف البديل", "label_e": "Altr. Item Nm"},
+   "ST_SUB_ITEM.SUB_GROUP_NAME": {"sql": "(select max(g.name_a) from st_item_group g where g.item_group_code = t.sub_item_group_code)",
+                                  "label_a": "اسم المجموعة الصنف", "label_e": "Group Name"},
+   "ST_STORE_ITEM.CURRENT_BAL": {"sql": "get_balance(t.store_code, t.group_code, t.item_code)", "type": "NUMBER",
+                                 "label_a": "رصيد جارى", "label_e": "Current Bal"},
+   "ST_STORE_ITEM.CURRENT_COST": {"sql": "get_cost(t.store_code, t.group_code, t.item_code)", "type": "NUMBER",
+                                  "label_a": "تكلفة كلية", "label_e": "Tot. Cost"},
+   "ST_STORE_ITEM.AVG_COST": {"sql": "get_unit_cost(t.store_code, t.group_code, t.item_code)", "type": "NUMBER",
+                              "label_a": "تكلفة متوسطة", "label_e": "Avg Cost"}
+  },
+  "blocks": {
+   "ST_ITEM_PIECES": {"insert": false, "update": false, "where": "NVL(DELETE_FLAG, 0) = 0"}
+  }
+ }
+}

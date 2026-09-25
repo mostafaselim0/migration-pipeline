@@ -1,0 +1,10 @@
+{
+  "pattern": "AUTO",
+  "notes": "Customer classes with discount periods: credit limit range, period exists, duplicate period, discount percent < 100 and value 0 .. 99999.99 (APP_RULES3_AR).",
+  "rules": {
+    "row_rules": {
+      "AR_CUST_CLASS": "app_rules3_ar.cust_class_row(:new.credit_limit);",
+      "AR_CUST_CLASS_DSCNT": "app_rules3_ar.dscnt_row('CLASS', inserting, :new.serial, :new.period_serial, :new.dscnt_prcnt, :new.dscnt_value);"
+    }
+  }
+}

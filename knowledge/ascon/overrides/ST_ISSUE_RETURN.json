@@ -1,0 +1,218 @@
+{
+  "pattern": "AUTO",
+  "notes": "Sales returns on ST_TRNS_MAST/ST_TRNS_DET (types EFFECT 4, TRNS_TYPE 4), both legacy modes on one page (INVOICE_NO 'TYPE\\SERIAL' = return against that invoice, empty = without invoice): numbering (DOC_NO_SEQ_RET, INVOICE_NO/INVOICE_REF), returned <= sold per lot, invoice prices/cost/tax, cost of returns, posted read-only, soft delete (APP_RULES_SA); wave 3: load the invoice items, item of an old lot (GET_THE_CONFIG), displays and notices (APP_ACT_ST)",
+  "rules": {
+  "computed": {
+   "ST_TRNS_DET.ITEM_NAME": {"sql": "(select max(nvl(i.name_e, i.name_a)) from st_item i where i.item_group_code = t.group_code and i.item_code = t.item_code)", "label_a": "إســم الصنـــف", "label_e": "Item Name"},
+   "ST_TRNS_DET.LOT_NO": {"sql": "(select max(c.lot_number) from st_item_confg c where c.item_confg_id = t.item_confg_id)", "label_a": "Lot No", "label_e": "Lot No"},
+   "ST_TRNS_DET.EXPIRE_DATE": {"sql": "app_ui.lot_expiry(t.item_confg_id)", "label_a": "تاريخ الصلاحيه", "label_e": "Expire Date", "type": "DATE"},
+   "ST_TRNS_DET.STORE_BALANCE": {"sql": "case when (nvl(to_number(v('G_USER_CODE')), 0) = 0 or (select nvl(max(u.allow_view_balance), 0) from users u where u.users_code = to_number(v('G_USER_CODE'))) = 1) then round(nvl(get_balance_confg(t.store_code, t.group_code, t.item_code, t.item_confg_id, t.trns_date, t.date_serial, t.item_serial), 0) / nvl((select max(u.factor) from st_item_unit u where u.group_code = t.group_code and u.item_code = t.item_code and u.unit_code = t.unit_code), 1), 3) end", "label_a": "الرصيد قبل الحركة", "label_e": "Balance Befor Trns", "type": "NUMBER"},
+   "ST_TRNS_DET.STORE_COST": {"sql": "case when (nvl(to_number(v('G_PASSWORD_NUMBER')), 0) = 0 or ((select nvl(max(b.show_cost), 0) from st_basic b) = 1 and (select nvl(max(u.allow_view_cost), 0) from users u where u.users_code = to_number(v('G_USER_CODE'))) = 1)) then get_unit_cost_confg(t.store_code, t.group_code, t.item_code, t.item_confg_id, t.trns_date, t.date_serial, t.item_serial) end", "label_a": "التكلفة المتوسطة", "label_e": "Avg Cost", "type": "NUMBER"}
+  },
+  "columns": {
+   "ST_TRNS_MAST.TRNS_TYPE_CODE": {"readonly_after_insert": true},
+   "ST_TRNS_MAST.STORE_CODE": {"readonly_after_insert": true, "required": true},
+   "ST_TRNS_MAST.RET_INV_CODE": {"required": true, "widget": "SELECT", "label_a": "السبب", "label_e": "Return reason", "lov": "select r.complaint_code || ' - ' || r.complaint_name d, r.complaint_code r from ret_inv_codes r order by r.complaint_code"},
+   "ST_TRNS_MAST.TAX_CODE_MAST": {"readonly_after_insert": true, "widget": "SELECT", "label_a": "رقم الضريبة", "label_e": "Tax code", "lov": "select x.tax_code || ' - ' || x.name_a d, x.tax_code r from tx_taxes_types x order by x.tax_code"},
+   "ST_TRNS_DET.LOT_NUMBER": {"hidden": true},
+   "ST_TRNS_DET.PRODUCTION_DATE": {"hidden": true},
+   "ST_TRNS_DET.ITEM_CONFG_ID": {"widget": "POPUP", "cascade": "ITEM_CODE", "lov": "select c.item_confg_id || ' - ' || c.lot_number || ' - ' || to_char(c.expire_date, 'DD/MM/YYYY') d, c.item_confg_id r from st_item_confg c where c.item_code = :PAGE_ITEM_CODE order by c.expire_date, c.item_confg_id"}
+  },
+    "where": "TRNS_TYPE_CODE IN (SELECT T.TRNS_TYPE_CODE FROM ST_TRNS_TYPE T WHERE T.EFFECT = 4 AND T.TRNS_TYPE = 4) AND NVL(DELETE_FLAG,0) = 0 AND (NVL(:G_PASSWORD_NUMBER,0) = 0 OR TRNS_TYPE_CODE IN (SELECT TP.TRNS_TYPE_CODE FROM ST_TRNSTYPE_PASSWORD TP WHERE TP.FLAG = 1 AND TP.PASSWORD_NUMBER = :G_PASSWORD_NUMBER))",
+    "defaults": {
+      "ST_TRNS_MAST.TRNS_TYPE_CODE": {
+        "type": "SQL_QUERY",
+        "value": "select app_rules_sa.first_type('SR') from dual"
+      },
+      "ST_TRNS_MAST.PRINT_FLAG": {
+        "type": "STATIC",
+        "value": "0"
+      }
+    },
+    "readonly": [
+      "ST_TRNS_MAST.TRNS_SERIAL",
+      "ST_TRNS_MAST.DOC_NO",
+      "ST_TRNS_MAST.POST_FLAG",
+      "ST_TRNS_MAST.CUST_POST_FLAG",
+      "ST_TRNS_MAST.SUPP_POST_FLAG",
+      "ST_TRNS_MAST.CUST_TRNS_ID",
+      "ST_TRNS_MAST.CUST_TRNS_SERIAL",
+      "ST_TRNS_MAST.SUPP_TRNS_ID",
+      "ST_TRNS_MAST.SUPP_TRNS_SERIAL",
+      "ST_TRNS_MAST.AC_ENTRY_YEAR",
+      "ST_TRNS_MAST.AC_ENTRY_TYPE",
+      "ST_TRNS_MAST.AC_ENTRY_NO",
+      "ST_TRNS_MAST.TAX_VALUE1",
+      "ST_TRNS_DET.TAX_VALUE1",
+      "ST_TRNS_MAST.INVOICE_REF",
+      "ST_TRNS_DET.UNIT_COST",
+      "ST_TRNS_DET.UNIT_PRICE"
+    ],
+    "optional": [
+      "ST_TRNS_MAST.DATE_SERIAL",
+      "ST_TRNS_MAST.DELETE_FLAG",
+      "ST_TRNS_DET.GROUP_CODE",
+      "ST_TRNS_DET.UNIT_CODE",
+      "ST_TRNS_DET.BASIC_QTY",
+      "ST_TRNS_DET.COST_FLAG"
+    ],
+    "row_rules": {
+      "ST_TRNS_MAST": "if app_rules_sa.doc_kind(:new.trns_type_code) in ('SI','SR') then app_rules_sa.trns_mast_row(inserting, :new.trns_type_code, :new.trns_serial, :new.trns_date, :new.doc_no, :new.invoice_no, :new.invoice_ref, :new.desc_a, :new.desc_e, :new.store_code, :new.customer_code, :new.salesman_code, :new.currency_code, :new.currency_rate, :new.due_days, :new.due_date, :new.delete_flag, :new.print_flag, :new.return_type_flag, :new.ret_trns_type_code, :new.ret_trns_serial, :new.order_trns_type_code, :new.order_trns_serial, :new.demo_trns_type_code, :new.demo_trns_serial, :new.trnsport_val); end if;",
+      "ST_TRNS_DET": "if app_rules_sa.doc_kind(:new.trns_type_code) in ('SI','SR') then app_rules_sa.trns_det_row2(inserting, :new.trns_type_code, :new.trns_serial, :new.item_serial, :new.group_code, :new.item_code, :new.unit_code, :new.item_confg_id, :new.quantity, :new.bonus, :new.extra_bonus, :new.extra_bonus_ratio, :new.basic_qty, :new.unit_price_curr, :new.unit_price, :new.disc1_ratio, :new.disc1_value, :new.disc2_ratio, :new.disc2_value, :new.disc3_ratio, :new.disc3_value, :new.det_disc, :new.disc, :new.cost_flag, :new.unit_cost, :new.store_code, :new.tax_code1, :new.tax_value1, :new.auto_disc, :new.org_disc1_ratio, :new.org_disc2_ratio, :new.org_disc3_ratio, :new.org_bonus_ratio, :new.org_unit_price_curr, :new.org_extra_bonus_ratio, :new.org_class_code, :old.item_code, :old.unit_code, :old.item_confg_id, :old.quantity, :old.bonus, :old.extra_bonus, :old.unit_price_curr); end if;",
+      "ST_TRNS_SERVICES": "if app_rules_sa.doc_kind(:new.trns_type_code) in ('SI','SR') then app_rules_sa.trns_srv_row(inserting, :new.trns_type_code, :new.trns_serial, :new.service_code, :new.service_cost, :new.units_no, :new.tax_code1, :new.tax_value1); end if;"
+    },
+    "validations": [
+      {
+        "name": "قواعد مرتجع المبيعات",
+        "when": "CREATE,SAVE",
+        "plsql": "return app_rules_sa.sr_validate(:REQUEST, :PAGE_ROWID, :PAGE_TRNS_TYPE_CODE, :PAGE_TRNS_DATE, :PAGE_STORE_CODE, :PAGE_CUSTOMER_CODE, :PAGE_SALESMAN_CODE, :PAGE_CURRENCY_CODE, :PAGE_CURRENCY_RATE, :PAGE_RET_INV_CODE, :PAGE_INVOICE_NO);"
+      },
+      {
+        "name": "مؤشر الطباعة للمستخدم 0 فقط",
+        "when": "CREATE,SAVE",
+        "plsql": "return app_act_st.sr_validate_extra(:PAGE_ROWID, :PAGE_PRINT_FLAG);"
+      }
+    ],
+    "after_save": [
+      {
+        "name": "فحص كميات وأرصدة المرتجع",
+        "when": "CREATE,SAVE",
+        "plsql": "app_rules_sa.sr_after_save(:REQUEST, :PAGE_ROWID);"
+      }
+    ],
+    "soft_delete": {
+      "set": {
+        "DELETE_FLAG": "1",
+        "DELETE_USER": ":G_USER_CODE",
+        "DELETE_DATE": "sysdate"
+      },
+      "lines": "keep",
+      "check": "return app_act_st.sr_delete_check(:PAGE_ROWID);",
+      "message_a": "تم حذف المرتجع"
+    },
+    "info": [
+      {
+        "name": "CREDIT",
+        "label_a": "الحد الائتماني المتبقي",
+        "label_e": "Remaining credit",
+        "sql": "select app_act_st.sr_info(:PAGE_ROWID, 'CREDIT') from dual"
+      },
+      {
+        "name": "INV_DATE",
+        "label_a": "تاريخ الفاتورة الأصلية",
+        "label_e": "Original invoice date",
+        "sql": "select app_act_st.sr_info(:PAGE_ROWID, 'INV_DATE') from dual"
+      },
+      {
+        "name": "TOTAL",
+        "label_a": "صافي الأصناف",
+        "label_e": "Items net",
+        "sql": "select app_act_st.sr_info(:PAGE_ROWID, 'TOTAL') from dual"
+      },
+      {
+        "name": "NOTICES",
+        "label_a": "تنبيهات",
+        "label_e": "Notices",
+        "sql": "select app_act_st.sr_info(:PAGE_ROWID, 'NOTICES') from dual"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "name": "LOAD_INV",
+      "label_a": "إنزال أصناف الفاتورة",
+      "label_e": "Drop Invoice Items",
+      "confirm_a": "هل تريد إنزال أصناف الفاتورة الأصلية (الكميات المتبقية بعد المرتجعات السابقة) وخدماتها في هذا المرتجع؟",
+      "confirm_e": "Load the items of the original invoice (the quantities left after earlier returns) and its services into this return?",
+      "condition": "app_act_st.sr_can_decompose(:PAGE_ROWID) = 'Y'",
+      "call": "app_act_st.sr_decompose(p_rowid => :PAGE_ROWID)",
+      "message": "app_act_st.last_message",
+      "success_a": "تم إنزال أصناف الفاتورة",
+      "success_e": "The invoice items were loaded",
+      "icon": "fa-download"
+    },
+    {
+      "name": "OLD_LOT",
+      "label_a": "صنف بشحنة قديمة",
+      "label_e": "Item of an old lot",
+      "confirm_a": "هل تريد إدخال الصنف بشحنة قديمة؟ يتم إنشاء الشحنة (رقم التشغيلة وتاريخ الصلاحية) وحركتي تكوين الشحنات وارد وصادر ثم سطر المرتجع.",
+      "confirm_e": "Enter the item with an old lot? The lot (lot number, expiry) is created with the lot-formation IN and OUT lines, then the return line.",
+      "condition": "app_act_st.sr_can_old_lot(:PAGE_ROWID) = 'Y'",
+      "params": [
+        {
+          "name": "ITEM",
+          "label_a": "رقم الصنف",
+          "label_e": "Item",
+          "type": "text",
+          "required": true,
+          "lov_sql": "select item_code || ' - ' || decode(:G_LANG, 'en', name_e, name_a) d, item_code r from st_item where nvl(stop_flag, 0) = 0 order by item_code"
+        },
+        {
+          "name": "UNIT",
+          "label_a": "الوحدة (فارغ = الوحدة الأساسية)",
+          "label_e": "Unit (empty = basic unit)",
+          "type": "number",
+          "required": false,
+          "lov_sql": "select unit_code || ' - ' || decode(:G_LANG, 'en', name_e, name_a) d, unit_code r from st_unit order by unit_code"
+        },
+        {
+          "name": "QTY",
+          "label_a": "الكمية",
+          "label_e": "Quantity",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "BONUS",
+          "label_a": "البونص",
+          "label_e": "Bonus",
+          "type": "number",
+          "required": false
+        },
+        {
+          "name": "LOT_NO",
+          "label_a": "رقم التشغيلة",
+          "label_e": "Lot number",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "EXPIRE",
+          "label_a": "تاريخ الصلاحية",
+          "label_e": "Expiry date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "COST",
+          "label_a": "تكلفة الوحدة (فارغ = تكلفة الصنف)",
+          "label_e": "Unit cost (empty = item cost)",
+          "type": "number",
+          "required": false
+        },
+        {
+          "name": "PRICE",
+          "label_a": "السعر (فارغ = سعر البيع)",
+          "label_e": "Price (empty = sales price)",
+          "type": "number",
+          "required": false
+        },
+        {
+          "name": "DISC1",
+          "label_a": "نسبة الخصم 1 (فارغ = خصم الصنف)",
+          "label_e": "Discount 1 % (empty = item discount)",
+          "type": "number",
+          "required": false
+        }
+      ],
+      "call": "app_act_st.sr_old_lot(p_rowid => :PAGE_ROWID, p_item => :ITEM, p_unit => :UNIT, p_qty => :QTY, p_bonus => :BONUS, p_lot_number => :LOT_NO, p_expire_date => :EXPIRE, p_unit_cost => :COST, p_price => :PRICE, p_disc1 => :DISC1)",
+      "message": "app_act_st.last_message",
+      "success_a": "تم إدخال الصنف بالشحنة القديمة",
+      "success_e": "The item was entered with the old lot",
+      "icon": "fa-plus"
+    }
+  ],
+ "links": [
+  {"label_a": "ترحيل السند", "label_e": "Post transaction", "form": "ST_POSTING_CPOSTING", "icon": "fa-send", "items": {"FROM_TYPE": "TRNS_TYPE_CODE", "TO_TYPE": "TRNS_TYPE_CODE", "FROM_SERIAL": "TRNS_SERIAL", "TO_SERIAL": "TRNS_SERIAL", "FROM_DATE": "TRNS_DATE", "TO_DATE": "TRNS_DATE"}}
+ ]
+}

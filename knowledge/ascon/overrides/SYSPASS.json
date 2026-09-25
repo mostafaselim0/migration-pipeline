@@ -1,0 +1,90 @@
+{
+  "pattern": "AUTO",
+  "notes": "Screen and report rights of a user (FILE_PASSWORD / REPORT_PASSWORD, read by APP_SEC.can_page and APP_MENU_V); all screens / all reports of a system buttons, registry checks (APP_RULES3_SE, see processes/SYSPASS.md)",
+  "rules": {
+    "hidden": [
+      "USERS.PASSWORD"
+    ],
+    "optional": [
+      "USERS.PASSWORD"
+    ],
+    "key_expr": {
+      "FILE_PASSWORD.FILE_SERIAL": "app_rules3_se.required('رقم الشاشة', 'Screen')",
+      "REPORT_PASSWORD.REPORT_SERIAL": "app_rules3_se.required('رقم التقرير', 'Report')"
+    },
+    "row_rules": {
+      "FILE_PASSWORD": "app_rules3_se.file_password_row(:new.system_number, :new.file_serial);",
+      "REPORT_PASSWORD": "app_rules3_se.report_password_row(:new.system_number, :new.report_serial);"
+    },
+    "columns": {
+      "FILE_PASSWORD.SYSTEM_NUMBER": {
+        "lov": "select system_number || ' - ' || case when app_sec.lang = 'en' then nvl(system_desc_e, system_desc_a) else system_desc_a end d, system_number r from sys_systems order by system_number",
+        "widget": "SELECT"
+      },
+      "REPORT_PASSWORD.SYSTEM_NUMBER": {
+        "lov": "select system_number || ' - ' || case when app_sec.lang = 'en' then nvl(system_desc_e, system_desc_a) else system_desc_a end d, system_number r from sys_systems order by system_number",
+        "widget": "SELECT"
+      },
+      "FILE_PASSWORD.FILE_SERIAL": {
+        "lov": "select file_serial || ' - ' || case when app_sec.lang = 'en' then nvl(file_desc_e, file_desc_a) else file_desc_a end d, file_serial r from sys_files where system_number = :PAGE_SYSTEM_NUMBER order by file_serial",
+        "widget": "POPUP",
+        "cascade": "SYSTEM_NUMBER"
+      },
+      "REPORT_PASSWORD.REPORT_SERIAL": {
+        "lov": "select report_serial || ' - ' || case when app_sec.lang = 'en' then nvl(report_desc_e, report_desc_a) else report_desc_a end d, report_serial r from sys_reports where system_number = :PAGE_SYSTEM_NUMBER order by report_serial",
+        "widget": "POPUP",
+        "cascade": "SYSTEM_NUMBER"
+      },
+      "USERS.MAIN_STORE_CODE": {
+        "lov": "select store_code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, store_code r from st_store where store_status = 1 order by store_code",
+        "widget": "SELECT"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "ALL_FORMS",
+      "label_a": "جميع الشــاشات",
+      "label_e": "All screens",
+      "confirm_a": "سيتم استبدال صلاحيات شاشات النظام المختار بصلاحية كاملة على كل شاشاته. هل تريد الاستمرار؟",
+      "confirm_e": "The screen rights of the chosen system will be replaced by full rights on all its screens. Continue?",
+      "params": [
+        {
+          "name": "SYSTEM_NO",
+          "label_a": "رقم النظام",
+          "label_e": "System",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select system_number || ' - ' || case when app_sec.lang = 'en' then nvl(system_desc_e, system_desc_a) else system_desc_a end d, system_number r from sys_systems order by tree_order, system_number"
+        }
+      ],
+      "call": "app_rules3_se.grant_all_forms(:PAGE_ROWID, :SYSTEM_NO)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "تم منح صلاحية الشاشات",
+      "success_e": "Screen rights granted",
+      "icon": "fa-desktop"
+    },
+    {
+      "name": "ALL_REPORTS",
+      "label_a": "جميع التقـــارير",
+      "label_e": "All reports",
+      "confirm_a": "سيتم استبدال صلاحيات تقارير النظام المختار بصلاحية كل تقاريره. هل تريد الاستمرار؟",
+      "confirm_e": "The report rights of the chosen system will be replaced by all its reports. Continue?",
+      "params": [
+        {
+          "name": "SYSTEM_NO",
+          "label_a": "رقم النظام",
+          "label_e": "System",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select system_number || ' - ' || case when app_sec.lang = 'en' then nvl(system_desc_e, system_desc_a) else system_desc_a end d, system_number r from sys_systems order by tree_order, system_number"
+        }
+      ],
+      "call": "app_rules3_se.grant_all_reports(:PAGE_ROWID, :SYSTEM_NO)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "تم منح صلاحية التقارير",
+      "success_e": "Report rights granted",
+      "icon": "fa-file-text-o"
+    }
+  ]
+}

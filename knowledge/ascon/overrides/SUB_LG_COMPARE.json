@@ -1,0 +1,173 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "SUB_LG_COMPARE"
+  },
+  "details": [
+    {
+      "table": "SUB_LG_COMPARE_DET",
+      "join": [
+        [
+          "ACCOUNT_NUMBER",
+          "ACCOUNT_NUMBER"
+        ],
+        [
+          "POST_SYSTEM",
+          "POST_SYSTEM"
+        ]
+      ],
+      "title_a": "أكـواد أنـواع الأصـول",
+      "title_e": "Asset categories"
+    }
+  ],
+  "order_by": "ACCOUNT_NUMBER",
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Sub-ledger monitor: setup of the monitored GL accounts (linked system, supplier prefix, asset categories ...) with the GL balance and the supplier sub-ledger balance of the legacy 'حساب الرصيد' button in the info panel (APP_RULES3_GL, see processes/SUB_LG_COMPARE.md)",
+  "rules": {
+    "add_columns": {
+      "SUB_LG_COMPARE.ACCOUNT_NUMBER": {
+        "label_a": "الحساب المراقب",
+        "label_e": "Monitored account"
+      },
+      "SUB_LG_COMPARE.POST_SYSTEM": {
+        "label_a": "النظام المرتبط",
+        "label_e": "Linked system"
+      },
+      "SUB_LG_COMPARE.SUPP_BEGIN": {
+        "label_a": "بداية  المورد - العميل",
+        "label_e": "Supplier / customer prefix"
+      },
+      "SUB_LG_COMPARE.ASST_DPRCT_COLL": {
+        "label_a": "حساب الاصل / اهلاك الاصل / مجمع الاهلاك (1 / 2 / 3)",
+        "label_e": "Asset / depreciation / accumulated (1 / 2 / 3)"
+      },
+      "SUB_LG_COMPARE.LOANS": {
+        "label_a": "السلف",
+        "label_e": "Loans"
+      },
+      "SUB_LG_COMPARE.TOTAL_DUES": {
+        "label_a": "صافي الاستحقاق",
+        "label_e": "Net dues"
+      },
+      "SUB_LG_COMPARE.EMP_TRNS": {
+        "label_a": "حركات على موظف",
+        "label_e": "Employee transactions"
+      },
+      "SUB_LG_COMPARE.PYS_FLAG": {
+        "label_a": "صافي التصفية",
+        "label_e": "Net settlement"
+      },
+      "SUB_LG_COMPARE.BANK_CODE": {
+        "label_a": "رقم البنك",
+        "label_e": "Bank"
+      },
+      "SUB_LG_COMPARE.BRANCH_CODE": {
+        "label_a": "رقم الفرع",
+        "label_e": "Branch"
+      },
+      "SUB_LG_COMPARE.BOX_CODE": {
+        "label_a": "رقم الصندوق",
+        "label_e": "Cash box"
+      },
+      "SUB_LG_COMPARE.STORE_CODE": {
+        "label_a": "رقم المخزن",
+        "label_e": "Store"
+      },
+      "SUB_LG_COMPARE.COST_CODE": {
+        "label_a": "مركز تكلفة",
+        "label_e": "Cost centre"
+      }
+    },
+    "info": [
+      {
+        "name": "GL",
+        "label_a": "الرصيد",
+        "label_e": "GL balance",
+        "sql": "select app_rules3_gl.sub_ledger_text(:PAGE_ROWID, 'GL') from dual"
+      },
+      {
+        "name": "SUB",
+        "label_a": "رصيد النظام الفرعي",
+        "label_e": "Sub-ledger balance",
+        "sql": "select app_rules3_gl.sub_ledger_text(:PAGE_ROWID, 'SUB') from dual"
+      },
+      {
+        "name": "DIFF",
+        "label_a": "الفرق",
+        "label_e": "Difference",
+        "sql": "select app_rules3_gl.sub_ledger_text(:PAGE_ROWID, 'DIFF') from dual"
+      }
+    ],
+    "columns": {
+      "SUB_LG_COMPARE.POST_SYSTEM": {
+        "lov": "select case when app_sec.lang = 'en' then nvl(system_desc_e, system_desc_a) else system_desc_a end d, system_number r from sys_systems order by system_number",
+        "widget": "SELECT"
+      },
+      "SUB_LG_COMPARE.ASST_DPRCT_COLL": {
+        "static": [
+          [
+            "حساب الاصل",
+            "1",
+            "Asset"
+          ],
+          [
+            "اهلاك الاصل",
+            "2",
+            "Depreciation"
+          ],
+          [
+            "مجمع الاهلاك",
+            "3",
+            "Accumulated depreciation"
+          ]
+        ],
+        "label_a": "حساب الاصل / اهلاك الاصل / مجمع الاهلاك",
+        "label_e": "Asset / depreciation / accumulated"
+      },
+      "SUB_LG_COMPARE.LOANS": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "SUB_LG_COMPARE.TOTAL_DUES": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "SUB_LG_COMPARE.EMP_TRNS": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "SUB_LG_COMPARE.PYS_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "SUB_LG_COMPARE.BANK_CODE": {
+        "lov": "select code || ' - ' || name_a d, code r from bank order by 1",
+        "widget": "SELECT"
+      },
+      "SUB_LG_COMPARE.BRANCH_CODE": {
+        "lov": "select code || ' - ' || desc_a d, code r from bank_branchs where bank_code = :PAGE_BANK_CODE order by 1",
+        "widget": "SELECT",
+        "cascade": "BANK_CODE"
+      },
+      "SUB_LG_COMPARE_DET.CTGRY_CD_ASCT": {
+        "lov": "select ctgry_cd_asct || ' - ' || case when app_sec.lang = 'en' then nvl(desc_e_asct, desc_a_asct) else desc_a_asct end d, ctgry_cd_asct r from as_ctgry where ctgry_type_asct = :PAGE_CTGRY_TYPE_ASCT and nvl(leaf, 0) = 1 order by ctgry_cd_asct",
+        "widget": "POPUP",
+        "cascade": "CTGRY_TYPE_ASCT"
+      }
+    }
+  }
+}

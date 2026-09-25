@@ -1,0 +1,9 @@
+{
+  "pattern": "AUTO",
+  "notes": "Communication ways code table; legacy duplicate-code message (APP_RULES3_SE, see processes/COMM_WAY.md)",
+  "rules": {
+    "row_rules": {
+      "COMM_WAY": "app_rules3_se.code_row('COMM_WAY', inserting, :new.comm_code);"
+    }
+  }
+}

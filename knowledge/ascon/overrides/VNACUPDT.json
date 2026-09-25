@@ -1,0 +1,42 @@
+{
+  "pattern": "PROCESS",
+  "notes": "Post AP transactions to GL: port of VN\\FMB\\vnacupdt.fmb (EXECUTE_REP + VN_SET_EVERY_ENTRY_AC, DB VN_GET_TRNS_DATA / VN_CREATE_ENTRY_EVERY_ONE) in app_proc_vn.post_to_gl; re-posting of all 416 historical postings reproduced the vouchers.",
+  "proc": {
+    "procedure": "app_proc_vn.post_to_gl",
+    "description_a": "ترحيل حركات الموردين للحسابات العامة: ينشئ قيد يومية مستقل لكل حركة موردين غير مرحلة في النطاق المحدد (السداد، التسويات الدائنة والمدينة، الخصم المكتسب) من حسابات نوع الحركة وتفاصيل حسابات الحركة وحسابات طرق السداد للمورد والخصم وفروق العملة والضريبة، ويربط الحركة بالقيد ويضع علامة الترحيل عليها. تؤخذ الحركة بتاريخ الترحيل إن وجد وإلا بتاريخ الحركة، ويكون القيد بنفس التاريخ. فواتير ومرتجعات المشتريات المرتبطة بالمخازن ترحل من شاشة ترحيل حركات المخازن. إذا تعذر ترحيل أي حركة في النطاق (فترة مقفلة أو حساب المورد غير معرف) أو كان أي قيد غير متوازن لا يتم ترحيل أي حركة وتظهر الأسباب، ويظهر السبب أيضاً في عمود (ملاحظة) بالجدول قبل الترحيل.",
+    "description_e": "Post supplier transactions to the GL: creates one journal voucher per unposted AP transaction of the selection (payments, credit / debit adjustments, earned discounts) from the accounts of the transaction type, the transaction's account-detail lines, the supplier's payment-method accounts, discount, currency differences and tax, links the transaction to the voucher and flags it as posted. A transaction is selected and dated by its posting date when present, otherwise by its date. Stock-linked purchase invoices and returns are posted from the stock posting screen. If any transaction of the selection cannot be posted (closed period, supplier account not defined) or a voucher is not balanced, nothing is posted and the reasons are listed; the table shows the reason beforehand in the 'note' column.",
+    "params": [
+      {"name": "FROM_DATE", "arg": "p_from_date", "label_a": "مـن تـاريــخ", "label_e": "From date", "type": "date", "required": true,
+       "default": "to_char(trunc(sysdate, 'YYYY'), 'DD/MM/YYYY')", "default_type": "EXPRESSION"},
+      {"name": "TO_DATE", "arg": "p_to_date", "label_a": "إلى تـاريــخ", "label_e": "To date", "type": "date", "required": true,
+       "default": "to_char(sysdate, 'DD/MM/YYYY')", "default_type": "EXPRESSION"},
+      {"name": "FROM_TRNS_ID", "arg": "p_from_trns_id", "label_a": "مـن رقم حركـة", "label_e": "From transaction", "type": "number", "required": false,
+       "lov_sql": "select t.id || ' - ' || decode(:G_LANG, 'en', nvl(t.description_e, t.description_a), t.description_a) d, t.id r from vn_trnstype t order by t.id"},
+      {"name": "TO_TRNS_ID", "arg": "p_to_trns_id", "label_a": "الى رقم حركــة", "label_e": "To transaction", "type": "number", "required": false,
+       "lov_sql": "select t.id || ' - ' || decode(:G_LANG, 'en', nvl(t.description_e, t.description_a), t.description_a) d, t.id r from vn_trnstype t order by t.id desc"},
+      {"name": "FROM_SERIAL", "arg": "p_from_serial", "label_a": "مـن مـسلسـل", "label_e": "From serial", "type": "number", "required": false},
+      {"name": "TO_SERIAL", "arg": "p_to_serial", "label_a": "إلى مسلســل", "label_e": "To serial", "type": "number", "required": false}
+    ],
+    "fixed_args": {"p_company_code": "to_number(:G_COMPANY_CODE)", "p_user_code": "to_number(:G_USER_CODE)",
+                   "p_password_number": "to_number(:G_PASSWORD_NUMBER)"},
+    "button_a": "ترحيل",
+    "button_e": "Post",
+    "confirm_a": "سيتم ترحيل حركات الموردين المحددة للحسابات العامة (قيد لكل حركة). هل تريد الاستمرار؟",
+    "success_a": "تمت عملية الترحيل",
+    "preview_title_a": "الحركات المفترض ترحيلها",
+    "preview_sql": "select q.trns_id, q.trns_desc, q.trns_serial, q.trns_date, q.acc_post_date, q.doc_no, q.supplier_id, q.supplier_name, q.total_value, q.supp_account, case when q.closed = 1 then decode(:G_LANG, 'en', 'closed period', 'تقع فى فترة مقفلة') when nvl(q.supp_account, 0) = 0 then decode(:G_LANG, 'en', 'supplier account not defined', 'حساب المورد غير معرف لنوع الحركة') when nvl(q.pay_method, 0) <> 5 then decode(:G_LANG, 'en', 'cash / cheque: not implemented', 'نقدية/شيكات: غير منفذ') when nvl(q.disc_value, 0) <> 0 and nvl(q.disc_acc, 0) = 0 then decode(:G_LANG, 'en', 'discount without account: skipped', 'خصم بدون حساب: لن ترحل') end note from (select m.trns_id, decode(:G_LANG, 'en', nvl(t.description_e, t.description_a), t.description_a) trns_desc, m.trns_serial, m.trns_date, m.acc_post_date, m.doc_no, m.supplier_id, decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) supplier_name, m.total_value, m.disc_value, m.pay_method, case t.disc_account_type when 1 then (select a.disc_account from vn_mainarea a where a.id = s.mainarea_id) when 2 then (select a.disc_account from vn_subarea a where a.id = s.subarea_id and a.main_id = s.mainarea_id) when 3 then s.disc_account when 4 then t.disc_account when 5 then m.disc_account end disc_acc, case t.supp_account_type when 1 then (select a.account_no from vn_mainarea a where a.id = s.mainarea_id) when 2 then (select a.account_no from vn_subarea a where a.id = s.subarea_id and a.main_id = s.mainarea_id) when 3 then s.account_no when 4 then t.supplier_account when 5 then m.supplier_account end supp_account, case when nvl(m.acc_post_date, m.trns_date) <= (select nvl(max(b.close_date), date '2000-01-01') from ac_basic b where b.company_code = to_number(:G_COMPANY_CODE)) then 1 else 0 end closed from vn_maintrns m join vn_trnstype t on t.id = m.trns_id left join supplier s on s.code = m.supplier_id where nvl(m.post_flag, 0) = 0 and nvl(m.pay_flag, 0) = 0 and t.account_joint = 1 and (nvl(m.pay_method, 0) = 5 or (nvl(m.pay_method, 0) = 2 and exists (select 1 from sys_systems x where x.system_number = 15)) or (nvl(m.pay_method, 0) in (4, 6) and exists (select 1 from sys_systems x where x.system_number = 13))) and nvl(m.acc_post_date, m.trns_date) between nvl(to_date(v('P' || :APP_PAGE_ID || '_FROM_DATE'), 'DD/MM/YYYY'), trunc(sysdate, 'YYYY')) and nvl(to_date(v('P' || :APP_PAGE_ID || '_TO_DATE'), 'DD/MM/YYYY'), trunc(sysdate)) and m.trns_id between nvl(to_number(v('P' || :APP_PAGE_ID || '_FROM_TRNS_ID')), 0) and nvl(to_number(v('P' || :APP_PAGE_ID || '_TO_TRNS_ID')), 999999999999) and m.trns_serial between nvl(to_number(v('P' || :APP_PAGE_ID || '_FROM_SERIAL')), 0) and nvl(to_number(v('P' || :APP_PAGE_ID || '_TO_SERIAL')), 999999999999) and (:G_PASSWORD_NUMBER = 0 or m.trns_id in (select tp.trns_id from vn_trnstype_password tp where tp.flag = 1 and tp.password_number = :G_PASSWORD_NUMBER))) q order by q.trns_id, q.trns_serial",
+    "preview_columns": [
+      {"name": "TRNS_ID", "label_a": "كود الحركة", "type": "NUMBER"},
+      {"name": "TRNS_DESC", "label_a": "اسم الحركة", "type": "STRING"},
+      {"name": "TRNS_SERIAL", "label_a": "مسلسل", "type": "NUMBER"},
+      {"name": "TRNS_DATE", "label_a": "التاريخ", "type": "DATE"},
+      {"name": "ACC_POST_DATE", "label_a": "تاريخ الترحيل", "type": "DATE"},
+      {"name": "DOC_NO", "label_a": "رقم المستند", "type": "NUMBER"},
+      {"name": "SUPPLIER_ID", "label_a": "رقم المورد", "type": "NUMBER"},
+      {"name": "SUPPLIER_NAME", "label_a": "اسم المورد", "type": "STRING"},
+      {"name": "TOTAL_VALUE", "label_a": "القيمة", "type": "NUMBER"},
+      {"name": "SUPP_ACCOUNT", "label_a": "حساب المورد", "type": "NUMBER"},
+      {"name": "NOTE", "label_a": "ملاحظة", "type": "STRING"}
+    ]
+  }
+}

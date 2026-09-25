@@ -1,0 +1,79 @@
+{
+  "pattern": "PROCESS",
+  "notes": "Query of an account balance after posting (legacy GET_BAL): posted entries up to the date + opening balance, per account and optional cost centres; the generated editable grid on AC_YEARLY_TRN_DET was wrong (the form only displays). See processes/AC_QUERYAFTER.md",
+  "proc": {
+    "procedure": "app_rules3_gl.query_balance",
+    "description_a": "الإستعلام عن رصيد حساب بعد الترحيل: الرصيد = القيود المرحلة حتى التاريخ + الرصيد الافتتاحي، لمراكز التكلفة المختارة (أو كلها عند تركها فارغة).",
+    "description_e": "Account balance after posting: posted entries up to the date + opening balance, for the chosen cost centres (all when empty).",
+    "params": [
+      {
+        "name": "ACCOUNT_NUMBER",
+        "arg": "p_account",
+        "label_a": "رقـم الحســــاب",
+        "label_e": "Acc. No.",
+        "type": "number",
+        "required": true,
+        "lov_sql": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or account_number in (select m2.account_number from ac_master m2, ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE) and rpad(substr(to_char(p2.account_number), 1, p2.account_end_pos), 12, '0') = rpad(substr(to_char(m2.account_number), 1, p2.account_end_pos), 12, '0'))) order by account_number"
+      },
+      {
+        "name": "COST_CODE",
+        "arg": "p_cost",
+        "label_a": "رقم مركز التكلفة 1",
+        "label_e": "Cost Center 1 Cd.",
+        "type": "number",
+        "lov_sql": "select cost_code || ' - ' || cost_desc d, cost_code r from ac_cost_centers where cost_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or cost_code in (select m2.cost_code from ac_cost_centers m2, ac_password_cost1 p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE) and rpad(substr(to_char(p2.cost_code), 1, p2.cost_end_pos), 9, '0') = rpad(substr(to_char(m2.cost_code), 1, p2.cost_end_pos), 9, '0') and m2.cost_status = 1)) order by cost_code"
+      },
+      {
+        "name": "COST_CODE2",
+        "arg": "p_cost2",
+        "label_a": "رقم مركز التكلفة 2",
+        "label_e": "Cost Center 2 Cd.",
+        "type": "number",
+        "lov_sql": "select cost_code || ' - ' || cost_desc d, cost_code r from ac_cost_centers2 where cost_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or cost_code in (select m2.cost_code from ac_cost_centers2 m2, ac_password_cost2 p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE) and rpad(substr(to_char(p2.cost_code), 1, p2.cost_end_pos), 9, '0') = rpad(substr(to_char(m2.cost_code), 1, p2.cost_end_pos), 9, '0') and m2.cost_status = 1)) order by cost_code"
+      },
+      {
+        "name": "DATE_W",
+        "arg": "p_date",
+        "label_a": "حتى تــاريــخ",
+        "label_e": "Till Dt.",
+        "type": "date",
+        "required": true,
+        "default": "to_char(sysdate, 'DD/MM/YYYY')",
+        "default_type": "EXPRESSION"
+      }
+    ],
+    "button_a": "استعلام",
+    "button_e": "Query",
+    "success_a": "الرصيد معروض أدناه",
+    "preview_title_a": "رصيد الحساب",
+    "preview_sql": "select m.account_number, m.account_name, c.currency_desc currency_name, abs(b.bal) balance, app_rules3_gl.side_text(b.bal) nature from ac_master m left join ac_currency c on c.currency_code = m.currency_code cross join (select app_rules3_gl.account_balance(to_number(:P10180_ACCOUNT_NUMBER), to_number(:P10180_COST_CODE), to_number(:P10180_COST_CODE2), to_date(:P10180_DATE_W, 'DD/MM/YYYY'), 0) bal from dual) b where m.account_number = to_number(:P10180_ACCOUNT_NUMBER) and :P10180_DATE_W is not null",
+    "preview_columns": [
+      {
+        "name": "ACCOUNT_NUMBER",
+        "label_a": "رقم الحساب",
+        "type": "NUMBER"
+      },
+      {
+        "name": "ACCOUNT_NAME",
+        "label_a": "اسم الحساب",
+        "type": "STRING"
+      },
+      {
+        "name": "CURRENCY_NAME",
+        "label_a": "عملة الحساب",
+        "type": "STRING"
+      },
+      {
+        "name": "BALANCE",
+        "label_a": "الرصــيد",
+        "type": "NUMBER"
+      },
+      {
+        "name": "NATURE",
+        "label_a": "مدين / دائن",
+        "type": "STRING"
+      }
+    ],
+    "run_right": "query"
+  }
+}

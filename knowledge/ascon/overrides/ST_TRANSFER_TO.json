@@ -1,0 +1,120 @@
+{
+ "pattern": "AUTO",
+ "notes": "receive transfer: types EFFECT 6 / TRNS_TYPE 9, must match a pending approved ST_TRNSFER, lines copied from the issue; wave 3: soft delete (transfer pending again), duplicate DOC_NO question, receipt status and totals (APP_ACT_ST)",
+ "rules": {
+  "computed": {
+   "ST_TRNS_DET.ITEM_NAME": {"sql": "(select max(nvl(i.name_e, i.name_a)) from st_item i where i.item_group_code = t.group_code and i.item_code = t.item_code)", "label_a": "إســم الصنـــف", "label_e": "Item Nm"},
+   "ST_TRNS_DET.EXPIRE_DATE": {"sql": "app_ui.lot_expiry(t.item_confg_id)", "label_a": "تاريخ الصلاحية", "label_e": "Expire Dt", "type": "DATE"},
+   "ST_TRNS_DET.STORE_BALANCE": {"sql": "round(nvl(get_balance_confg(t.store_code, t.group_code, t.item_code, t.item_confg_id, t.trns_date, t.date_serial, t.item_serial), 0) / nvl((select max(u.factor) from st_item_unit u where u.group_code = t.group_code and u.item_code = t.item_code and u.unit_code = t.unit_code), 1), 3)", "label_a": "رصيد المخزن", "label_e": "Store Bal", "type": "NUMBER"},
+   "ST_TRNS_DET.ITEM_COST_CONFG": {"sql": "case when (nvl(to_number(v('G_PASSWORD_NUMBER')), 0) = 0 or ((select nvl(max(b.show_cost), 0) from st_basic b) = 1 and (select nvl(max(u.allow_view_cost), 0) from users u where u.users_code = to_number(v('G_USER_CODE'))) = 1)) then get_unit_cost_confg(t.store_code, t.group_code, t.item_code, t.item_confg_id, t.trns_date, t.date_serial, t.item_serial) * nvl((select max(u.factor) from st_item_unit u where u.group_code = t.group_code and u.item_code = t.item_code and u.unit_code = t.unit_code), 1) end", "label_a": "متوسط تكلفة الصنف", "label_e": "Item Avg Cost", "type": "NUMBER"}
+  },
+  "columns": {
+   "ST_TRNS_MAST.TRNSFER_SERIAL": {"widget": "POPUP", "cascade": "STORE_CODE", "lov": "select t.trnsfer_serial || ' - ' || s.name_a || ' - ' || to_char(t.trnsfer_date, 'DD/MM/YYYY') d, t.trnsfer_serial r from st_trnsfer t, st_store s where s.store_code = t.trnsfer_from_store and t.trnsfer_receiving_date is null and nvl(t.delete_flag, 0) = 0 and t.approve_flag = 1 and t.trnsfer_to_store = :PAGE_STORE_CODE order by t.trnsfer_serial"},
+   "ST_TRNS_MAST.TRNSFER_FROM_STORE": {"widget": "SELECT", "cascade": ["TRNSFER_SERIAL", "STORE_CODE"], "lov": "select distinct s.store_code || ' - ' || s.name_a d, s.store_code r from st_trnsfer t, st_store s where s.store_code = t.trnsfer_from_store and t.trnsfer_serial = :PAGE_TRNSFER_SERIAL and t.trnsfer_to_store = :PAGE_STORE_CODE order by 2"},
+   "ST_TRNS_DET.ITEM_CONFG_ID": {"widget": "POPUP", "cascade": "ITEM_CODE", "lov": "select c.item_confg_id || ' - ' || c.lot_number || ' - ' || to_char(c.expire_date, 'DD/MM/YYYY') d, c.item_confg_id r from st_item_confg c where c.item_code = :PAGE_ITEM_CODE order by c.expire_date, c.item_confg_id"}
+  },
+  "where": "TRNS_TYPE_CODE in (select t.trns_type_code from st_trns_type t where t.effect = 6 and t.trns_type = 9) and nvl(DELETE_FLAG, 0) = 0 and (:G_PASSWORD_NUMBER = 0 or TRNS_TYPE_CODE in (select tp.trns_type_code from st_trnstype_password tp where tp.password_number = :G_PASSWORD_NUMBER))",
+  "defaults": {
+   "ST_TRNS_MAST.TRNS_TYPE_CODE": {
+    "type": "EXPRESSION",
+    "value": "app_rules_st.default_type('ST_TRANSFER_TO')"
+   },
+   "ST_TRNS_MAST.STORE_CODE": {
+    "type": "EXPRESSION",
+    "value": "app_rules_st.type_store(app_rules_st.default_type('ST_TRANSFER_TO'))"
+   },
+   "ST_TRNS_MAST.DELETE_FLAG": {
+    "type": "STATIC",
+    "value": "0"
+   },
+   "ST_TRNS_MAST.POST_FLAG": {
+    "type": "STATIC",
+    "value": "0"
+   }
+  },
+  "validations": [
+   {
+    "name": "legacy header rules (type of the screen, CHECK_DATE, store, account, transfer, posted)",
+    "plsql": "return app_rules_st.val_trns('ST_TRANSFER_TO', :PAGE_ROWID, :REQUEST, :PAGE_TRNS_TYPE_CODE, :PAGE_TRNS_DATE, :PAGE_STORE_CODE, :PAGE_DOC_NO, :PAGE_ACCOUNT_NUMBER1, null, :PAGE_TRNSFER_FROM_STORE, :PAGE_TRNSFER_SERIAL, :PAGE_CURRENCY_CODE, :PAGE_CURRENCY_RATE);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "legacy commit rules (lines required, balances, receive lines)",
+    "plsql": "app_rules_st.after_trns('ST_TRANSFER_TO', :REQUEST, :PAGE_ROWID);",
+    "when": "CREATE,SAVE"
+   },
+   {
+    "name": "إلغاء الاستلام (حذف منطقي): التحويل غير مستلم",
+    "plsql": "app_act_st.trt_after_delete(:PAGE_ROWID);",
+    "when": "DELETE"
+   }
+  ],
+  "row_rules": {
+   "ST_TRNS_MAST": "app_rules_st.mast_row(inserting, updating, :new.trns_type_code, :new.trns_serial, :new.trns_date, :new.store_code, :new.doc_no, :new.desc_a, :new.desc_e, :new.delete_flag, :new.post_flag, :new.account_number1, :new.trnsfer_type, :new.trnsfer_serial, :new.trnsfer_from_store, :new.trnsfer_to_store, :old.trns_date, :old.trnsfer_serial, :old.trnsfer_from_store, :old.store_code);",
+   "ST_TRNS_DET": "app_rules_st.det_row(inserting, updating, :new.trns_type_code, :new.trns_serial, :new.item_serial, :new.group_code, :new.item_code, :new.unit_code, :new.item_confg_id, :new.quantity, :new.bonus, :new.basic_qty, :new.unit_price, :new.unit_cost, :new.cost_flag, :new.lot_number, :new.expiry_date, :new.disc1_ratio, :old.group_code, :old.item_code, :old.unit_code, :old.item_confg_id, :old.quantity, :old.basic_qty, :old.unit_price, :old.unit_cost, :new.trnsfer_serial, :new.trnsfer_from_store, :new.trnsfer_to_store);"
+  },
+  "readonly": [
+   "ST_TRNS_MAST.TRNS_SERIAL",
+   "ST_TRNS_MAST.DATE_SERIAL",
+   "ST_TRNS_MAST.POST_FLAG",
+   "ST_TRNS_MAST.AC_ENTRY_NO",
+   "ST_TRNS_MAST.AC_ENTRY_YEAR",
+   "ST_TRNS_MAST.AC_ENTRY_TYPE"
+  ],
+  "hidden": [
+   "ST_TRNS_MAST.DATE_SERIAL",
+   "ST_TRNS_MAST.DELETE_FLAG",
+   "ST_TRNS_DET.BASIC_QTY",
+   "ST_TRNS_DET.COST_FLAG"
+  ],
+  "optional": [
+   "ST_TRNS_MAST.DATE_SERIAL",
+   "ST_TRNS_MAST.DELETE_FLAG",
+   "ST_TRNS_DET.BASIC_QTY",
+   "ST_TRNS_DET.COST_FLAG",
+   "ST_TRNS_DET.GROUP_CODE",
+   "ST_TRNS_DET.UNIT_CODE",
+   "ST_TRNS_DET.ITEM_CONFG_ID"
+  ],
+  "soft_delete": {
+   "set": {
+    "DELETE_FLAG": "1"
+   },
+   "lines": "keep",
+   "check": "return app_act_st.trt_delete_check(:PAGE_ROWID);",
+   "message_a": "تم حذف المستند"
+  },
+  "warnings": [
+   {
+    "name": "رقم المستند مكرر (هل تريد الإستمرار)",
+    "plsql": "return app_act_st.trt_doc_warn(:PAGE_ROWID, :PAGE_TRNS_TYPE_CODE, :PAGE_DOC_NO, :PAGE_TRNSFER_FROM_STORE);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "info": [
+   {
+    "name": "STATUS",
+    "label_a": "حالة الاستلام",
+    "label_e": "Receipt status",
+    "sql": "select app_act_st.trf_status(:PAGE_ROWID) from dual"
+   },
+   {
+    "name": "QTY",
+    "label_a": "اجمالى الكمية",
+    "label_e": "Total quantity",
+    "sql": "select app_act_st.trt_totals(:PAGE_ROWID, 'QTY') from dual"
+   },
+   {
+    "name": "TOTAL",
+    "label_a": "الإجمالى",
+    "label_e": "Total",
+    "sql": "select app_act_st.trt_totals(:PAGE_ROWID, 'TOTAL') from dual"
+   }
+  ]
+ },
+ "links": [
+  {"label_a": "ترحيل السند", "label_e": "Post transaction", "form": "ST_POSTING_CPOSTING", "icon": "fa-send", "items": {"FROM_TYPE": "TRNS_TYPE_CODE", "TO_TYPE": "TRNS_TYPE_CODE", "FROM_SERIAL": "TRNS_SERIAL", "TO_SERIAL": "TRNS_SERIAL", "FROM_DATE": "TRNS_DATE", "TO_DATE": "TRNS_DATE"}}
+ ]
+}

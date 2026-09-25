@@ -1,0 +1,31 @@
+{
+  "pattern": "PROCESS",
+  "notes": "Legacy AC_DELETECCLOSE: deletes the last closing entry (CLOSE_FLAG=1, latest ENTRY_DATE, own group unless group 0) and sets AC_BASIC.CLOSE_DATE to the previous closing entry date (NULL if none); reproduced in app_proc_gl.cancel_closing_entry. The date parameter only confirms which entry is cancelled (double-submit guard).",
+  "proc": {
+    "procedure": "app_proc_gl.cancel_closing_entry",
+    "description_a": "إلغاء قيد الإقفال: يحذف آخر قيد إقفال (الأحدث تاريخاً) ويعيد تاريخ الإقفال فى بيانات النظام إلى تاريخ قيد الإقفال السابق، أو يصبح فارغاً إذا لم يوجد قيد إقفال سابق فتصبح كل الفترات مفتوحة. للتأكيد يجب أن يطابق التاريخ المعروض تاريخ آخر قيد إقفال. المجموعات غير مجموعة المدير (0) لا تلغى إلا قيود الإقفال التى أنشأتها. الجدول أدناه يعرض قيود الإقفال الموجودة.",
+    "description_e": "Cancel closing entry: deletes the last (most recent) closing entry and sets the system closing date back to the date of the previous closing entry, or empty when there is none (all periods open again). As a confirmation the date shown must be the date of the last closing entry. Groups other than the administrator group (0) can only cancel closing entries they created. The table below lists the existing closing entries.",
+    "params": [
+      {"name": "CLOSE_DATE", "arg": "p_close_date", "label_a": "تاريـخ آخر قيد إقفال (للتأكيد)", "label_e": "Date of the last closing entry (confirmation)", "type": "date", "required": true,
+       "default": "to_char(app_proc_gl.last_closing_date(to_number(:G_COMPANY_CODE), to_number(:G_PASSWORD_NUMBER)), 'DD/MM/YYYY')", "default_type": "EXPRESSION"}
+    ],
+    "fixed_args": {"p_company_code": "to_number(:G_COMPANY_CODE)", "p_user_code": "to_number(:G_USER_CODE)",
+                   "p_password_number": "to_number(:G_PASSWORD_NUMBER)"},
+    "button_a": "إلغاء قيد الإقفال",
+    "button_e": "Cancel closing entry",
+    "confirm_a": "سيتم حذف آخر قيد إقفال وإرجاع تاريخ الإقفال إلى الإقفال السابق. هل تريد الاستمرار؟",
+    "success_a": "تمت العملية.",
+    "preview_title_a": "قيود الإقفال",
+    "preview_sql": "select y.entry_year, y.entry_type, y.entry_no, y.entry_date, y.entry_total, (select count(*) from ac_yearly_trn_det d where d.entry_year = y.entry_year and d.entry_type = y.entry_type and d.entry_no = y.entry_no) lines, case when y.entry_date = (select max(x.entry_date) from ac_yearly_trn x where x.close_flag = 1) then decode(:G_LANG, 'en', 'Last closing entry: the one that will be cancelled', 'آخر قيد إقفال: هو الذى سيتم إلغاؤه') end status, (select b.close_date from ac_basic b where b.company_code = to_number(:G_COMPANY_CODE)) current_close_date from ac_yearly_trn y where y.close_flag = 1 and (to_number(:G_PASSWORD_NUMBER) = 0 or (y.create_company_code = to_number(:G_COMPANY_CODE) and y.create_password_number = to_number(:G_PASSWORD_NUMBER))) order by y.entry_date desc",
+    "preview_columns": [
+      {"name": "ENTRY_YEAR", "label_a": "السنة", "type": "NUMBER"},
+      {"name": "ENTRY_TYPE", "label_a": "رقم الحركة", "type": "NUMBER"},
+      {"name": "ENTRY_NO", "label_a": "رقم القيد", "type": "NUMBER"},
+      {"name": "ENTRY_DATE", "label_a": "تاريخ الإقفال", "type": "DATE"},
+      {"name": "ENTRY_TOTAL", "label_a": "إجمالى القيد", "type": "NUMBER"},
+      {"name": "LINES", "label_a": "عدد الأطراف", "type": "NUMBER"},
+      {"name": "STATUS", "label_a": "الحالة", "type": "STRING"},
+      {"name": "CURRENT_CLOSE_DATE", "label_a": "تاريخ الإقفال الحالى بالنظام", "type": "DATE"}
+    ]
+  }
+}

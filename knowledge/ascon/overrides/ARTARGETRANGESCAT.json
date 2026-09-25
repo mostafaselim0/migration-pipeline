@@ -1,0 +1,262 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "ST_CATEGORY_TYPE"
+  },
+  "details": [
+    {
+      "table": "ST_CATEGORY_COMM",
+      "join": [
+        [
+          "CATEGORY_TYPE_CODE",
+          "CATEGORY_TYPE_CODE"
+        ]
+      ],
+      "title_a": "مدى المستهدف والعمولات المناظرة (حالة الخصم: 0 بدون الخصم / 1 بالخصم)",
+      "title_e": "Target ranges and commissions (DISC_FLAG 0 = without discount, 1 = with discount)"
+    },
+    {
+      "table": "ST_CATEGORY_COMM_ITEMS",
+      "join": [
+        [
+          "CATEGORY_TYPE_CODE",
+          "CATEGORY_TYPE_CODE"
+        ]
+      ],
+      "title_a": "عمولات الاصناف",
+      "title_e": "Item commissions"
+    },
+    {
+      "table": "ST_CATEGORY_COMM_MNGR",
+      "join": [
+        [
+          "CATEGORY_TYPE_CODE",
+          "CATEGORY_TYPE_CODE"
+        ]
+      ],
+      "title_a": "مدى المستهدف وعمولات المدير",
+      "title_e": "Target ranges and commissions (manager)"
+    },
+    {
+      "table": "AR_SALESMAN_COMM",
+      "join": [
+        [
+          "CTGRY_CODE",
+          "CATEGORY_TYPE_CODE"
+        ]
+      ],
+      "title_a": "المستهدف للمندوبين",
+      "title_e": "Salesmen targets"
+    },
+    {
+      "table": "AR_SALESMAN_PRC_COMM",
+      "join": [
+        [
+          "CTGRY_CODE",
+          "CATEGORY_TYPE_CODE"
+        ]
+      ],
+      "title_a": "عمولات المستهدف للمندوبين",
+      "title_e": "Salesmen target commissions"
+    }
+  ],
+  "where": null,
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Department (ST_CATEGORY_TYPE) commission setup; wave 3: range numbering / continuity / last-serial delete, salesman of the department, item-commission loader (APP_RULES3_AR).",
+  "rules": {
+    "key_expr": {
+      "ST_CATEGORY_COMM.SERIAL": "app_rules3_ar.next_comm_serial('COMM', :new.category_type_code, :new.disc_flag)",
+      "ST_CATEGORY_COMM_MNGR.SERIAL": "app_rules3_ar.next_comm_serial('MNGR', :new.category_type_code, :new.disc_flag)",
+      "AR_SALESMAN_PRC_COMM.SERIAL": "app_rules3_ar.next_comm_serial('PRC', :new.ctgry_code, null)"
+    },
+    "row_rules": {
+      "ST_CATEGORY_COMM": "app_rules3_ar.comm_row('COMM', inserting, :new.category_type_code, :new.disc_flag, :new.serial, :new.from_p, :new.to_p);",
+      "ST_CATEGORY_COMM_MNGR": "app_rules3_ar.comm_row('MNGR', inserting, :new.category_type_code, :new.disc_flag, :new.serial, :new.from_p, :new.to_p);",
+      "AR_SALESMAN_PRC_COMM": "app_rules3_ar.comm_row('PRC', inserting, :new.ctgry_code, null, :new.serial, :new.from_p, :new.to_p, :new.code);",
+      "ST_CATEGORY_COMM_ITEMS": "app_rules3_ar.comm_items_row(:new.category_type_code, :new.serial, :new.disc_flag, :new.group_code, :new.item_code);",
+      "AR_SALESMAN_COMM": "app_rules3_ar.salesman_comm_row(:new.code, :new.ctgry_code);"
+    },
+    "defaults": {
+      "ST_CATEGORY_COMM.DISC_FLAG": {
+        "type": "STATIC",
+        "value": "0"
+      },
+      "ST_CATEGORY_COMM_MNGR.DISC_FLAG": {
+        "type": "STATIC",
+        "value": "0"
+      },
+      "ST_CATEGORY_COMM_ITEMS.DISC_FLAG": {
+        "type": "STATIC",
+        "value": "0"
+      }
+    },
+    "readonly": [
+      "ST_CATEGORY_COMM.FROM_P",
+      "ST_CATEGORY_COMM_MNGR.FROM_P",
+      "AR_SALESMAN_PRC_COMM.FROM_P"
+    ],
+    "optional": [
+      "ST_CATEGORY_COMM.SERIAL",
+      "ST_CATEGORY_COMM_MNGR.SERIAL",
+      "ST_CATEGORY_COMM_ITEMS.GROUP_CODE"
+    ],
+    "add_columns": {
+      "ST_CATEGORY_TYPE.CUST_AGE": {
+        "label_a": "جدول اعمار الديون",
+        "label_e": "Debt ages table"
+      },
+      "ST_CATEGORY_TYPE.OVER_TRGT_PRC": {
+        "label_a": "نسبة عمولة الإضافي",
+        "label_e": "Over-target commission %"
+      },
+      "ST_CATEGORY_TYPE.DAYS_OUT_COMM": {
+        "label_a": "عدد إيام خارج المستهدف",
+        "label_e": "Days outside the target"
+      },
+      "ST_CATEGORY_TYPE.PENALTIES_PRC": {
+        "label_a": "نسبة خصم المتأخرات",
+        "label_e": "Arrears discount %"
+      },
+      "ST_CATEGORY_TYPE.PENALITES_DAYS": {
+        "label_a": "أقصي عدد إيام للمتأخرات",
+        "label_e": "Maximum arrears days"
+      },
+      "ST_CATEGORY_TYPE.DISC_COMM_LIMIT": {
+        "label_a": "أقصي إيام سداد لفواتير الخصم",
+        "label_e": "Maximum payment days of discount invoices"
+      },
+      "ST_CATEGORY_COMM.COMM": {
+        "label_a": "النسبة",
+        "label_e": "Percent"
+      },
+      "ST_CATEGORY_COMM.TRGT_LNK": {
+        "label_a": "مرتبط بالمستهدف",
+        "label_e": "Linked to target"
+      },
+      "ST_CATEGORY_COMM_MNGR.COMM": {
+        "label_a": "نسبة التحصيل",
+        "label_e": "Collection %"
+      },
+      "ST_CATEGORY_COMM_MNGR.SALES_COMM": {
+        "label_a": "نسبة البيع",
+        "label_e": "Sales %"
+      },
+      "ST_CATEGORY_COMM_MNGR.TRGT_LNK": {
+        "label_a": "مرتبط بالمستهدف",
+        "label_e": "Linked to target"
+      },
+      "ST_CATEGORY_COMM_ITEMS.COMM": {
+        "label_a": "نسبة التحصيل",
+        "label_e": "Collection %"
+      },
+      "ST_CATEGORY_COMM_ITEMS.SALES_COMM": {
+        "label_a": "نسبة البيع",
+        "label_e": "Sales %"
+      },
+      "AR_SALESMAN_COMM.CODE": {
+        "label_a": "كود المندوب",
+        "label_e": "Salesman"
+      },
+      "AR_SALESMAN_COMM.COMM_VALUE": {
+        "label_a": "التحصيل",
+        "label_e": "Collection"
+      },
+      "AR_SALESMAN_COMM.SALES_VALUE": {
+        "label_a": "المبيعات",
+        "label_e": "Sales"
+      },
+      "AR_SALESMAN_COMM.OVER_TRGT_PRC": {
+        "label_a": "نسبة التحصيل (%)",
+        "label_e": "Collection %"
+      },
+      "AR_SALESMAN_PRC_COMM.CODE": {
+        "label_a": "كود المندوب",
+        "label_e": "Salesman"
+      },
+      "AR_SALESMAN_PRC_COMM.COMM": {
+        "label_a": "النسبة",
+        "label_e": "Percent"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "LOAD_ITEMS",
+      "label_a": "انزال الاصناف",
+      "label_e": "Load items",
+      "confirm_a": "هل تريد انزال الأصناف المختارة إلى عمولات الأصناف للمدى؟",
+      "confirm_e": "Load the selected items into the range item commissions?",
+      "params": [
+        {
+          "name": "SERIAL",
+          "label_a": "مسلسل المدى",
+          "label_e": "Range serial",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "DISC_FLAG",
+          "label_a": "حالة الخصم (0 بدون / 1 بالخصم)",
+          "label_e": "Discount flag (0 / 1)",
+          "type": "number",
+          "required": true,
+          "default": "0"
+        },
+        {
+          "name": "FROM_GROUP",
+          "label_a": "من مجموعة",
+          "label_e": "From group",
+          "type": "number"
+        },
+        {
+          "name": "TO_GROUP",
+          "label_a": "إلى مجموعة",
+          "label_e": "To group",
+          "type": "number"
+        },
+        {
+          "name": "FROM_ITEM",
+          "label_a": "من صنف",
+          "label_e": "From item",
+          "type": "text"
+        },
+        {
+          "name": "TO_ITEM",
+          "label_a": "إلى صنف",
+          "label_e": "To item",
+          "type": "text"
+        },
+        {
+          "name": "FROM_SUPP",
+          "label_a": "من مورد",
+          "label_e": "From supplier",
+          "type": "number"
+        },
+        {
+          "name": "TO_SUPP",
+          "label_a": "إلى مورد",
+          "label_e": "To supplier",
+          "type": "number"
+        },
+        {
+          "name": "FROM_KIND",
+          "label_a": "من مصنع",
+          "label_e": "From kind",
+          "type": "number"
+        },
+        {
+          "name": "TO_KIND",
+          "label_a": "إلى مصنع",
+          "label_e": "To kind",
+          "type": "number"
+        }
+      ],
+      "call": "app_rules3_ar.load_comm_items(to_number(:PAGE_CATEGORY_TYPE_CODE), :SERIAL, :DISC_FLAG, :FROM_GROUP, :TO_GROUP, :FROM_ITEM, :TO_ITEM, :FROM_SUPP, :TO_SUPP, :FROM_KIND, :TO_KIND)",
+      "success_a": "تم انزال الاصناف",
+      "success_e": "Items loaded",
+      "icon": "fa-download"
+    }
+  ]
+}

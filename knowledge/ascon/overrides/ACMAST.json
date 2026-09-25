@@ -1,0 +1,95 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "AC_MASTER"
+  },
+  "details": [],
+  "order_by": "ACCOUNT_NUMBER",
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Chart of accounts: one account per document page (no lines) so that the balance panel and the 'add sub-account' button of the legacy tree can be shown. Level / parent / structure checks, parent becomes a main account, grants to company and group, delete rules (APP_RULES3_GL, see processes/ACMAST.md)",
+  "rules": {
+    "where": "(nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or ACCOUNT_NUMBER in (select m2.account_number from ac_master m2, ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE) and rpad(substr(to_char(p2.account_number), 1, p2.account_end_pos), 12, '0') = rpad(substr(to_char(m2.account_number), 1, p2.account_end_pos), 12, '0')))",
+    "validations": [
+      {
+        "name": "رقم الحساب والمستوى والحساب الأب والعملة",
+        "plsql": "return app_rules3_gl.check_account(:PAGE_ROWID, :PAGE_ACCOUNT_NUMBER, :PAGE_CURRENCY_CODE);",
+        "when": "CREATE,SAVE"
+      }
+    ],
+    "row_rules": {
+      "AC_MASTER": "app_rules3_gl.account_row(inserting, :new.account_number, :new.account_level, :new.account_status);"
+    },
+    "after_save": [
+      {
+        "name": "الحساب الأب يصبح رئيسيا وصلاحيات الحساب الجديد",
+        "plsql": "app_rules3_gl.account_created(:PAGE_ROWID);",
+        "when": "CREATE"
+      }
+    ],
+    "readonly": [
+      "AC_MASTER.ACCOUNT_LEVEL"
+    ],
+    "hidden": [
+      "AC_MASTER.ACCOUNT_STATUS"
+    ],
+    "optional": [
+      "AC_MASTER.ACCOUNT_LEVEL",
+      "AC_MASTER.ACCOUNT_STATUS"
+    ],
+    "info": [
+      {
+        "name": "BAL",
+        "label_a": "الرصيد الجارى",
+        "label_e": "Current balance",
+        "sql": "select app_rules3_gl.account_balance_text(to_number(:PAGE_ACCOUNT_NUMBER)) from dual"
+      },
+      {
+        "name": "LVL",
+        "label_a": "المستوى",
+        "label_e": "Level",
+        "sql": "select app_rules3_gl.level_text(to_number(:PAGE_ACCOUNT_LEVEL)) from dual"
+      }
+    ],
+    "columns": {
+      "AC_MASTER.STOP_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "CHILD",
+      "label_a": "إضافة حساب فرعي",
+      "label_e": "Add sub-account",
+      "confirm_a": "هل تريد إضافة حساب فرعي تحت هذا الحساب؟",
+      "confirm_e": "Add a sub-account under this account?",
+      "condition": "app_rules3_gl.can_add_child(:PAGE_ROWID) = 'Y'",
+      "params": [
+        {
+          "name": "NAME_A",
+          "label_a": "إسم الحساب عربي",
+          "label_e": "Account name (Ar)",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "NAME_E",
+          "label_a": "إسم الحساب لاتيني",
+          "label_e": "Account name (En)",
+          "type": "text"
+        }
+      ],
+      "call": "app_rules3_gl.add_child_account(:PAGE_ROWID, :NAME_A, :NAME_E)",
+      "message": "app_rules3_gl.last_message",
+      "target_form": "ACMAST",
+      "success_a": "تم إنشاء الحساب",
+      "success_e": "Account created"
+    }
+  ]
+}

@@ -1,0 +1,599 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "SALESMAN",
+    "columns": [
+      "CODE",
+      "NAME_A",
+      "NAME_E",
+      "SUPERVISOR_SLSMAN"
+    ]
+  },
+  "details": [
+    {
+      "table": "AR_COMM_PAY",
+      "join": [
+        [
+          "SALESMAN_CODE",
+          "CODE"
+        ]
+      ],
+      "title_a": "تفاصيل الفواتير المسددة",
+      "title_e": "Paid invoices"
+    },
+    {
+      "table": "AR_COMM_SALES",
+      "join": [
+        [
+          "SALESMAN_CODE",
+          "CODE"
+        ]
+      ],
+      "title_a": "تفاصيل فواتير البيع",
+      "title_e": "Sales invoices"
+    },
+    {
+      "table": "AR_COMM_AGES",
+      "join": [
+        [
+          "SALESMAN_CODE",
+          "CODE"
+        ]
+      ],
+      "title_a": "تفاصيل إعمار الديون",
+      "title_e": "Debt ages"
+    }
+  ],
+  "where": null,
+  "insert": false,
+  "update": true,
+  "delete": false,
+  "notes": "Review of the salesmen's commissions (AR_COMM_PAY / AR_COMM_SALES / AR_COMM_AGES written by GET_SALESMAN_COMM): calculate and delete a month, adjust the commission percent / value; the generated grid on AR_SALESMAN_COMM was corrected; rules in APP_RULES3_AR.",
+  "rules": {
+    "where": "(nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or CODE in (select SALESMAN_CODE from AR_SALESMAN_PASSWORD where PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)))",
+    "row_rules": {
+      "SALESMAN": "if app_rules3_ar.is_form('AR_SALESMAN_COMM_REV') then app_rules3_ar.readonly_master; end if;",
+      "AR_COMM_PAY": "app_rules3_ar.comm_value_row(:new.net_value, :new.act_comm_prc, :new.act_comm_value, :old.act_comm_prc, :old.act_comm_value);",
+      "AR_COMM_SALES": "app_rules3_ar.comm_value_row(:new.net_value, :new.act_s_comm_prc, :new.act_s_comm_value, :old.act_s_comm_prc, :old.act_s_comm_value);"
+    },
+    "readonly": [
+      "SALESMAN.CODE",
+      "SALESMAN.NAME_A",
+      "SALESMAN.NAME_E",
+      "SALESMAN.SUPERVISOR_SLSMAN",
+      "AR_COMM_PAY.TRNS_ID",
+      "AR_COMM_PAY.TRNS_SERIAL",
+      "AR_COMM_PAY.MAINAREA_ID",
+      "AR_COMM_PAY.SUBAREA_ID",
+      "AR_COMM_PAY.SALESMAN_CODE",
+      "AR_COMM_PAY.CUSTOMER_CODE",
+      "AR_COMM_PAY.CTGRY_CODE",
+      "AR_COMM_PAY.COMM_MONTH",
+      "AR_COMM_PAY.COMM_YEAR",
+      "AR_COMM_PAY.TRNS_DATE",
+      "AR_COMM_PAY.BILL_SEQ",
+      "AR_COMM_PAY.BILL_ID1",
+      "AR_COMM_PAY.BILL_ID2",
+      "AR_COMM_PAY.INV_TRNS_DATE",
+      "AR_COMM_PAY.TOTAL_VALUE",
+      "AR_COMM_PAY.DISC_VALUE",
+      "AR_COMM_PAY.NET_VALUE",
+      "AR_COMM_PAY.ACT_PAYED_VALUE",
+      "AR_COMM_PAY.WITHOUT_COMM_FLAG",
+      "AR_COMM_PAY.DIFF_DAYS",
+      "AR_COMM_PAY.COMM_DESC",
+      "AR_COMM_PAY.COMM_SERIAL",
+      "AR_COMM_PAY.COMM_FROM",
+      "AR_COMM_PAY.COMM_TO",
+      "AR_COMM_PAY.TRGT_LNK",
+      "AR_COMM_PAY.INV_TRNS_ID",
+      "AR_COMM_PAY.INV_TRNS_SERIAL",
+      "AR_COMM_PAY.INV_MAINAREA_ID",
+      "AR_COMM_PAY.INV_SUBAREA_ID",
+      "AR_COMM_PAY.INV_BILL_SEQ",
+      "AR_COMM_PAY.INV_PAY_DATE",
+      "AR_COMM_PAY.INV_VALUE",
+      "AR_COMM_PAY.OUT_COMM",
+      "AR_COMM_PAY.ACT_DIFF_DAYS",
+      "AR_COMM_PAY.BOOK_NO",
+      "AR_COMM_PAY.BOOK_SERIAL",
+      "AR_COMM_PAY.ACC_POST_DATE",
+      "AR_COMM_PAY.ORG_COMM_PRC",
+      "AR_COMM_PAY.ORG_COMM_VALUE",
+      "AR_COMM_SALES.TRNS_ID",
+      "AR_COMM_SALES.TRNS_SERIAL",
+      "AR_COMM_SALES.MAINAREA_ID",
+      "AR_COMM_SALES.SUBAREA_ID",
+      "AR_COMM_SALES.SALESMAN_CODE",
+      "AR_COMM_SALES.CUSTOMER_CODE",
+      "AR_COMM_SALES.CTGRY_CODE",
+      "AR_COMM_SALES.COMM_MONTH",
+      "AR_COMM_SALES.COMM_YEAR",
+      "AR_COMM_SALES.TRNS_DATE",
+      "AR_COMM_SALES.BILL_SEQ",
+      "AR_COMM_SALES.BILL_ID1",
+      "AR_COMM_SALES.BILL_ID2",
+      "AR_COMM_SALES.INV_TRNS_DATE",
+      "AR_COMM_SALES.TOTAL_VALUE",
+      "AR_COMM_SALES.DISC_VALUE",
+      "AR_COMM_SALES.NET_VALUE",
+      "AR_COMM_SALES.ACT_PAYED_VALUE",
+      "AR_COMM_SALES.WITHOUT_COMM_FLAG",
+      "AR_COMM_SALES.DIFF_DAYS",
+      "AR_COMM_SALES.COMM_DESC",
+      "AR_COMM_SALES.COMM_SERIAL",
+      "AR_COMM_SALES.COMM_FROM",
+      "AR_COMM_SALES.COMM_TO",
+      "AR_COMM_SALES.TRGT_LNK",
+      "AR_COMM_SALES.INV_TRNS_ID",
+      "AR_COMM_SALES.INV_TRNS_SERIAL",
+      "AR_COMM_SALES.INV_MAINAREA_ID",
+      "AR_COMM_SALES.INV_SUBAREA_ID",
+      "AR_COMM_SALES.INV_BILL_SEQ",
+      "AR_COMM_SALES.INV_PAY_DATE",
+      "AR_COMM_SALES.INV_VALUE",
+      "AR_COMM_SALES.OUT_COMM",
+      "AR_COMM_SALES.ACT_DIFF_DAYS",
+      "AR_COMM_SALES.BOOK_NO",
+      "AR_COMM_SALES.BOOK_SERIAL",
+      "AR_COMM_SALES.ACC_POST_DATE",
+      "AR_COMM_SALES.ORG_S_COMM_PRC",
+      "AR_COMM_SALES.ORG_S_COMM_VALUE",
+      "AR_COMM_AGES.SALESMAN_CODE",
+      "AR_COMM_AGES.CTGRY_CODE",
+      "AR_COMM_AGES.CUSTOMER_CODE",
+      "AR_COMM_AGES.COMM_MONTH",
+      "AR_COMM_AGES.COMM_YEAR",
+      "AR_COMM_AGES.P1_VALUE",
+      "AR_COMM_AGES.P2_VALUE",
+      "AR_COMM_AGES.P3_VALUE",
+      "AR_COMM_AGES.P4_VALUE",
+      "AR_COMM_AGES.P5_VALUE",
+      "AR_COMM_AGES.P6_VALUE",
+      "AR_COMM_AGES.P7_VALUE",
+      "AR_COMM_AGES.DUE_NEGATIVE"
+    ],
+    "add_columns": {
+      "AR_COMM_PAY.CUSTOMER_CODE": {
+        "label_a": "رقم العميل",
+        "label_e": "Customer"
+      },
+      "AR_COMM_PAY.CTGRY_CODE": {
+        "label_a": "القــــــــسم",
+        "label_e": "Department"
+      },
+      "AR_COMM_PAY.COMM_MONTH": {
+        "label_a": "الشهر",
+        "label_e": "Month"
+      },
+      "AR_COMM_PAY.COMM_YEAR": {
+        "label_a": "السنة",
+        "label_e": "Year"
+      },
+      "AR_COMM_PAY.TRNS_ID": {
+        "label_a": "رقم الحركة",
+        "label_e": "Transaction type"
+      },
+      "AR_COMM_PAY.TRNS_SERIAL": {
+        "label_a": "مسلسل",
+        "label_e": "Serial"
+      },
+      "AR_COMM_PAY.MAINAREA_ID": {
+        "label_a": "المنطقة",
+        "label_e": "Area"
+      },
+      "AR_COMM_PAY.SUBAREA_ID": {
+        "label_a": "الفرع",
+        "label_e": "Branch"
+      },
+      "AR_COMM_PAY.TRNS_DATE": {
+        "label_a": "تاريخ السداد",
+        "label_e": "Payment date"
+      },
+      "AR_COMM_PAY.BOOK_NO": {
+        "label_a": "رقم الدفتر",
+        "label_e": "Book no."
+      },
+      "AR_COMM_PAY.BOOK_SERIAL": {
+        "label_a": "رقم السند",
+        "label_e": "Receipt no."
+      },
+      "AR_COMM_PAY.BILL_ID2": {
+        "label_a": "رقم الفاتورة",
+        "label_e": "Invoice no."
+      },
+      "AR_COMM_PAY.BILL_SEQ": {
+        "label_a": "مسلسل الفاتورة",
+        "label_e": "Invoice line"
+      },
+      "AR_COMM_PAY.INV_TRNS_DATE": {
+        "label_a": "تاريخ الفاتورة",
+        "label_e": "Invoice date"
+      },
+      "AR_COMM_PAY.TOTAL_VALUE": {
+        "label_a": "القيمة المسددة",
+        "label_e": "Paid"
+      },
+      "AR_COMM_PAY.DISC_VALUE": {
+        "label_a": "قيمة الخصم",
+        "label_e": "Discount"
+      },
+      "AR_COMM_PAY.NET_VALUE": {
+        "label_a": "صافى السداد",
+        "label_e": "Net paid"
+      },
+      "AR_COMM_PAY.DIFF_DAYS": {
+        "label_a": "الفرق بالإيام",
+        "label_e": "Days"
+      },
+      "AR_COMM_PAY.ACT_DIFF_DAYS": {
+        "label_a": "بإيام السماح",
+        "label_e": "Days after grace"
+      },
+      "AR_COMM_PAY.WITHOUT_COMM_FLAG": {
+        "label_a": "بدون عمولة",
+        "label_e": "Without commission"
+      },
+      "AR_COMM_PAY.OUT_COMM": {
+        "label_a": "خارج المستهدف",
+        "label_e": "Outside the target"
+      },
+      "AR_COMM_PAY.ORG_COMM_PRC": {
+        "label_a": "م نسبة العمولة (%)",
+        "label_e": "Original commission %"
+      },
+      "AR_COMM_PAY.ORG_COMM_VALUE": {
+        "label_a": "م قيمة العمولة",
+        "label_e": "Original commission"
+      },
+      "AR_COMM_PAY.ACT_COMM_PRC": {
+        "label_a": "نسبة العمولة (%)",
+        "label_e": "Commission %"
+      },
+      "AR_COMM_PAY.ACT_COMM_VALUE": {
+        "label_a": "قيمة العمولة",
+        "label_e": "Commission"
+      },
+      "AR_COMM_PAY.COMM_SERIAL": {
+        "label_a": "مسلسل",
+        "label_e": "Policy serial"
+      },
+      "AR_COMM_PAY.COMM_FROM": {
+        "label_a": "الفترة من",
+        "label_e": "Period from"
+      },
+      "AR_COMM_PAY.COMM_TO": {
+        "label_a": "الفترة إلي",
+        "label_e": "Period to"
+      },
+      "AR_COMM_PAY.TRGT_LNK": {
+        "label_a": "مرتبط بالهدف",
+        "label_e": "Linked to the target"
+      },
+      "AR_COMM_PAY.INV_VALUE": {
+        "label_a": "إجمالي الفاتورة",
+        "label_e": "Invoice total"
+      },
+      "AR_COMM_PAY.P1_VALUE": {
+        "label_a": "الفترة الإولي",
+        "label_e": "Period 1"
+      },
+      "AR_COMM_PAY.P2_VALUE": {
+        "label_a": "الفترة الثانية",
+        "label_e": "Period 2"
+      },
+      "AR_COMM_PAY.P3_VALUE": {
+        "label_a": "الفترة الثالثة",
+        "label_e": "Period 3"
+      },
+      "AR_COMM_PAY.P4_VALUE": {
+        "label_a": "الفترة الرابعة",
+        "label_e": "Period 4"
+      },
+      "AR_COMM_PAY.P5_VALUE": {
+        "label_a": "الفترة الخامسة",
+        "label_e": "Period 5"
+      },
+      "AR_COMM_PAY.P6_VALUE": {
+        "label_a": "الفترة السادسة",
+        "label_e": "Period 6"
+      },
+      "AR_COMM_PAY.P7_VALUE": {
+        "label_a": "الفترة السابعة",
+        "label_e": "Period 7"
+      },
+      "AR_COMM_SALES.CUSTOMER_CODE": {
+        "label_a": "رقم العميل",
+        "label_e": "Customer"
+      },
+      "AR_COMM_SALES.CTGRY_CODE": {
+        "label_a": "القــــــــسم",
+        "label_e": "Department"
+      },
+      "AR_COMM_SALES.COMM_MONTH": {
+        "label_a": "الشهر",
+        "label_e": "Month"
+      },
+      "AR_COMM_SALES.COMM_YEAR": {
+        "label_a": "السنة",
+        "label_e": "Year"
+      },
+      "AR_COMM_SALES.TRNS_ID": {
+        "label_a": "رقم الحركة",
+        "label_e": "Transaction type"
+      },
+      "AR_COMM_SALES.TRNS_SERIAL": {
+        "label_a": "مسلسل",
+        "label_e": "Serial"
+      },
+      "AR_COMM_SALES.MAINAREA_ID": {
+        "label_a": "المنطقة",
+        "label_e": "Area"
+      },
+      "AR_COMM_SALES.SUBAREA_ID": {
+        "label_a": "الفرع",
+        "label_e": "Branch"
+      },
+      "AR_COMM_SALES.TRNS_DATE": {
+        "label_a": "تاريخ السداد",
+        "label_e": "Payment date"
+      },
+      "AR_COMM_SALES.BOOK_NO": {
+        "label_a": "رقم الدفتر",
+        "label_e": "Book no."
+      },
+      "AR_COMM_SALES.BOOK_SERIAL": {
+        "label_a": "رقم السند",
+        "label_e": "Receipt no."
+      },
+      "AR_COMM_SALES.BILL_ID2": {
+        "label_a": "رقم الفاتورة",
+        "label_e": "Invoice no."
+      },
+      "AR_COMM_SALES.BILL_SEQ": {
+        "label_a": "مسلسل الفاتورة",
+        "label_e": "Invoice line"
+      },
+      "AR_COMM_SALES.INV_TRNS_DATE": {
+        "label_a": "تاريخ الفاتورة",
+        "label_e": "Invoice date"
+      },
+      "AR_COMM_SALES.TOTAL_VALUE": {
+        "label_a": "القيمة المسددة",
+        "label_e": "Paid"
+      },
+      "AR_COMM_SALES.DISC_VALUE": {
+        "label_a": "قيمة الخصم",
+        "label_e": "Discount"
+      },
+      "AR_COMM_SALES.NET_VALUE": {
+        "label_a": "صافى السداد",
+        "label_e": "Net paid"
+      },
+      "AR_COMM_SALES.DIFF_DAYS": {
+        "label_a": "الفرق بالإيام",
+        "label_e": "Days"
+      },
+      "AR_COMM_SALES.ACT_DIFF_DAYS": {
+        "label_a": "بإيام السماح",
+        "label_e": "Days after grace"
+      },
+      "AR_COMM_SALES.WITHOUT_COMM_FLAG": {
+        "label_a": "بدون عمولة",
+        "label_e": "Without commission"
+      },
+      "AR_COMM_SALES.OUT_COMM": {
+        "label_a": "خارج المستهدف",
+        "label_e": "Outside the target"
+      },
+      "AR_COMM_SALES.ORG_S_COMM_PRC": {
+        "label_a": "م نسبة العمولة (%)",
+        "label_e": "Original commission %"
+      },
+      "AR_COMM_SALES.ORG_S_COMM_VALUE": {
+        "label_a": "م قيمة العمولة",
+        "label_e": "Original commission"
+      },
+      "AR_COMM_SALES.ACT_S_COMM_PRC": {
+        "label_a": "نسبة العمولة (%)",
+        "label_e": "Commission %"
+      },
+      "AR_COMM_SALES.ACT_S_COMM_VALUE": {
+        "label_a": "قيمة العمولة",
+        "label_e": "Commission"
+      },
+      "AR_COMM_SALES.COMM_SERIAL": {
+        "label_a": "مسلسل",
+        "label_e": "Policy serial"
+      },
+      "AR_COMM_SALES.COMM_FROM": {
+        "label_a": "الفترة من",
+        "label_e": "Period from"
+      },
+      "AR_COMM_SALES.COMM_TO": {
+        "label_a": "الفترة إلي",
+        "label_e": "Period to"
+      },
+      "AR_COMM_SALES.TRGT_LNK": {
+        "label_a": "مرتبط بالهدف",
+        "label_e": "Linked to the target"
+      },
+      "AR_COMM_SALES.INV_VALUE": {
+        "label_a": "إجمالي الفاتورة",
+        "label_e": "Invoice total"
+      },
+      "AR_COMM_SALES.P1_VALUE": {
+        "label_a": "الفترة الإولي",
+        "label_e": "Period 1"
+      },
+      "AR_COMM_SALES.P2_VALUE": {
+        "label_a": "الفترة الثانية",
+        "label_e": "Period 2"
+      },
+      "AR_COMM_SALES.P3_VALUE": {
+        "label_a": "الفترة الثالثة",
+        "label_e": "Period 3"
+      },
+      "AR_COMM_SALES.P4_VALUE": {
+        "label_a": "الفترة الرابعة",
+        "label_e": "Period 4"
+      },
+      "AR_COMM_SALES.P5_VALUE": {
+        "label_a": "الفترة الخامسة",
+        "label_e": "Period 5"
+      },
+      "AR_COMM_SALES.P6_VALUE": {
+        "label_a": "الفترة السادسة",
+        "label_e": "Period 6"
+      },
+      "AR_COMM_SALES.P7_VALUE": {
+        "label_a": "الفترة السابعة",
+        "label_e": "Period 7"
+      },
+      "AR_COMM_AGES.CUSTOMER_CODE": {
+        "label_a": "رقم العميل",
+        "label_e": "Customer"
+      },
+      "AR_COMM_AGES.CTGRY_CODE": {
+        "label_a": "القــــــــسم",
+        "label_e": "Department"
+      },
+      "AR_COMM_AGES.COMM_MONTH": {
+        "label_a": "الشهر",
+        "label_e": "Month"
+      },
+      "AR_COMM_AGES.COMM_YEAR": {
+        "label_a": "السنة",
+        "label_e": "Year"
+      },
+      "AR_COMM_AGES.P1_VALUE": {
+        "label_a": "الفترة الإولي",
+        "label_e": "Period 1"
+      },
+      "AR_COMM_AGES.P2_VALUE": {
+        "label_a": "الفترة الثانية",
+        "label_e": "Period 2"
+      },
+      "AR_COMM_AGES.P3_VALUE": {
+        "label_a": "الفترة الثالثة",
+        "label_e": "Period 3"
+      },
+      "AR_COMM_AGES.P4_VALUE": {
+        "label_a": "الفترة الرابعة",
+        "label_e": "Period 4"
+      },
+      "AR_COMM_AGES.P5_VALUE": {
+        "label_a": "الفترة الخامسة",
+        "label_e": "Period 5"
+      },
+      "AR_COMM_AGES.P6_VALUE": {
+        "label_a": "الفترة السادسة",
+        "label_e": "Period 6"
+      },
+      "AR_COMM_AGES.P7_VALUE": {
+        "label_a": "الفترة السابعة",
+        "label_e": "Period 7"
+      },
+      "SALESMAN.SUPERVISOR_SLSMAN": {
+        "label_a": "المشرف",
+        "label_e": "Supervisor"
+      }
+    },
+    "info": [
+      {
+        "name": "SUP",
+        "label_a": "المشرف",
+        "label_e": "Supervisor",
+        "sql": "select app_rules3_ar.comm_last(to_number(:PAGE_CODE), 'SUP') from dual"
+      },
+      {
+        "name": "MON",
+        "label_a": "آخر شهر محسوب",
+        "label_e": "Last calculated month",
+        "sql": "select app_rules3_ar.comm_last(to_number(:PAGE_CODE), 'MONTH') from dual"
+      },
+      {
+        "name": "NET",
+        "label_a": "إجمالي المحصل",
+        "label_e": "Total collected",
+        "sql": "select app_rules3_ar.comm_last(to_number(:PAGE_CODE), 'NET') from dual"
+      },
+      {
+        "name": "PAYC",
+        "label_a": "عمولة التحصيل",
+        "label_e": "Collection commission",
+        "sql": "select app_rules3_ar.comm_last(to_number(:PAGE_CODE), 'PAYC') from dual"
+      },
+      {
+        "name": "SALC",
+        "label_a": "عمولة المبيعات",
+        "label_e": "Sales commission",
+        "sql": "select app_rules3_ar.comm_last(to_number(:PAGE_CODE), 'SALC') from dual"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "name": "CALC",
+      "label_a": "إحتساب العمولة",
+      "label_e": "Calculate commission",
+      "confirm_a": "هل تريد إحتساب عمولة المندوب للشهر المختار؟",
+      "confirm_e": "Calculate the salesman's commission for the month?",
+      "params": [
+        {
+          "name": "COMM_MONTH",
+          "label_a": "الشهر",
+          "label_e": "Month",
+          "type": "number",
+          "required": true,
+          "default": "to_number(to_char(sysdate, 'MM'))",
+          "default_type": "EXPRESSION"
+        },
+        {
+          "name": "COMM_YEAR",
+          "label_a": "السنة",
+          "label_e": "Year",
+          "type": "number",
+          "required": true,
+          "default": "to_number(to_char(sysdate, 'YYYY'))",
+          "default_type": "EXPRESSION"
+        }
+      ],
+      "call": "app_rules3_ar.comm_calc(:PAGE_ROWID, :COMM_MONTH, :COMM_YEAR)",
+      "success_a": "تم إحتساب العمولة",
+      "success_e": "Commission calculated",
+      "icon": "fa-calculator"
+    },
+    {
+      "name": "DELETE_COMM",
+      "label_a": "حذف العمولة",
+      "label_e": "Delete commission",
+      "confirm_a": "هل تريد مسح عمولة المندوب للشهر المختار؟",
+      "confirm_e": "Do you want to delete the salesman's commission of the month?",
+      "params": [
+        {
+          "name": "COMM_MONTH",
+          "label_a": "الشهر",
+          "label_e": "Month",
+          "type": "number",
+          "required": true,
+          "default": "to_number(to_char(sysdate, 'MM'))",
+          "default_type": "EXPRESSION"
+        },
+        {
+          "name": "COMM_YEAR",
+          "label_a": "السنة",
+          "label_e": "Year",
+          "type": "number",
+          "required": true,
+          "default": "to_number(to_char(sysdate, 'YYYY'))",
+          "default_type": "EXPRESSION"
+        }
+      ],
+      "call": "app_rules3_ar.comm_delete(:PAGE_ROWID, :COMM_MONTH, :COMM_YEAR)",
+      "success_a": "تم حذف العمولة",
+      "success_e": "Commission deleted",
+      "icon": "fa-trash"
+    }
+  ]
+}

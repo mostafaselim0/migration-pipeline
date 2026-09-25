@@ -1,0 +1,53 @@
+{
+  "pattern": "PROCESS",
+  "notes": "Cancel AR posting to GL: rebuilt from the SQL of the compiled AR_CPOSTING.fmx (cursor on posted AR_MAINTRNS, closed-period check, delete AC_YEARLY_TRN(_DET), reset AR_MAINTRNS / AR_SUBTRNS.POST_FLAG) in app_proc_ar.cancel_gl_posting.",
+  "proc": {
+    "procedure": "app_proc_ar.cancel_gl_posting",
+    "description_a": "إلغاء ترحيل حركات العملاء للحسابات العامة: يحذف قيد الحسابات الناتج عن ترحيل حركات العملاء المحددة (سندات القبض والتسويات) ويعيد علامة الترحيل للحركة وتفاصيلها وجميع الحركات المرحلة في نفس القيد. الحركات المرتبطة بالمخازن (فواتير ومرتجعات المبيعات) لا تظهر هنا بل يلغى ترحيلها من شاشة إلغاء ترحيل حركات المخازن. لا يمكن إلغاء ترحيل حركة في فترة مقفلة، وإذا كان القيد مجمعاً لأكثر من حركة يجب اختيار (إلغاء القيود المجمعة).",
+    "description_e": "Cancel the GL posting of customer transactions: deletes the GL voucher created for the selected AR transactions (receipts, adjustments) and resets the posting flag of the transaction, its details and every transaction posted in the same voucher. Stock-linked transactions (sales invoices and returns) are cancelled from the stock cancel-posting screen. Closed periods are refused; shared vouchers need the option 'cancel collected vouchers'.",
+    "params": [
+      {"name": "FROM_DATE", "arg": "p_from_date", "label_a": "مـن تـاريخ", "label_e": "From date", "type": "date", "required": true,
+       "default": "to_char(trunc(sysdate, 'YYYY'), 'DD/MM/YYYY')", "default_type": "EXPRESSION"},
+      {"name": "TO_DATE", "arg": "p_to_date", "label_a": "إلى تـاريخ", "label_e": "To date", "type": "date", "required": true,
+       "default": "to_char(sysdate, 'DD/MM/YYYY')", "default_type": "EXPRESSION"},
+      {"name": "FROM_TRNS_ID", "arg": "p_from_trns_id", "label_a": "مـن حركه", "label_e": "From transaction", "type": "number", "required": false,
+       "lov_sql": "select t.id || ' - ' || decode(:G_LANG, 'en', nvl(t.description_e, t.description_a), t.description_a) d, t.id r from ar_trnstype t where t.trns_type <> 6 and (:G_PASSWORD_NUMBER = 0 or t.id in (select tp.trns_id from ar_trnstype_password tp where tp.flag = 1 and tp.password_number = :G_PASSWORD_NUMBER)) order by t.id"},
+      {"name": "TO_TRNS_ID", "arg": "p_to_trns_id", "label_a": "إلى حركه", "label_e": "To transaction", "type": "number", "required": false,
+       "lov_sql": "select t.id || ' - ' || decode(:G_LANG, 'en', nvl(t.description_e, t.description_a), t.description_a) d, t.id r from ar_trnstype t where t.trns_type <> 6 and (:G_PASSWORD_NUMBER = 0 or t.id in (select tp.trns_id from ar_trnstype_password tp where tp.flag = 1 and tp.password_number = :G_PASSWORD_NUMBER)) order by t.id desc"},
+      {"name": "FROM_MAINAREA", "arg": "p_from_mainarea", "label_a": "مـن منطقه", "label_e": "From area", "type": "number", "required": false,
+       "lov_sql": "select a.id || ' - ' || decode(:G_LANG, 'en', nvl(a.name_e, a.name_a), a.name_a) d, a.id r from ar_mainarea a order by a.id"},
+      {"name": "TO_MAINAREA", "arg": "p_to_mainarea", "label_a": "إلى منطقه", "label_e": "To area", "type": "number", "required": false,
+       "lov_sql": "select a.id || ' - ' || decode(:G_LANG, 'en', nvl(a.name_e, a.name_a), a.name_a) d, a.id r from ar_mainarea a order by a.id desc"},
+      {"name": "FROM_SUBAREA", "arg": "p_from_subarea", "label_a": "مـن فرع", "label_e": "From sub area", "type": "number", "required": false,
+       "lov_sql": "select s.id || ' - ' || decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) d, s.id r from ar_subarea s order by s.id"},
+      {"name": "TO_SUBAREA", "arg": "p_to_subarea", "label_a": "إلى فرع", "label_e": "To sub area", "type": "number", "required": false,
+       "lov_sql": "select s.id || ' - ' || decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) d, s.id r from ar_subarea s order by s.id desc"},
+      {"name": "FROM_SERIAL", "arg": "p_from_serial", "label_a": "مـن مسلسل", "label_e": "From serial", "type": "number", "required": false},
+      {"name": "TO_SERIAL", "arg": "p_to_serial", "label_a": "إلى مسلسل", "label_e": "To serial", "type": "number", "required": false},
+      {"name": "ALLOW_GROUPED", "arg": "p_allow_grouped", "label_a": "إلغاء القيود المجمعة", "label_e": "Cancel collected vouchers", "type": "check", "required": false, "default": "0", "default_type": "STATIC"}
+    ],
+    "fixed_args": {"p_company_code": "to_number(:G_COMPANY_CODE)", "p_user_code": "to_number(:G_USER_CODE)",
+                   "p_password_number": "to_number(:G_PASSWORD_NUMBER)"},
+    "button_a": "إلغاء الترحيل",
+    "button_e": "Cancel posting",
+    "confirm_a": "سيتم حذف قيود الحسابات الخاصة بحركات العملاء المحددة. هل تريد الاستمرار؟",
+    "success_a": "انتهت عملية الغاء الترحيل",
+    "preview_title_a": "الحركات المفترض إلغاء ترحيلها",
+    "preview_sql": "select m.trns_id, decode(:G_LANG, 'en', nvl(t.description_e, t.description_a), t.description_a) trns_desc, m.mainarea_id, m.subarea_id, m.trns_serial, m.trns_date, m.acc_post_date, m.doc_no, m.customer_id, decode(:G_LANG, 'en', nvl(c.name_e, c.name_a), c.name_a) customer_name, m.total_value, m.acc_year || '/' || m.acc_type || '/' || m.acc_no gl_entry, (select count(*) from ar_maintrns x where x.acc_year = m.acc_year and x.acc_type = m.acc_type and x.acc_no = m.acc_no and x.post_flag = 1) voucher_trns from ar_maintrns m join ar_trnstype t on t.id = m.trns_id left join customer c on c.code = m.customer_id where nvl(m.post_flag, 0) = 1 and nvl(m.link_flag, 0) = 0 and m.acc_no is not null and m.trns_serial_tot is null and nvl(m.acc_post_date, m.trns_date) between nvl(to_date(v('P' || :APP_PAGE_ID || '_FROM_DATE'), 'DD/MM/YYYY'), trunc(sysdate, 'YYYY')) and nvl(to_date(v('P' || :APP_PAGE_ID || '_TO_DATE'), 'DD/MM/YYYY'), sysdate) and m.trns_id between nvl(to_number(v('P' || :APP_PAGE_ID || '_FROM_TRNS_ID')), 0) and nvl(to_number(v('P' || :APP_PAGE_ID || '_TO_TRNS_ID')), 999999999999) and (:G_PASSWORD_NUMBER = 0 or m.trns_id in (select tp.trns_id from ar_trnstype_password tp where tp.flag = 1 and tp.password_number = :G_PASSWORD_NUMBER)) order by m.trns_id, m.trns_serial",
+    "preview_columns": [
+      {"name": "TRNS_ID", "label_a": "كود الحركة", "type": "NUMBER"},
+      {"name": "TRNS_DESC", "label_a": "الحركة", "type": "STRING"},
+      {"name": "MAINAREA_ID", "label_a": "المنطقة", "type": "NUMBER"},
+      {"name": "SUBAREA_ID", "label_a": "الفرع", "type": "NUMBER"},
+      {"name": "TRNS_SERIAL", "label_a": "مسلسل الحركه", "type": "NUMBER"},
+      {"name": "TRNS_DATE", "label_a": "تاريخ الحركة", "type": "DATE"},
+      {"name": "ACC_POST_DATE", "label_a": "تاريخ الترحيل", "type": "DATE"},
+      {"name": "DOC_NO", "label_a": "رقم المستند", "type": "NUMBER"},
+      {"name": "CUSTOMER_ID", "label_a": "رقم العميل", "type": "NUMBER"},
+      {"name": "CUSTOMER_NAME", "label_a": "اسم العميل", "type": "STRING"},
+      {"name": "TOTAL_VALUE", "label_a": "القيمة", "type": "NUMBER"},
+      {"name": "GL_ENTRY", "label_a": "رقم القيد", "type": "STRING"},
+      {"name": "VOUCHER_TRNS", "label_a": "عدد حركات القيد", "type": "NUMBER"}
+    ]
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "pattern": "PROCESS",
+  "notes": "barcode labels of an item lot (BARCODE_LABELS.fmx): store, group, item, unit, lot (required, 'مسلسل النظام'), number of labels and price (default = reduction price, else wholesale for DEAL_TYPE 1, else retail); the print button empties the work table PRINT_TRNS_BARCODE and fills one row per label (item English name, barcode = alternative number PEICE_NO or item code, price, user) for report ST_BARCODE_LABEL (printed by the report engine)",
+  "proc": {
+    "procedure": "app_rules3_st.prepare_barcode_labels",
+    "description_a": "طباعة باركود صنف: اختر المخزن والصنف والوحدة ومسلسل النظام (الشحنة) وعدد الملصقات، ويمكن تعديل سعر البيع (الافتراضي حسب نوع تعامل المخزن). عند الضغط على تجهيز الملصقات تُملأ ملصقات تقرير الباركود ST_BARCODE_LABEL ويظهر محتواها في الجدول أدناه.",
+    "description_e": "Item barcode labels: choose the store, the item, the unit, the system serial (lot) and the number of labels; the selling price defaults from the store deal type. Prepare labels fills the labels of report ST_BARCODE_LABEL, listed below.",
+    "params": [
+      {
+        "name": "STORE_CODE",
+        "arg": "p_store",
+        "label_a": "رقم المخزن",
+        "label_e": "Store",
+        "type": "number",
+        "required": true,
+        "lov_sql": "select s.store_code || ' - ' || decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) d, s.store_code r from st_store s where s.store_status = 1 and nvl(s.stop_flag, 0) = 0 order by s.store_code"
+      },
+      {
+        "name": "GROUP_CODE",
+        "arg": "p_group",
+        "label_a": "المجموعة",
+        "label_e": "Group",
+        "type": "number",
+        "required": true,
+        "lov_sql": "select g.item_group_code || ' - ' || decode(:G_LANG, 'en', nvl(g.name_e, g.name_a), g.name_a) d, g.item_group_code r from st_item_group g order by g.item_group_code"
+      },
+      {
+        "name": "ITEM_CODE",
+        "arg": "p_item",
+        "label_a": "كود الصنف",
+        "label_e": "Item code",
+        "type": "text",
+        "required": true,
+        "lov_sql": "select i.item_code || ' - ' || decode(:G_LANG, 'en', nvl(i.name_e, i.name_a), i.name_a) d, i.item_code r from st_item i where nvl(i.stop_flag, 0) = 0 and (:G_PASSWORD_NUMBER = 0 or i.item_group_code in (select gp.group_code from st_group_password gp where gp.password_number = :G_PASSWORD_NUMBER)) order by i.item_code"
+      },
+      {
+        "name": "UNIT_CODE",
+        "arg": "p_unit",
+        "label_a": "رقم الوحدة",
+        "label_e": "Unit",
+        "type": "number",
+        "required": true,
+        "lov_sql": "select u.unit_code || ' - ' || decode(:G_LANG, 'en', nvl(u.name_e, u.name_a), u.name_a) d, u.unit_code r from st_unit u order by u.unit_code"
+      },
+      {
+        "name": "ITEM_CONFG_ID",
+        "arg": "p_confg",
+        "label_a": "مسلسل النظام",
+        "label_e": "System serial (lot)",
+        "type": "number",
+        "required": true,
+        "lov_sql": "select c.item_confg_id || ' - ' || c.item_code || ' - ' || c.lot_number || ' - ' || to_char(c.expire_date, 'DD-MM-YYYY') d, c.item_confg_id r from st_item_confg c order by c.item_code, c.item_confg_id"
+      },
+      {
+        "name": "LABEL_COUNT",
+        "arg": "p_count",
+        "label_a": "عدد الملصقات",
+        "label_e": "Number of labels",
+        "type": "number",
+        "required": true,
+        "default": "1",
+        "default_type": "STATIC"
+      },
+      {
+        "name": "PRICE",
+        "arg": "p_price",
+        "label_a": "سعر البيع (اختياري)",
+        "label_e": "Selling price (optional)",
+        "type": "number",
+        "required": false
+      }
+    ],
+    "button_a": "تجهيز الملصقات",
+    "button_e": "Prepare labels",
+    "success_a": "تم تجهيز ملصقات الباركود",
+    "preview_title_a": "الملصقات المجهزة للطباعة",
+    "preview_sql": "select p.item_serial, p.item_code, p.item_name, p.barcode, p.sales_price, p.user_code from print_trns_barcode p order by p.item_code, p.item_serial",
+    "preview_columns": [
+      {
+        "name": "ITEM_SERIAL",
+        "label_a": "م",
+        "type": "NUMBER"
+      },
+      {
+        "name": "ITEM_CODE",
+        "label_a": "رقم الصنف",
+        "type": "STRING"
+      },
+      {
+        "name": "ITEM_NAME",
+        "label_a": "اسم الصنف",
+        "type": "STRING"
+      },
+      {
+        "name": "BARCODE",
+        "label_a": "الباركود",
+        "type": "STRING"
+      },
+      {
+        "name": "SALES_PRICE",
+        "label_a": "سعر البيع",
+        "type": "NUMBER"
+      },
+      {
+        "name": "USER_CODE",
+        "label_a": "المستخدم",
+        "type": "NUMBER"
+      }
+    ],
+    "print_runs": true
+  }
+}

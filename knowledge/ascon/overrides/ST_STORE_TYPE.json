@@ -1,0 +1,13 @@
+{
+ "pattern": "AUTO",
+ "notes": "store types: STORE_TYPE = NVL(MAX(STORE_TYPE),0)+1 when left empty (st_store_type.fmx; key_expr, the generator no longer numbers *TYPE* keys) within 1..999999; delete refused while stores use the type (APP_RULES3_ST_STORE_TYPE_BD)",
+ "rules": {
+  "key_expr": {
+   "ST_STORE_TYPE.STORE_TYPE": "app_rules3_st.next_code('ST_STORE_TYPE')"
+  },
+  "optional": ["ST_STORE_TYPE.STORE_TYPE"],
+  "row_rules": {
+   "ST_STORE_TYPE": "app_rules3_st.store_type_row(:new.store_type);"
+  }
+ }
+}

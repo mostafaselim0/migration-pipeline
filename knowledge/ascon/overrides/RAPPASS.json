@@ -1,0 +1,62 @@
+{
+  "pattern": "AUTO",
+  "notes": "Cashier-system grants of a group (RP_BOXS_PASSWORD boxes, RAP_TRNS_PASSWORD transaction types); duplicate-box message, all boxes / all types / select all / none buttons (APP_RULES3_SE, see processes/RAPPASS.md)",
+  "rules": {
+    "key_expr": {
+      "RP_BOXS_PASSWORD.BOX_CODE": "app_rules3_se.required('رقم الصندوق', 'Box')"
+    },
+    "row_rules": {
+      "RP_BOXS_PASSWORD": "if inserting then app_rules3_se.dup_row('RP_BOXS_PASSWORD', :new.password_number, :new.box_code); end if;"
+    },
+    "columns": {
+      "RAP_TRNS_PASSWORD.TRNS_TYPE_CODE": {
+        "lov": "select trns_type_code || ' - ' || case when app_sec.lang = 'en' then nvl(desc_e, desc_a) else desc_a end d, trns_type_code r from rp_trns_type order by 1",
+        "widget": "SELECT"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "ALL_BOXES",
+      "label_a": "كل الصناديق",
+      "label_e": "All boxes",
+      "call": "app_rules3_se.rap_all_boxes(:PAGE_ROWID)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "تمت إضافة الصناديق",
+      "success_e": "Boxes added",
+      "icon": "fa-archive"
+    },
+    {
+      "name": "ALL_TRNS",
+      "label_a": "كل الحركات",
+      "label_e": "All transactions",
+      "confirm_a": "سيتم استبدال حركات المجموعة بكل الحركات. هل تريد الاستمرار؟",
+      "confirm_e": "Replace the group's transaction types by all types?",
+      "call": "app_rules3_se.rap_all_trns(:PAGE_ROWID)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "تمت إضافة الحركات",
+      "success_e": "Types added",
+      "icon": "fa-list"
+    },
+    {
+      "name": "FLAGS",
+      "label_a": "إختيار الكل / استبعاد الكل",
+      "label_e": "Select all / deselect all",
+      "params": [
+        {
+          "name": "FLAG",
+          "label_a": "اساسي",
+          "label_e": "Basic",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select case when app_sec.lang = 'en' then e else a end d, r from (select 'إختيار الكل' a, 'Select all' e, 1 r from dual union all select 'استبعاد الكل', 'Deselect all', 0 from dual) order by r desc"
+        }
+      ],
+      "call": "app_rules3_se.set_flags(:PAGE_ROWID, 'RAP_TRNS_PASSWORD', :FLAG)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "تم التعديل",
+      "success_e": "Updated",
+      "icon": "fa-check-square-o"
+    }
+  ]
+}

@@ -1,0 +1,200 @@
+{
+  "pattern": "REPORT_FORM",
+  "master": {
+    "table": "AR_MAINTRNS_DAILY"
+  },
+  "where": null,
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "External customers' cheques and transfers collected by the salesmen (AR_MAINTRNS_DAILY); the generated form on AC_DAILY_TRN was corrected; field rules in APP_RULES3_AR; the posting / approval vouchers are not reproduced (see the process document).",
+  "rules": {
+    "where": "TRNS_ID in (select ID from AR_TRNSTYPE where EFFECT = 1 and TRNS_TYPE <> 6) and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (TRNS_ID in (select TRNS_ID from AR_TRNSTYPE_PASSWORD TP where TP.FLAG = 1 and PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)) and CUSTOMER_ID in (select CUSTOMER_CODE from AR_CUST_PASSWORD where PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)) and SALESMAN_ID in (select SALESMAN_CODE from AR_SALESMAN_PASSWORD where PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER))))",
+    "row_rules": {
+      "AR_MAINTRNS_DAILY": "app_rules3_ar.daily_row(inserting, :new.trns_id, :new.customer_id, :new.salesman_id, :new.trns_date, :new.cash_flag, :new.auth_trns_date, :old.auth_trns_date, :new.trns_status, :old.trns_status);"
+    },
+    "defaults": {
+      "AR_MAINTRNS_DAILY.TRNS_STATUS": {
+        "type": "STATIC",
+        "value": "0"
+      },
+      "AR_MAINTRNS_DAILY.POST_FLAG": {
+        "type": "STATIC",
+        "value": "0"
+      },
+      "AR_MAINTRNS_DAILY.CURRENCY_CODE": {
+        "type": "STATIC",
+        "value": "1"
+      },
+      "AR_MAINTRNS_DAILY.CURRENCY_RATE": {
+        "type": "STATIC",
+        "value": "1"
+      },
+      "AR_MAINTRNS_DAILY.TRNS_DATE": {
+        "type": "EXPRESSION",
+        "value": "to_char(sysdate, 'DD/MM/YYYY')"
+      }
+    },
+    "readonly": [
+      "AR_MAINTRNS_DAILY.TRNS_SERIAL",
+      "AR_MAINTRNS_DAILY.TRNS_STATUS",
+      "AR_MAINTRNS_DAILY.TRNS_STATUS_USER_CODE",
+      "AR_MAINTRNS_DAILY.TRNS_STATUS_DATE",
+      "AR_MAINTRNS_DAILY.POST_FLAG",
+      "AR_MAINTRNS_DAILY.ENTRY_YEAR",
+      "AR_MAINTRNS_DAILY.ENTRY_TYPE",
+      "AR_MAINTRNS_DAILY.ENTRY_NO",
+      "AR_MAINTRNS_DAILY.AUTH_ENTRY_YEAR",
+      "AR_MAINTRNS_DAILY.AUTH_ENTRY_TYPE",
+      "AR_MAINTRNS_DAILY.AUTH_ENTRY_NO"
+    ],
+    "optional": [
+      "AR_MAINTRNS_DAILY.TRNS_SERIAL"
+    ],
+    "columns": {
+      "AR_MAINTRNS_DAILY.TRNS_STATUS": {
+        "static": [
+          [
+            "تحت الاجراء",
+            "0"
+          ],
+          [
+            "معتمدة",
+            "1"
+          ],
+          [
+            "مرفوضة",
+            "2"
+          ]
+        ]
+      },
+      "AR_MAINTRNS_DAILY.TRNS_ID": {
+        "lov": "select id || ' - ' || description_a d, id r from ar_trnstype where effect = 1 and trns_type <> 6 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or id in (select trns_id from ar_trnstype_password where flag = 1 and password_number = to_number(:G_PASSWORD_NUMBER))) order by 2",
+        "widget": "SELECT"
+      },
+      "AR_MAINTRNS_DAILY.SALESMAN_ID": {
+        "lov": "select code || ' - ' || name_a d, code r from salesman where (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or code in (select salesman_code from ar_salesman_password where password_number = to_number(:G_PASSWORD_NUMBER))) order by 2"
+      },
+      "AR_MAINTRNS_DAILY.BANK_ACCOUNT_NUMBER": {
+        "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 order by 2"
+      },
+      "AR_MAINTRNS_DAILY.CR_ACCOUNT_NUMBER": {
+        "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 order by 2"
+      }
+    },
+    "add_columns": {
+      "AR_MAINTRNS_DAILY.TRNS_ID": {
+        "label_a": "رقم الحركة",
+        "label_e": "Transaction type"
+      },
+      "AR_MAINTRNS_DAILY.MAINAREA_ID": {
+        "label_a": "المنـــطـــقــــة",
+        "label_e": "Area"
+      },
+      "AR_MAINTRNS_DAILY.SUBAREA_ID": {
+        "label_a": "الفــــــــــــرع",
+        "label_e": "Branch"
+      },
+      "AR_MAINTRNS_DAILY.TRNS_SERIAL": {
+        "label_a": "مسلسل",
+        "label_e": "Serial"
+      },
+      "AR_MAINTRNS_DAILY.CTGRY_CODE": {
+        "label_a": "القسم",
+        "label_e": "Department"
+      },
+      "AR_MAINTRNS_DAILY.TRNS_DATE": {
+        "label_a": "تاريخ الحركة",
+        "label_e": "Date"
+      },
+      "AR_MAINTRNS_DAILY.DOC_NO": {
+        "label_a": "رقم المستند",
+        "label_e": "Document no."
+      },
+      "AR_MAINTRNS_DAILY.TOTAL_VALUE": {
+        "label_a": "اجمالى الحركة",
+        "label_e": "Total"
+      },
+      "AR_MAINTRNS_DAILY.DESCRIPTION_A": {
+        "label_a": "البيان عربي",
+        "label_e": "Description (Arabic)"
+      },
+      "AR_MAINTRNS_DAILY.DESCRIPTION_E": {
+        "label_a": "البيان لاتيني",
+        "label_e": "Description (English)"
+      },
+      "AR_MAINTRNS_DAILY.CUSTOMER_ID": {
+        "label_a": "رقم العميل",
+        "label_e": "Customer"
+      },
+      "AR_MAINTRNS_DAILY.SALESMAN_ID": {
+        "label_a": "المندوب",
+        "label_e": "Salesman"
+      },
+      "AR_MAINTRNS_DAILY.CURRENCY_CODE": {
+        "label_a": "رقم العملة",
+        "label_e": "Currency"
+      },
+      "AR_MAINTRNS_DAILY.CURRENCY_RATE": {
+        "label_a": "معامل التحويل",
+        "label_e": "Rate"
+      },
+      "AR_MAINTRNS_DAILY.CHEQUE_NUMBER": {
+        "label_a": "رقم الشيك - الحوالة",
+        "label_e": "Cheque / transfer no."
+      },
+      "AR_MAINTRNS_DAILY.CASH_FLAG": {
+        "label_a": "نوع السداد (شيكات / تحويل)",
+        "label_e": "Payment type (cheques / transfer)"
+      },
+      "AR_MAINTRNS_DAILY.BANK_CODE": {
+        "label_a": "بنك العميل",
+        "label_e": "Customer bank"
+      },
+      "AR_MAINTRNS_DAILY.CHK_DATE": {
+        "label_a": "تاريخ الشيك - الحوالة",
+        "label_e": "Cheque / transfer date"
+      },
+      "AR_MAINTRNS_DAILY.TRNS_STATUS": {
+        "label_a": "حالة الحركة",
+        "label_e": "Status"
+      },
+      "AR_MAINTRNS_DAILY.TRNS_STATUS_USER_CODE": {
+        "label_a": "مستخدم المعتمد - الرفض",
+        "label_e": "Approved / refused by"
+      },
+      "AR_MAINTRNS_DAILY.TRNS_STATUS_DATE": {
+        "label_a": "تاريخ حركة الاعتماد او الرفض",
+        "label_e": "Approval / refusal time"
+      },
+      "AR_MAINTRNS_DAILY.AUTH_TRNS_DATE": {
+        "label_a": "تاريخ اعتماد الحركة",
+        "label_e": "Approval date"
+      },
+      "AR_MAINTRNS_DAILY.ENTRY_NO": {
+        "label_a": "رقم قيد الحركة",
+        "label_e": "Voucher no."
+      },
+      "AR_MAINTRNS_DAILY.POST_FLAG": {
+        "label_a": "مرحل",
+        "label_e": "Posted"
+      },
+      "AR_MAINTRNS_DAILY.BANK_ACCOUNT_NUMBER": {
+        "label_a": "رقم حساب بنك الايداع",
+        "label_e": "Deposit bank account"
+      },
+      "AR_MAINTRNS_DAILY.CR_ACCOUNT_NUMBER": {
+        "label_a": "رقم حساب الدائن للشيكات",
+        "label_e": "Cheques credit account"
+      },
+      "AR_MAINTRNS_DAILY.AUTH_ENTRY_NO": {
+        "label_a": "رقم قيد الاعتماد",
+        "label_e": "Approval voucher no."
+      },
+      "AR_MAINTRNS_DAILY.REF_DOC": {
+        "label_a": "مرجع البنك",
+        "label_e": "Bank reference"
+      }
+    }
+  }
+}

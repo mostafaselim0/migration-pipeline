@@ -1,0 +1,398 @@
+{
+ "pattern": "MASTER_DETAIL",
+ "notes": "purchase returns per invoice: generated screen kept (same columns) + RET_TRNS_SERIAL (invoice serial, needed to reference the invoice); legacy rules in APP_RULES_PR Wave 3b: invoice (type + serial of the store / supplier), items and lots of that invoice as cascading lists, legacy return-type / store / supplier / unit lists, posting check boxes, item name and lot expiry on the lines.",
+ "master": {
+  "table": "ST_TRNS_MAST",
+  "columns": [
+   "TRNS_TYPE_CODE",
+   "TRNS_SERIAL",
+   "TRNS_DATE",
+   "ENTRY_DATE",
+   "DOC_NO",
+   "STORE_CODE",
+   "SUPPLIER_CODE",
+   "RET_TRNS_TYPE_CODE",
+   "RET_TRNS_SERIAL",
+   "INVOICE_NO",
+   "CURRENCY_CODE",
+   "CURRENCY_RATE",
+   "DESC_A",
+   "COST_CODE",
+   "ACCOUNT_NUMBER1",
+   "ACCOUNT_NUMBER2",
+   "ACCOUNT_NUMBER3",
+   "ACCOUNT_NUMBER4",
+   "CUSTOMER_CODE",
+   "FREIGHT_VAL",
+   "CUSTOMS_VAL",
+   "TRNSPORT_VAL",
+   "COMMISSION_VAL",
+   "INSURANCE_VAL",
+   "OTHERS_VAL",
+   "SUPP_FREIGHT_VAL",
+   "SUPP_INSURANCE_VAL",
+   "SUPP_OTHERS_VAL",
+   "TOT_DISC1_VALUE",
+   "TOT_DISC2_VALUE",
+   "TOT_DISC3_VALUE",
+   "TAX_VALUE1",
+   "TAX_VALUE2",
+   "POST_FLAG",
+   "SUPP_POST_FLAG",
+   "CUST_POST_FLAG",
+   "PC_TRNS_TYPE_CODE",
+   "RP_TRNS_TYPE_CODE"
+  ]
+ },
+ "details": [
+  {
+   "table": "ST_TRNS_DET",
+   "join": [
+    [
+     "TRNS_TYPE_CODE",
+     "TRNS_TYPE_CODE"
+    ],
+    [
+     "TRNS_SERIAL",
+     "TRNS_SERIAL"
+    ]
+   ],
+   "title_a": "أصناف المرتجع",
+   "title_e": "Returned items",
+   "columns": [
+    "ITEM_CODE",
+    "GROUP_CODE",
+    "UNIT_CODE",
+    "ITEM_CONFG_ID",
+    "LOT_NUMBER",
+    "PRODUCTION_DATE",
+    "QUANTITY",
+    "BONUS_RATIO",
+    "BONUS",
+    "EXTRA_BONUS_RATIO",
+    "EXTRA_BONUS",
+    "UNIT_PRICE_CURR",
+    "UNIT_PRICE",
+    "DISC1_RATIO",
+    "DISC1_VALUE",
+    "DISC2_RATIO",
+    "DISC2_VALUE",
+    "DISC3_RATIO",
+    "DISC3_VALUE",
+    "DET_DISC",
+    "TAX_VALUE1",
+    "TAX_VALUE2"
+   ]
+  }
+ ],
+ "insert": true,
+ "update": true,
+ "delete": true,
+ "rules": {
+  "row_rules": {
+   "ST_TRNS_MAST": "if app_rules_pr.bypass = 0 and app_rules_pr.is_purchase_type(:new.trns_type_code) = 1 then\n  -- purchase invoices / returns (ST_RECEIVE_COST, ST_RETURN_COST, ST_RETURN_COST2): legacy PRE-INSERT and WVI derivations\n  if inserting then\n    :new.delete_flag := nvl(:new.delete_flag, 0);\n    :new.entry_date := nvl(:new.entry_date, trunc(sysdate));\n    :new.store_code := nvl(:new.store_code, app_rules_pr.type_store(:new.trns_type_code));\n    if :new.supplier_code is not null then\n      if nvl(:new.currency_code, 1) = 1 and app_rules_pr.supplier_currency(:new.supplier_code) <> 1 then\n        :new.currency_code := app_rules_pr.supplier_currency(:new.supplier_code);\n        :new.currency_rate := app_rules_pr.currency_rate(:new.currency_code, :new.trns_date);\n      end if;\n      :new.purch_code := nvl(:new.purch_code, app_rules_pr.supplier_resp(:new.supplier_code));\n      :new.gln := nvl(:new.gln, app_rules_pr.supplier_gln(:new.supplier_code));\n    end if;\n    :new.posting_supplier_code := nvl(:new.posting_supplier_code, :new.supplier_code);\n    if app_rules_pr.is_receive_type(:new.trns_type_code) = 1 then\n      :new.invoice_no := nvl(:new.invoice_no, to_char(:new.trns_type_code) || lpad(to_char(:new.trns_serial), 7, '0'));\n    else\n      :new.invoice_no := nvl(:new.invoice_no, app_rules_pr.st_invoice_no(:new.ret_trns_type_code, :new.ret_trns_serial));\n      :new.doc_no := nvl(:new.doc_no, app_rules_pr.next_st_doc_no(:new.trns_type_code, :new.store_code));\n    end if;\n  elsif app_rules_pr.chg(:new.supplier_code, :old.supplier_code) = 1 then\n    :new.posting_supplier_code := :new.supplier_code;\n  end if;\n  if (inserting and :new.due_date is null and :new.due_days is not null)\n     or (updating and app_rules_pr.chg(:new.due_days, :old.due_days) = 1 and app_rules_pr.chg(:new.due_date, :old.due_date) = 0) then\n    :new.due_date := :new.trns_date + :new.due_days;\n  elsif :new.due_date is not null then\n    :new.due_days := trunc(:new.due_date) - trunc(:new.trns_date);\n  end if;\nend if;",
+   "ST_TRNS_DET": "if app_rules_pr.bypass = 0 and app_rules_pr.is_purchase_type(:new.trns_type_code) = 1 then\n  -- purchase invoice / return lines: group, unit, bonus and discount pairs, basic quantity, price in riyal, lot configuration\n  if :new.item_code is not null then\n    :new.group_code := nvl(:new.group_code, app_rules_pr.item_group(:new.item_code));\n    :new.unit_code := nvl(:new.unit_code, app_rules_pr.basic_unit(:new.group_code, :new.item_code));\n  end if;\n  if (inserting or app_rules_pr.chg(:new.quantity, :old.quantity) + app_rules_pr.chg(:new.bonus, :old.bonus)\n                   + app_rules_pr.chg(:new.extra_bonus, :old.extra_bonus) > 0)\n     and (nvl(:new.quantity, 0) < 0 or nvl(:new.quantity, 0) + nvl(:new.bonus, 0) + nvl(:new.extra_bonus, 0) <= 0) then\n    raise_application_error(-20122, 'يجب إدخال كمية أكبر من الصفر - الصنف ' || :new.item_code);\n  end if;\n  if :new.unit_price_curr < 0 then\n    raise_application_error(-20122, 'القيمة يجب أن تكون أكبر من الصفر - سعر الصنف ' || :new.item_code);\n  end if;\n  :new.unit_price_curr := round(:new.unit_price_curr, 4);\n  app_rules_pr.pair_ratio(inserting, :new.quantity, :old.quantity, :new.bonus_ratio, :old.bonus_ratio, :new.bonus, :old.bonus);\n  app_rules_pr.pair_ratio(inserting, :new.quantity, :old.quantity, :new.extra_bonus_ratio, :old.extra_bonus_ratio, :new.extra_bonus, :old.extra_bonus);\n  app_rules_pr.disc_chain(inserting, :new.unit_price_curr, :old.unit_price_curr,\n                          :new.disc1_ratio, :old.disc1_ratio, :new.disc1_value, :old.disc1_value,\n                          :new.disc2_ratio, :old.disc2_ratio, :new.disc2_value, :old.disc2_value,\n                          :new.disc3_ratio, :old.disc3_ratio, :new.disc3_value, :old.disc3_value);\n  :new.basic_qty := (nvl(:new.quantity, 0) + nvl(:new.bonus, 0) + nvl(:new.extra_bonus, 0))\n                    * app_rules_pr.unit_factor(:new.group_code, :new.item_code, :new.unit_code);\n  :new.cost_flag := nvl(:new.cost_flag, 1);\n  if :new.unit_price_curr is not null and (inserting or app_rules_pr.chg(:new.unit_price_curr, :old.unit_price_curr) = 1) then\n    :new.unit_price := :new.unit_price_curr * app_rules_pr.st_rate(:new.trns_type_code, :new.trns_serial);\n  end if;\n  if inserting and app_rules_pr.is_receive_type(:new.trns_type_code) = 1 then\n    if :new.item_confg_id is null then\n      -- line typed on the purchase-invoice page (processes that create invoices supply the lot configuration themselves)\n      if :new.unit_price_curr is null then\n        raise_application_error(-20122, 'القيمة يجب أن تكون أكبر من الصفر - سعر الصنف ' || :new.item_code);\n      end if;\n      :new.item_confg_id := app_rules_pr.receive_line_confg(:new.trns_type_code, :new.trns_serial, :new.group_code, :new.item_code,\n                              :new.unit_code, :new.lot_number, :new.expiry_date, :new.sales_price, :new.sales_disc_ratio, :new.production_date);\n      app_rules_pr.check_next_posted(:new.trns_type_code, :new.trns_serial, :new.group_code, :new.item_code);\n    end if;\n    if :new.unit_cost is null and nvl(:new.basic_qty, 0) <> 0 then\n      :new.unit_cost := ((nvl(:new.quantity, 0) * (nvl(:new.unit_price_curr, 0) - nvl(:new.disc1_value, 0) - nvl(:new.disc2_value, 0)\n                          - nvl(:new.disc3_value, 0) - nvl(:new.supp_disc_value, 0))) * app_rules_pr.st_rate(:new.trns_type_code, :new.trns_serial)\n                         - nvl(:new.det_disc, 0)) / :new.basic_qty;\n    end if;\n  end if;\nend if;"
+  },
+  "validations": [
+   {
+    "name": "legacy header checks (RETURN)",
+    "plsql": "return app_rules_pr.check_st_header('RETURN', :PAGE_ROWID, :PAGE_TRNS_TYPE_CODE, :PAGE_TRNS_DATE, :PAGE_STORE_CODE, :PAGE_SUPPLIER_CODE, :PAGE_CURRENCY_CODE, :PAGE_CURRENCY_RATE, null, :PAGE_DOC_NO, :PAGE_RET_TRNS_TYPE_CODE, :PAGE_RET_TRNS_SERIAL);",
+    "when": "CREATE,SAVE"
+   },
+   {
+    "name": "posted / cancelled / closed-period document is read-only",
+    "plsql": "return app_rules_pr.check_st_locked(:PAGE_ROWID);",
+    "when": "SAVE"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "legacy KEY-COMMIT checks and derived values",
+    "plsql": "app_rules_pr.return_after_save(:PAGE_ROWID, :REQUEST, 'RETURN');",
+    "when": "CREATE,SAVE"
+   },
+   {
+    "name": "delete: release the incoming lot (KEY-DELREC)",
+    "plsql": "app_act_pr.st_after_soft_delete(:PAGE_ROWID);",
+    "when": "DELETE"
+   }
+  ],
+  "where": "TRNS_TYPE_CODE IN (SELECT T.TRNS_TYPE_CODE FROM ST_TRNS_TYPE T WHERE T.EFFECT = 3 AND T.TRNS_TYPE IN (3, 5)) AND DELETE_FLAG = 0 AND (:G_PASSWORD_NUMBER = 0 OR TRNS_TYPE_CODE IN (SELECT TRNS_TYPE_CODE FROM ST_TRNSTYPE_PASSWORD WHERE FLAG = 1 AND PASSWORD_NUMBER = :G_PASSWORD_NUMBER)) AND RET_TRNS_TYPE_CODE IS NOT NULL",
+  "defaults": {
+   "ST_TRNS_MAST.TRNS_TYPE_CODE": {
+    "type": "EXPRESSION",
+    "value": "app_rules_pr.default_type('RETURN')"
+   },
+   "ST_TRNS_MAST.STORE_CODE": {
+    "type": "EXPRESSION",
+    "value": "app_rules_pr.type_store(app_rules_pr.default_type('RETURN'))"
+   },
+   "ST_TRNS_MAST.ENTRY_DATE": {
+    "type": "EXPRESSION",
+    "value": "to_char(sysdate, 'DD/MM/YYYY')"
+   }
+  },
+  "readonly": [
+   "ST_TRNS_MAST.POST_FLAG",
+   "ST_TRNS_MAST.SUPP_POST_FLAG",
+   "ST_TRNS_MAST.CUST_POST_FLAG",
+   "ST_TRNS_MAST.INVOICE_NO",
+   "ST_TRNS_MAST.PC_TRNS_TYPE_CODE",
+   "ST_TRNS_MAST.RP_TRNS_TYPE_CODE",
+   "ST_TRNS_DET.UNIT_PRICE",
+   "ST_TRNS_DET.UNIT_PRICE_CURR",
+   "ST_TRNS_DET.GROUP_CODE",
+   "ST_TRNS_DET.LOT_NUMBER",
+   "ST_TRNS_DET.PRODUCTION_DATE"
+  ],
+  "hidden": [
+   "ST_TRNS_MAST.DATE_SERIAL",
+   "ST_TRNS_MAST.DELETE_FLAG",
+   "ST_TRNS_DET.BASIC_QTY",
+   "ST_TRNS_DET.COST_FLAG"
+  ],
+  "optional": [
+   "ST_TRNS_MAST.DATE_SERIAL",
+   "ST_TRNS_MAST.DELETE_FLAG",
+   "ST_TRNS_DET.BASIC_QTY",
+   "ST_TRNS_DET.COST_FLAG",
+   "ST_TRNS_DET.GROUP_CODE",
+   "ST_TRNS_DET.UNIT_CODE"
+  ],
+  "soft_delete": {
+   "set": {
+    "DELETE_FLAG": "1"
+   },
+   "lines": "keep",
+   "check": "return app_act_pr.st_delete_check(:PAGE_ROWID);",
+   "message_a": "تم حذف المستند"
+  },
+  "warnings": [
+   {
+    "name": "FUTURE_DATE",
+    "plsql": "return app_act_pr.st_date_warning(:PAGE_ROWID, :PAGE_TRNS_DATE);",
+    "when": "CREATE,SAVE"
+   },
+   {
+    "name": "NO_SUPPLIER",
+    "plsql": "return app_act_pr.st_supplier_warning(:PAGE_ROWID, :PAGE_SUPPLIER_CODE);",
+    "when": "CREATE,SAVE"
+   },
+   {
+    "name": "DOC_REPEAT",
+    "plsql": "return app_act_pr.st_doc_warning('RETURN', :PAGE_ROWID, :PAGE_TRNS_TYPE_CODE, :PAGE_DOC_NO);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "columns": {
+   "ST_TRNS_MAST.TRNS_TYPE_CODE": {
+    "widget": "SELECT",
+    "lov": "select trns_type_code || ' - ' || desc_a d, trns_type_code r from st_trns_type where effect = 3 and trns_type in (3, 5) and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or trns_type_code in (select tp.trns_type_code from st_trnstype_password tp where tp.flag = 1 and tp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2"
+   },
+   "ST_TRNS_MAST.STORE_CODE": {
+    "widget": "SELECT",
+    "lov": "select st.store_code || ' - ' || st.name_a d, st.store_code r from st_store st where nvl(st.store_status, 0) = 1 and nvl(st.stop_flag, 0) = 0 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or st.store_code in (select s2.store_code from st_store s2, st_chart_structure chrt, st_store_password sp where s2.store_status = 1 and sp.password_number = to_number(:G_PASSWORD_NUMBER) and sp.flag = 1 and chrt.chr_stru_level = (select s3.store_level from st_store s3 where s3.store_code = sp.store_code) and chrt.chr_type = 1 and substr(sp.store_code, 1, chrt.chr_stru_end) = substr(s2.store_code, 1, chrt.chr_stru_end))) order by 2"
+   },
+   "ST_TRNS_MAST.SUPPLIER_CODE": {
+    "widget": "POPUP",
+    "lov": "select s.code || ' - ' || s.name_a d, s.code r from supplier s where nvl(s.stopflag, 0) = 0 and nvl(s.supplier_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (s.code >= (select max(from_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)) and s.code <= (select max(to_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)))) order by 2"
+   },
+   "ST_TRNS_MAST.POST_FLAG": {
+    "widget": "CHECK",
+    "values": [
+     "1",
+     "0"
+    ]
+   },
+   "ST_TRNS_MAST.SUPP_POST_FLAG": {
+    "widget": "CHECK",
+    "values": [
+     "1",
+     "0"
+    ]
+   },
+   "ST_TRNS_MAST.CUST_POST_FLAG": {
+    "widget": "CHECK",
+    "values": [
+     "1",
+     "0"
+    ]
+   },
+   "ST_TRNS_DET.UNIT_CODE": {
+    "widget": "SELECT",
+    "cascade": [
+     "ITEM_CODE",
+     "GROUP_CODE"
+    ],
+    "lov": "select u.unit_code || ' - ' || u.name_a || decode(iu.basic_unit, 1, ' (وحدة أساسية)', '') d, u.unit_code r from st_item_unit iu, st_unit u where iu.item_code = :PAGE_ITEM_CODE and (iu.group_code = :PAGE_GROUP_CODE or :PAGE_GROUP_CODE is null) and iu.unit_code = u.unit_code order by 2"
+   },
+   "ST_TRNS_MAST.RET_TRNS_TYPE_CODE": {
+    "widget": "SELECT",
+    "lov": "select trns_type_code || ' - ' || desc_a d, trns_type_code r from st_trns_type where nvl(effect, 0) = 1 and nvl(trns_type, 0) = 1 order by 2"
+   },
+   "ST_TRNS_MAST.RET_TRNS_SERIAL": {
+    "widget": "POPUP",
+    "cascade": [
+     "RET_TRNS_TYPE_CODE",
+     "STORE_CODE",
+     "SUPPLIER_CODE"
+    ],
+    "label_a": "مسلسل فاتورة المشتريات",
+    "label_e": "Purchase invoice serial",
+    "lov": "select m.trns_serial || ' - ' || m.invoice_no || ' - ' || to_char(m.trns_date, 'DD-MM-YYYY') || nvl2(m.supplier_ref, ' - ' || m.supplier_ref, '') d, m.trns_serial r from st_trns_mast m where m.trns_type_code = :PAGE_RET_TRNS_TYPE_CODE and nvl(m.delete_flag, 0) = 0 and m.store_code = :PAGE_STORE_CODE and (:PAGE_SUPPLIER_CODE is null or m.supplier_code = :PAGE_SUPPLIER_CODE) and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or m.store_code in (select sp.store_code from st_store_password sp where sp.password_number = to_number(:G_PASSWORD_NUMBER))) order by m.doc_no, m.trns_serial"
+   },
+   "ST_TRNS_DET.ITEM_CODE": {
+    "widget": "POPUP",
+    "cascade": [
+     "TRNS_TYPE_CODE",
+     "TRNS_SERIAL"
+    ],
+    "lov": "select distinct i.item_code || ' - ' || nvl(i.name_a, i.name_e) d, i.item_code r from st_item i, st_trns_det v where i.item_code = v.item_code and i.item_group_code = v.group_code and (v.trns_type_code, v.trns_serial) in (select h.ret_trns_type_code, h.ret_trns_serial from st_trns_mast h where h.trns_type_code = :PAGE_TRNS_TYPE_CODE and h.trns_serial = :PAGE_TRNS_SERIAL) and nvl(i.stop_flag, 0) = 0 and nvl(v.delete_flag, 0) != 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or i.item_group_code in (select gp.group_code from st_group_password gp where gp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2"
+   },
+   "ST_TRNS_DET.ITEM_CONFG_ID": {
+    "widget": "SELECT",
+    "cascade": [
+     "ITEM_CODE",
+     "TRNS_TYPE_CODE",
+     "TRNS_SERIAL"
+    ],
+    "lov": "select v.item_confg_id || ' - ' || to_char(c.expire_date, 'DD-MM-YYYY') || nvl2(c.lot_number, ' - ' || c.lot_number, '') || ' - الكمية ' || v.quantity d, v.item_confg_id r from st_trns_det v, st_item_confg c where c.item_confg_id = v.item_confg_id and (v.trns_type_code, v.trns_serial) in (select h.ret_trns_type_code, h.ret_trns_serial from st_trns_mast h where h.trns_type_code = :PAGE_TRNS_TYPE_CODE and h.trns_serial = :PAGE_TRNS_SERIAL) and v.item_code = :PAGE_ITEM_CODE and nvl(v.delete_flag, 0) != 1 order by 2"
+   }
+  },
+  "computed": {
+   "ST_TRNS_DET.ITEM_NAME_A": {
+    "sql": "(select max(nvl(i.name_a, i.name_e)) from st_item i where i.item_code = t.item_code and i.item_group_code = t.group_code)",
+    "label_a": "إســم الصنـــف",
+    "label_e": "Item Name"
+   },
+   "ST_TRNS_DET.LOT_EXPIRE": {
+    "sql": "(select max(g.expire_date) from st_item_confg g where g.item_confg_id = t.item_confg_id)",
+    "label_a": "تاريخ الصلاحية",
+    "label_e": "Expire Date",
+    "type": "DATE"
+   }
+  }
+ },
+ "columns": [
+  "TRNS_TYPE_CODE",
+  "TRNS_SERIAL",
+  "TRNS_DATE",
+  "ENTRY_DATE",
+  "DOC_NO",
+  "STORE_CODE",
+  "SUPPLIER_CODE",
+  "RET_TRNS_TYPE_CODE",
+  "RET_TRNS_SERIAL",
+  "INVOICE_NO",
+  "CURRENCY_CODE",
+  "CURRENCY_RATE",
+  "DESC_A",
+  "COST_CODE",
+  "ACCOUNT_NUMBER1",
+  "ACCOUNT_NUMBER2",
+  "ACCOUNT_NUMBER3",
+  "ACCOUNT_NUMBER4",
+  "CUSTOMER_CODE",
+  "FREIGHT_VAL",
+  "CUSTOMS_VAL",
+  "TRNSPORT_VAL",
+  "COMMISSION_VAL",
+  "INSURANCE_VAL",
+  "OTHERS_VAL",
+  "SUPP_FREIGHT_VAL",
+  "SUPP_INSURANCE_VAL",
+  "SUPP_OTHERS_VAL",
+  "TOT_DISC1_VALUE",
+  "TOT_DISC2_VALUE",
+  "TOT_DISC3_VALUE",
+  "TAX_VALUE1",
+  "TAX_VALUE2",
+  "POST_FLAG",
+  "SUPP_POST_FLAG",
+  "CUST_POST_FLAG",
+  "PC_TRNS_TYPE_CODE",
+  "RP_TRNS_TYPE_CODE"
+ ],
+ "actions": [
+  {
+   "name": "POST",
+   "label_a": "ترحيل السند",
+   "label_e": "Post Trns",
+   "confirm_a": "سيتم ترحيل الحركة الحالية. هل تريد الاستمرار؟",
+   "confirm_e": "The transaction will be posted. Continue?",
+   "condition": "app_act_pr.st_can(:PAGE_ROWID, 'POST') = 'Y'",
+   "params": [
+    {
+     "name": "GL",
+     "label_a": "الحسابات العامة",
+     "label_e": "General ledger",
+     "type": "number",
+     "required": true,
+     "lov_sql": "select decode(:G_LANG, 'en', 'Yes', 'نعم') d, 1 r from dual union all select decode(:G_LANG, 'en', 'No', 'لا') d, 0 r from dual",
+     "default": "1",
+     "default_type": "STATIC"
+    },
+    {
+     "name": "AP",
+     "label_a": "الموردين",
+     "label_e": "Payables",
+     "type": "number",
+     "required": true,
+     "lov_sql": "select decode(:G_LANG, 'en', 'Yes', 'نعم') d, 1 r from dual union all select decode(:G_LANG, 'en', 'No', 'لا') d, 0 r from dual",
+     "default": "1",
+     "default_type": "STATIC"
+    }
+   ],
+   "call": "app_act_pr.st_post(:PAGE_ROWID, :GL, :AP)",
+   "message": "app_act_pr.last_message",
+   "success_a": "تمت عملية الترحيل",
+   "success_e": "Posting completed",
+   "icon": "fa-share-square-o"
+  },
+  {
+   "name": "UNPOST",
+   "label_a": "إلغاء الترحيل",
+   "label_e": "Cancel Posting",
+   "confirm_a": "سيتم إلغاء ترحيل الحركة الحالية. هل تريد الاستمرار؟",
+   "confirm_e": "The posting of the transaction will be cancelled. Continue?",
+   "condition": "app_act_pr.st_can(:PAGE_ROWID, 'UNPOST') = 'Y'",
+   "params": [
+    {
+     "name": "GL",
+     "label_a": "الحسابات العامة",
+     "label_e": "General ledger",
+     "type": "number",
+     "required": true,
+     "lov_sql": "select decode(:G_LANG, 'en', 'Yes', 'نعم') d, 1 r from dual union all select decode(:G_LANG, 'en', 'No', 'لا') d, 0 r from dual",
+     "default": "1",
+     "default_type": "STATIC"
+    },
+    {
+     "name": "AP",
+     "label_a": "الموردين",
+     "label_e": "Payables",
+     "type": "number",
+     "required": true,
+     "lov_sql": "select decode(:G_LANG, 'en', 'Yes', 'نعم') d, 1 r from dual union all select decode(:G_LANG, 'en', 'No', 'لا') d, 0 r from dual",
+     "default": "1",
+     "default_type": "STATIC"
+    },
+    {
+     "name": "GROUPED",
+     "label_a": "إلغاء القيود المجمعة",
+     "label_e": "Cancel collected vouchers",
+     "type": "number",
+     "required": true,
+     "lov_sql": "select decode(:G_LANG, 'en', 'Yes', 'نعم') d, 1 r from dual union all select decode(:G_LANG, 'en', 'No', 'لا') d, 0 r from dual",
+     "default": "0",
+     "default_type": "STATIC"
+    }
+   ],
+   "call": "app_act_pr.st_unpost(:PAGE_ROWID, :GL, :AP, :GROUPED)",
+   "message": "app_act_pr.last_message",
+   "success_a": "تمت عملية إلغاء الترحيل",
+   "success_e": "Cancel posting completed",
+   "icon": "fa-undo"
+  }
+ ]
+}

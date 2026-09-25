@@ -1,0 +1,23 @@
+{
+  "pattern": "GRID",
+  "master": {"table": "GENERAL_FIXED_PARAMETER"},
+  "details": [],
+  "where": null,
+  "insert": false,
+  "update": true,
+  "delete": false,
+  "notes": "Application/report server configuration: the single row of GENERAL_FIXED_PARAMETER (host name/IP, report server, BI/EUL settings); update only, the legacy form checked the row count.",
+  "rules": {
+    "add_columns": {
+      "GENERAL_FIXED_PARAMETER.HOST_NAME": {"label_a": "اسم الخادم (Host name)", "label_e": "Host name"},
+      "GENERAL_FIXED_PARAMETER.HOST_IP": {"label_a": "عنوان الخادم (Host IP)", "label_e": "Host IP"},
+      "GENERAL_FIXED_PARAMETER.REPORT_SERVER_NAME": {"label_a": "خادم التقارير (Report server)", "label_e": "Report server"},
+      "GENERAL_FIXED_PARAMETER.CONFG_A": {"label_a": "الإعداد (عربى)", "label_e": "Config (Arabic)"},
+      "GENERAL_FIXED_PARAMETER.CONFIG_E": {"label_a": "الإعداد (إنجليزى)", "label_e": "Config (English)"},
+      "GENERAL_FIXED_PARAMETER.BI_IP": {"label_a": "BI IP", "label_e": "BI IP"},
+      "GENERAL_FIXED_PARAMETER.EUL_AR": {"label_a": "EUL عربى", "label_e": "EUL (Arabic)"},
+      "GENERAL_FIXED_PARAMETER.EUL_EG": {"label_a": "EUL إنجليزى", "label_e": "EUL (English)"},
+      "GENERAL_FIXED_PARAMETER.EXTERNAL_HOST": {"label_a": "الخادم الخارجى (External host)", "label_e": "External host"}
+    }
+  }
+}

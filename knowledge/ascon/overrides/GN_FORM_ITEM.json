@@ -1,0 +1,143 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "GN_FORM_ITEM"
+  },
+  "details": [
+    {
+      "table": "GN_FORM_ITEM_RAD",
+      "join": [
+        [
+          "SYSTEM_NUMBER",
+          "SYSTEM_NUMBER"
+        ],
+        [
+          "FORM_CODE",
+          "FORM_CODE"
+        ],
+        [
+          "ITEM_CODE",
+          "ITEM_CODE"
+        ],
+        [
+          "ITEM_TYPE",
+          "ITEM_TYPE"
+        ]
+      ],
+      "title_a": "أزرار الاختيار",
+      "title_e": "Radio buttons"
+    }
+  ],
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Forms translation: Arabic and English prompt / label / tooltip / hint of each legacy form item (GN_FORM_ITEM, the label source of the generator) and its radio buttons; keys editable on new rows only, 'shown in' list (see processes/GN_FORM_ITEM.md)",
+  "rules": {
+    "readonly": [],
+    "add_columns": {
+      "GN_FORM_ITEM.SYSTEM_NUMBER": {
+        "label_a": "رقم النظام",
+        "label_e": "System No."
+      },
+      "GN_FORM_ITEM.FORM_CODE": {
+        "label_a": "اسم الشاشة",
+        "label_e": "Screen Nm."
+      },
+      "GN_FORM_ITEM.ITEM_CODE": {
+        "label_a": "اسم الوحدة",
+        "label_e": "Unit Nm."
+      },
+      "GN_FORM_ITEM.ITEM_TYPE": {
+        "label_a": "نوع الوحدة",
+        "label_e": "Unit Type"
+      },
+      "GN_FORM_ITEM.PROMPT_A": {
+        "label_a": "Prompt عربى",
+        "label_e": "Prompt (Arabic)"
+      },
+      "GN_FORM_ITEM.PROMPT_E": {
+        "label_a": "Prompt إنجليزى",
+        "label_e": "Prompt (English)"
+      },
+      "GN_FORM_ITEM.LABEL_A": {
+        "label_a": "Label عربى",
+        "label_e": "Label (Arabic)"
+      },
+      "GN_FORM_ITEM.LABEL_E": {
+        "label_a": "Label إنجليزى",
+        "label_e": "Label (English)"
+      },
+      "GN_FORM_ITEM.TOOLTIP_A": {
+        "label_a": "ToolTip عربى",
+        "label_e": "ToolTip (Arabic)"
+      },
+      "GN_FORM_ITEM.TOOLTIP_E": {
+        "label_a": "ToolTip إنجليزى",
+        "label_e": "ToolTip (English)"
+      },
+      "GN_FORM_ITEM.HINT_A": {
+        "label_a": "Hint عربى",
+        "label_e": "Hint (Arabic)"
+      },
+      "GN_FORM_ITEM.HINT_E": {
+        "label_a": "Hint إنجليزى",
+        "label_e": "Hint (English)"
+      },
+      "GN_FORM_ITEM.SHOW_IN_LANG": {
+        "label_a": "يظهر فى",
+        "label_e": "Shown in"
+      },
+      "GN_FORM_ITEM_RAD.LABEL_E": {
+        "label_a": "Label إنجليزى",
+        "label_e": "Label (English)"
+      }
+    },
+    "columns": {
+      "GN_FORM_ITEM.SYSTEM_NUMBER": {
+        "readonly_after_insert": true,
+        "lov": "select system_number || ' - ' || case when app_sec.lang = 'en' then nvl(system_desc_e, system_desc_a) else system_desc_a end d, system_number r from sys_systems order by system_number",
+        "widget": "SELECT"
+      },
+      "GN_FORM_ITEM.FORM_CODE": {
+        "readonly_after_insert": true
+      },
+      "GN_FORM_ITEM.ITEM_CODE": {
+        "readonly_after_insert": true,
+        "lov": null
+      },
+      "GN_FORM_ITEM.ITEM_TYPE": {
+        "readonly_after_insert": true
+      },
+      "GN_FORM_ITEM_RAD.RADIO_BUTTON": {
+        "readonly_after_insert": true
+      },
+      "GN_FORM_ITEM.SHOW_IN_LANG": {
+        "static": [
+          [
+            "يظهر فى العربى و الإنجليزى",
+            "0",
+            "Shown in Arabic and English"
+          ],
+          [
+            "يظهر فى العربى فقط",
+            "1",
+            "Arabic only"
+          ],
+          [
+            "يظهر فى الإنجليزى فقط",
+            "2",
+            "English only"
+          ]
+        ]
+      }
+    },
+    "blocks": {
+      "GN_FORM_ITEM": {
+        "insert": true
+      },
+      "GN_FORM_ITEM_RAD": {
+        "insert": true
+      }
+    }
+  }
+}

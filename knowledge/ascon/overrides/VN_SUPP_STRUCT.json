@@ -1,0 +1,32 @@
+{
+  "pattern": "AUTO",
+  "notes": "Supplier code structure (VN_CHART_STRUCTURE, CHR_TYPE 1): level max+1, start = previous end + 1, end >= start and <= 12, length; locked while suppliers exist (only level names), bottom-up delete (APP_RULES3_VN).",
+  "rules": {
+    "where": "CHR_TYPE = 1",
+    "defaults": {
+      "VN_CHART_STRUCTURE.CHR_TYPE": {
+        "type": "STATIC",
+        "value": "1"
+      }
+    },
+    "key_expr": {
+      "VN_CHART_STRUCTURE.CHR_STRU_LEVEL": "app_rules3_vn.next_struct_level"
+    },
+    "row_rules": {
+      "VN_CHART_STRUCTURE": "app_rules3_vn.struct_row(inserting, :new.chr_type, :new.chr_stru_start, :new.chr_stru_end, :new.length, :old.chr_stru_start, :old.chr_stru_end, :old.length);"
+    },
+    "hidden": [
+      "VN_CHART_STRUCTURE.CHR_TYPE"
+    ],
+    "readonly": [
+      "VN_CHART_STRUCTURE.CHR_STRU_START",
+      "VN_CHART_STRUCTURE.LENGTH"
+    ],
+    "optional": [
+      "VN_CHART_STRUCTURE.CHR_STRU_LEVEL",
+      "VN_CHART_STRUCTURE.CHR_STRU_START",
+      "VN_CHART_STRUCTURE.LENGTH",
+      "VN_CHART_STRUCTURE.CHR_TYPE"
+    ]
+  }
+}

@@ -1,0 +1,391 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "AR_TRNS",
+    "columns": [
+      "SERIAL",
+      "TRNS_ID",
+      "CTGRY_CODE",
+      "TRNS_DATE",
+      "ACC_POST_DATE",
+      "DOC_NO",
+      "TOTAL_VALUE",
+      "DESCRIPTION_A",
+      "DESCRIPTION_E",
+      "CASH_FLAG",
+      "BOX_CODE",
+      "BANK_CODE",
+      "BRANCH",
+      "CHEQUE_DESC",
+      "TRNSFER_NO",
+      "TRNS_ACCOUNT",
+      "COST_NO",
+      "COST_NO2",
+      "POST_FLAG"
+    ]
+  },
+  "details": [
+    {
+      "table": "AR_MAINTRNS",
+      "join": [
+        [
+          "SERIAL",
+          "SERIAL"
+        ]
+      ],
+      "title_a": "تفاصيل السداد (العملاء)",
+      "title_e": "Customers' payments",
+      "columns": [
+        "CUSTOMER_ID",
+        "SALESMAN_ID",
+        "DOC_NO",
+        "BOOK_SERIAL",
+        "BOOK_NO",
+        "TOTAL_VALUE",
+        "DISC_VAL",
+        "PAY_METHOD",
+        "DESCRIPTION_A",
+        "TRNS_ID",
+        "MAINAREA_ID",
+        "SUBAREA_ID",
+        "TRNS_SERIAL",
+        "CTGRY_CODE",
+        "CURRENCY_CODE",
+        "CURRENCY_RATE"
+      ]
+    },
+    {
+      "table": "AR_TRNS_ACCOUNT",
+      "join": [
+        [
+          "SERIAL",
+          "SERIAL"
+        ]
+      ],
+      "title_a": "حسابات الحركة المدينة",
+      "title_e": "Debit accounts",
+      "columns": [
+        "ACC_SERIAL",
+        "ACCOUNT_NO",
+        "ACCOUNT_VAL",
+        "COST_CENTER",
+        "COST_CENTER2",
+        "DESC_A"
+      ]
+    },
+    {
+      "table": "AR_SUBACC",
+      "join": [
+        [
+          "SERIAL",
+          "SERIAL"
+        ]
+      ],
+      "title_a": "حسابات الحركة الدائنة",
+      "title_e": "Credit accounts",
+      "columns": [
+        "ACC_SERIAL",
+        "ACCOUNT_NO",
+        "ACCOUNT_VAL",
+        "COST_CENTER",
+        "COST_CENTER2",
+        "DESC_A"
+      ]
+    }
+  ],
+  "where": null,
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Grouped customers' payments (AR_TRNS header with the customers' lines AR_MAINTRNS, debit accounts AR_TRNS_ACCOUNT and credit accounts AR_SUBACC); the generated grid on AR_CUST_PASSWORD was corrected; rules in APP_RULES3_AR; the invoice allocation of each customer line and the posting are not reproduced (see the process document).",
+  "rules": {
+    "where": "TRNS_ID in (select ID from AR_TRNSTYPE where EFFECT = 1 and TRNS_TYPE <> 6 and nvl(TOT_TRNS_FLAG, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or ID in (select TRNS_ID from AR_TRNSTYPE_PASSWORD where FLAG = 1 and PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER))))",
+    "row_rules": {
+      "AR_TRNS": "app_rules3_ar.multi_mast_row(inserting, :new.trns_id, :new.cash_flag, :new.box_code, :new.bank_code, :new.branch, :new.doc_no, :new.trns_date, :new.post_flag, :old.post_flag, :new.ctgry_code, :new.acc_post_date, :new.trns_account, :new.cost_no, :new.description_a);",
+      "AR_MAINTRNS": "app_rules3_ar.multi_line_row(inserting, :new.serial, :new.customer_id, :new.total_value, :new.disc_val, :new.trns_id, :new.ctgry_code, :new.trns_date, :new.acc_post_date, :new.post_flag, :new.cash_flag, :new.mainarea_id, :new.subarea_id, :new.currency_code, :new.currency_rate, :new.salesman_id, :new.trns_serial, :new.trns_serial_total);",
+      "AR_TRNS_ACCOUNT": "app_rules3_ar.multi_acc_row(:new.serial, :new.account_no, :new.cost_center, :new.cost_center2);",
+      "AR_SUBACC": "app_rules3_ar.multi_acc_row(:new.serial, :new.account_no, :new.cost_center, :new.cost_center2);"
+    },
+    "after_save": [
+      {
+        "name": "القيمة المدفوعة من العملاء لا تساوي إجمالي الحركة",
+        "plsql": "begin\n  app_rules3_ar.multi_after_save(:PAGE_ROWID);\nend;",
+        "when": "CREATE,SAVE"
+      }
+    ],
+    "defaults": {
+      "AR_TRNS.TRNS_DATE": {
+        "type": "EXPRESSION",
+        "value": "to_char(sysdate, 'DD/MM/YYYY')"
+      },
+      "AR_TRNS.POST_FLAG": {
+        "type": "STATIC",
+        "value": "0"
+      },
+      "AR_TRNS.CASH_FLAG": {
+        "type": "STATIC",
+        "value": "2"
+      }
+    },
+    "optional": [
+      "AR_TRNS.SERIAL",
+      "AR_TRNS.CTGRY_CODE",
+      "AR_TRNS.ACC_POST_DATE",
+      "AR_MAINTRNS.TRNS_ID",
+      "AR_MAINTRNS.MAINAREA_ID",
+      "AR_MAINTRNS.SUBAREA_ID",
+      "AR_MAINTRNS.TRNS_SERIAL",
+      "AR_MAINTRNS.TRNS_DATE",
+      "AR_MAINTRNS.ACC_POST_DATE",
+      "AR_TRNS_ACCOUNT.ACC_SERIAL",
+      "AR_SUBACC.ACC_SERIAL"
+    ],
+    "readonly": [
+      "AR_TRNS.SERIAL",
+      "AR_TRNS.POST_FLAG",
+      "AR_TRNS.TRNS_ACCOUNT",
+      "AR_TRNS.COST_NO",
+      "AR_MAINTRNS.TRNS_ID",
+      "AR_MAINTRNS.MAINAREA_ID",
+      "AR_MAINTRNS.SUBAREA_ID",
+      "AR_MAINTRNS.TRNS_SERIAL",
+      "AR_MAINTRNS.CTGRY_CODE",
+      "AR_MAINTRNS.CURRENCY_CODE",
+      "AR_MAINTRNS.CURRENCY_RATE",
+      "AR_TRNS_ACCOUNT.ACC_SERIAL",
+      "AR_SUBACC.ACC_SERIAL"
+    ],
+    "hidden": [
+      "AR_MAINTRNS.TRNS_DATE",
+      "AR_MAINTRNS.ACC_POST_DATE"
+    ],
+    "columns": {
+      "AR_TRNS.TRNS_ID": {
+        "lov": "select id || ' - ' || description_a d, id r from ar_trnstype where effect = 1 and trns_type <> 6 and nvl(tot_trns_flag, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or id in (select trns_id from ar_trnstype_password where flag = 1 and password_number = to_number(:G_PASSWORD_NUMBER))) order by id",
+        "widget": "SELECT",
+        "label_a": "كود نوع الحركة",
+        "label_e": "Transaction type"
+      },
+      "AR_TRNS.CASH_FLAG": {
+        "static": [
+          [
+            "شيكات",
+            "0"
+          ],
+          [
+            "نقدية",
+            "1"
+          ],
+          [
+            "حسابات",
+            "2"
+          ],
+          [
+            "تحويل",
+            "3"
+          ]
+        ],
+        "widget": "RADIO",
+        "label_a": "نوع السداد",
+        "label_e": "Payment type"
+      },
+      "AR_TRNS.BOX_CODE": {
+        "lov": "select box_code || ' - ' || name_a d, box_code r from rp_boxs order by 2",
+        "label_a": "رقم الصندوق",
+        "label_e": "Cash box"
+      },
+      "AR_TRNS.BANK_CODE": {
+        "lov": "select code || ' - ' || name_a d, code r from bank order by 2",
+        "label_a": "البنك",
+        "label_e": "Bank"
+      },
+      "AR_TRNS.BRANCH": {
+        "lov": "select bank_code || '/' || code || ' - ' || desc_a d, code r from bank_branchs order by bank_code, code",
+        "label_a": "الفرع",
+        "label_e": "Branch"
+      },
+      "AR_TRNS.TRNS_ACCOUNT": {
+        "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 order by 2",
+        "label_a": "رقم حساب الحركة",
+        "label_e": "Transaction account"
+      },
+      "AR_TRNS_ACCOUNT.ACCOUNT_NO": {
+        "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 order by 2"
+      },
+      "AR_SUBACC.ACCOUNT_NO": {
+        "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 order by 2"
+      }
+    },
+    "computed": {
+      "AR_MAINTRNS.CUSTOMER_NAME": {
+        "sql": "(select max(c.name_a) from customer c where c.code = t.customer_id)",
+        "label_a": "إسم العميل",
+        "label_e": "Customer name"
+      }
+    },
+    "add_columns": {
+      "AR_TRNS_ACCOUNT.ACC_SERIAL": {
+        "label_a": "مسلسل",
+        "label_e": "Serial"
+      },
+      "AR_TRNS_ACCOUNT.ACCOUNT_NO": {
+        "label_a": "رقم الحساب",
+        "label_e": "Account"
+      },
+      "AR_TRNS_ACCOUNT.ACCOUNT_VAL": {
+        "label_a": "القيمة",
+        "label_e": "Value"
+      },
+      "AR_TRNS_ACCOUNT.COST_CENTER": {
+        "label_a": "مركز التكلفة",
+        "label_e": "Cost centre"
+      },
+      "AR_TRNS_ACCOUNT.COST_CENTER2": {
+        "label_a": "مركز التكلفة 2",
+        "label_e": "Cost centre 2"
+      },
+      "AR_TRNS_ACCOUNT.DESC_A": {
+        "label_a": "شرح طرف القيد",
+        "label_e": "Line description"
+      },
+      "AR_SUBACC.ACC_SERIAL": {
+        "label_a": "مسلسل",
+        "label_e": "Serial"
+      },
+      "AR_SUBACC.ACCOUNT_NO": {
+        "label_a": "رقم الحساب",
+        "label_e": "Account"
+      },
+      "AR_SUBACC.ACCOUNT_VAL": {
+        "label_a": "القيمة",
+        "label_e": "Value"
+      },
+      "AR_SUBACC.COST_CENTER": {
+        "label_a": "مركز التكلفة",
+        "label_e": "Cost centre"
+      },
+      "AR_SUBACC.COST_CENTER2": {
+        "label_a": "مركز التكلفة 2",
+        "label_e": "Cost centre 2"
+      },
+      "AR_SUBACC.DESC_A": {
+        "label_a": "شرح طرف القيد",
+        "label_e": "Line description"
+      },
+      "AR_TRNS.SERIAL": {
+        "label_a": "مسلسل",
+        "label_e": "Serial"
+      },
+      "AR_TRNS.CTGRY_CODE": {
+        "label_a": "القسم",
+        "label_e": "Department"
+      },
+      "AR_TRNS.TRNS_DATE": {
+        "label_a": "تاريخ الحركة",
+        "label_e": "Date"
+      },
+      "AR_TRNS.ACC_POST_DATE": {
+        "label_a": "تاريخ الايداع",
+        "label_e": "Deposit date"
+      },
+      "AR_TRNS.DOC_NO": {
+        "label_a": "رقم المستند",
+        "label_e": "Document no."
+      },
+      "AR_TRNS.TOTAL_VALUE": {
+        "label_a": "اجمالى الحركة",
+        "label_e": "Total"
+      },
+      "AR_TRNS.DESCRIPTION_A": {
+        "label_a": "البيان عربي",
+        "label_e": "Description (Arabic)"
+      },
+      "AR_TRNS.DESCRIPTION_E": {
+        "label_a": "البيان لاتيني",
+        "label_e": "Description (English)"
+      },
+      "AR_TRNS.CHEQUE_DESC": {
+        "label_a": "رقم الشيك",
+        "label_e": "Cheque no."
+      },
+      "AR_TRNS.TRNSFER_NO": {
+        "label_a": "رقم التحويل",
+        "label_e": "Transfer no."
+      },
+      "AR_TRNS.COST_NO": {
+        "label_a": "مركز تكلفة 1",
+        "label_e": "Cost centre 1"
+      },
+      "AR_TRNS.COST_NO2": {
+        "label_a": "مركز تكلفة 2",
+        "label_e": "Cost centre 2"
+      },
+      "AR_TRNS.POST_FLAG": {
+        "label_a": "ترحيل الحركة للحسابات",
+        "label_e": "Posted"
+      },
+      "AR_MAINTRNS.CUSTOMER_ID": {
+        "label_a": "رقم العميل",
+        "label_e": "Customer"
+      },
+      "AR_MAINTRNS.SALESMAN_ID": {
+        "label_a": "المندوب",
+        "label_e": "Salesman"
+      },
+      "AR_MAINTRNS.DOC_NO": {
+        "label_a": "المستند",
+        "label_e": "Document no."
+      },
+      "AR_MAINTRNS.BOOK_SERIAL": {
+        "label_a": "رقم الدفتر",
+        "label_e": "Book no."
+      },
+      "AR_MAINTRNS.BOOK_NO": {
+        "label_a": "رقم السند",
+        "label_e": "Receipt no."
+      },
+      "AR_MAINTRNS.TOTAL_VALUE": {
+        "label_a": "اجمالى السداد",
+        "label_e": "Paid"
+      },
+      "AR_MAINTRNS.DISC_VAL": {
+        "label_a": "الخصم",
+        "label_e": "Discount"
+      },
+      "AR_MAINTRNS.PAY_METHOD": {
+        "label_a": "طريقة الدفع",
+        "label_e": "Payment method"
+      },
+      "AR_MAINTRNS.DESCRIPTION_A": {
+        "label_a": "الشرح",
+        "label_e": "Description"
+      }
+    },
+    "info": [
+      {
+        "name": "CUST",
+        "label_a": "اجمالى السداد (العملاء)",
+        "label_e": "Customers' payments",
+        "sql": "select to_char(app_rules3_ar.multi_total(to_number(:PAGE_SERIAL), 'CUST'), 'FM999G999G999G990D00') from dual"
+      },
+      {
+        "name": "CR",
+        "label_a": "اجمالى الحركات الدائنة",
+        "label_e": "Credit accounts",
+        "sql": "select to_char(app_rules3_ar.multi_total(to_number(:PAGE_SERIAL), 'CR'), 'FM999G999G999G990D00') from dual"
+      },
+      {
+        "name": "DB",
+        "label_a": "اجمالى الحركات المدينة",
+        "label_e": "Debit accounts",
+        "sql": "select to_char(app_rules3_ar.multi_total(to_number(:PAGE_SERIAL), 'DB'), 'FM999G999G999G990D00') from dual"
+      },
+      {
+        "name": "DIFF",
+        "label_a": "الفرق",
+        "label_e": "Difference",
+        "sql": "select to_char(nvl(max(total_value), 0) - app_rules3_ar.multi_total(max(serial), 'CUST') - app_rules3_ar.multi_total(max(serial), 'CR'), 'FM999G999G999G990D00') from ar_trns where rowid = chartorowid(:PAGE_ROWID)"
+      }
+    ]
+  }
+}

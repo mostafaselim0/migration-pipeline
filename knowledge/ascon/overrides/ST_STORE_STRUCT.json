@@ -1,0 +1,17 @@
+{
+ "pattern": "AUTO",
+ "notes": "store structure = ST_CHART_STRUCTURE rows of CHR_TYPE 1 (the group structure shares the table with CHR_TYPE 2): level max+1, start = previous end + 1, end between start and 12, length = end - start + 1; delete from the last level and only while no store exists (APP_RULES3_ST_CHART_BD)",
+ "rules": {
+  "where": "CHR_TYPE = 1",
+  "key_expr": {
+   "ST_CHART_STRUCTURE.CHR_TYPE": "app_rules3_st.struct_type",
+   "ST_CHART_STRUCTURE.CHR_STRU_LEVEL": "app_rules3_st.next_struct_level(:new.chr_type)"
+  },
+  "row_rules": {
+   "ST_CHART_STRUCTURE": "app_rules3_st.struct_row(inserting, :new.chr_type, :new.chr_stru_level, :new.chr_stru_start, :new.chr_stru_end, :new.length);"
+  },
+  "hidden": ["ST_CHART_STRUCTURE.CHR_TYPE"],
+  "readonly": ["ST_CHART_STRUCTURE.LENGTH"],
+  "optional": ["ST_CHART_STRUCTURE.CHR_TYPE", "ST_CHART_STRUCTURE.CHR_STRU_LEVEL", "ST_CHART_STRUCTURE.CHR_STRU_START", "ST_CHART_STRUCTURE.LENGTH"]
+ }
+}

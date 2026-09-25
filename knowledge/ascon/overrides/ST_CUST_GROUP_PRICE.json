@@ -1,0 +1,135 @@
+{
+ "pattern": "AUTO",
+ "notes": "Customer pricing (ST_CUST_GROUP_PRICE + ST_CUST_GROUP_PRICE_DET): legacy customer rights filter, customer required, lines (item, unit, sales price of the item, discount percent / value pair, quantity ranges may not intersect), buttons load items of the group / item ranges and copy the lines to another customer (APP_RULES3_SA). Wave 3b: legacy group / item / unit lists (item ranges within the group range, items of the line's group, units of the item: cascading), customer and item names.",
+ "rules": {
+  "where": "(NVL(:G_PASSWORD_NUMBER, 0) = 0 OR :G_PASSWORD_NUMBER IN (SELECT T.PASSWORD_NUMBER FROM AR_CUSTOMER_PASSWORD T WHERE CUST_CODE BETWEEN T.FROM_CUSTOMER_CODE AND T.TO_CUSTOMER_CODE))",
+  "add_columns": {
+   "ST_CUST_GROUP_PRICE.DEAL_TYPE": {
+    "label_a": "سعر البيع المستخدم",
+    "label_e": "Used sales price"
+   }
+  },
+  "readonly": [
+   "ST_CUST_GROUP_PRICE_DET.UNIT_PRICE"
+  ],
+  "optional": [
+   "ST_CUST_GROUP_PRICE_DET.ITEM_GROUP_CODE",
+   "ST_CUST_GROUP_PRICE_DET.UNIT_PRICE"
+  ],
+  "row_rules": {
+   "ST_CUST_GROUP_PRICE_DET": "-- legacy line WHEN-VALIDATE-ITEM: item group, unit (basic by default), sales price of the item, discount percent <-> value,\n-- from quantity <= to quantity (intersections across lines: after-save check)\napp_rules3_sa.cgp_det_row(inserting, :new.cust_code, :new.item_group_code, :new.item_code, :new.unit_code, :new.unit_price,\n  :new.disc_percent, :old.disc_percent, :new.disc_val, :old.disc_val, :new.from_qty, :new.to_qty);"
+  },
+  "validations": [
+   {
+    "name": "العميل",
+    "when": "CREATE,SAVE",
+    "plsql": "declare l number; begin if :PAGE_CUST_CODE is null then return case when v('G_LANG') = 'en' then 'Enter the customer' else 'لا بد من ادخال رقم عميل' end; end if; select count(1) into l from customer where code = app_rules3_pr.to_n(:PAGE_CUST_CODE); if l = 0 then return app_rules3_pr.in_list('رقم العميل', 'customer'); end if; if :REQUEST = 'CREATE' then select count(1) into l from st_cust_group_price where cust_code = app_rules3_pr.to_n(:PAGE_CUST_CODE); if l > 0 then return case when v('G_LANG') = 'en' then 'The customer already has a pricing file' else 'رقم مكرر تم إدخالة من قبل' end; end if; end if; return null; end;"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "الكميات لا يمكن ان تتقاطع",
+    "when": "CREATE,SAVE",
+    "plsql": "app_rules3_sa.cgp_after_save(:REQUEST, :PAGE_ROWID);"
+   }
+  ],
+  "columns": {
+   "ST_CUST_GROUP_PRICE.FROM_GROUP_CODE": {
+    "lov": "select item_group_code || ' - ' || name_a d, item_group_code r from st_item_group where nvl(stop_flag, 0) = 0 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or item_group_code in (select gp.group_code from st_group_password gp where gp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2",
+    "widget": "SELECT"
+   },
+   "ST_CUST_GROUP_PRICE.TO_GROUP_CODE": {
+    "lov": "select item_group_code || ' - ' || name_a d, item_group_code r from st_item_group where nvl(stop_flag, 0) = 0 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or item_group_code in (select gp.group_code from st_group_password gp where gp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2",
+    "widget": "SELECT"
+   },
+   "ST_CUST_GROUP_PRICE.FROM_ITEM_CODE": {
+    "widget": "POPUP",
+    "cascade": [
+     "FROM_GROUP_CODE",
+     "TO_GROUP_CODE"
+    ],
+    "lov": "select it.item_code || ' - ' || nvl(it.name_a, it.name_e) d, it.item_code r from st_item it where (:PAGE_FROM_GROUP_CODE is null or it.item_group_code >= :PAGE_FROM_GROUP_CODE) and (:PAGE_TO_GROUP_CODE is null or it.item_group_code <= :PAGE_TO_GROUP_CODE) and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or it.item_group_code in (select gp.group_code from st_group_password gp where gp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2"
+   },
+   "ST_CUST_GROUP_PRICE.TO_ITEM_CODE": {
+    "widget": "POPUP",
+    "cascade": [
+     "FROM_GROUP_CODE",
+     "TO_GROUP_CODE"
+    ],
+    "lov": "select it.item_code || ' - ' || nvl(it.name_a, it.name_e) d, it.item_code r from st_item it where (:PAGE_FROM_GROUP_CODE is null or it.item_group_code >= :PAGE_FROM_GROUP_CODE) and (:PAGE_TO_GROUP_CODE is null or it.item_group_code <= :PAGE_TO_GROUP_CODE) and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or it.item_group_code in (select gp.group_code from st_group_password gp where gp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2"
+   },
+   "ST_CUST_GROUP_PRICE_DET.ITEM_GROUP_CODE": {
+    "lov": "select item_group_code || ' - ' || name_a d, item_group_code r from st_item_group where nvl(stop_flag, 0) = 0 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or item_group_code in (select gp.group_code from st_group_password gp where gp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2",
+    "widget": "SELECT"
+   },
+   "ST_CUST_GROUP_PRICE_DET.ITEM_CODE": {
+    "widget": "POPUP",
+    "cascade": "ITEM_GROUP_CODE",
+    "lov": "select it.item_code || ' - ' || nvl(it.name_a, it.name_e) d, it.item_code r from st_item it where (:PAGE_ITEM_GROUP_CODE is null or it.item_group_code = :PAGE_ITEM_GROUP_CODE) and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or it.item_group_code in (select gp.group_code from st_group_password gp where gp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2"
+   },
+   "ST_CUST_GROUP_PRICE_DET.UNIT_CODE": {
+    "widget": "SELECT",
+    "cascade": [
+     "ITEM_CODE",
+     "ITEM_GROUP_CODE"
+    ],
+    "lov": "select u.unit_code || ' - ' || u.name_a || decode(iu.basic_unit, 1, ' (وحدة أساسية)', '') d, u.unit_code r from st_item_unit iu, st_unit u where iu.item_code = :PAGE_ITEM_CODE and (iu.group_code = :PAGE_ITEM_GROUP_CODE or :PAGE_ITEM_GROUP_CODE is null) and iu.unit_code = u.unit_code order by 2"
+   }
+  },
+  "computed": {
+   "ST_CUST_GROUP_PRICE.CUST_NAME": {
+    "sql": "(select max(c.name_a) from customer c where c.code = t.cust_code)",
+    "label_a": "اسم العميل",
+    "label_e": "Customer Name"
+   },
+   "ST_CUST_GROUP_PRICE_DET.ITEM_NAME": {
+    "sql": "(select max(nvl(i.name_a, i.name_e)) from st_item i where i.item_code = t.item_code and i.item_group_code = t.item_group_code)",
+    "label_a": "إسم الصنف",
+    "label_e": "Item Name"
+   }
+  }
+ },
+ "actions": [
+  {
+   "name": "GET_ITEMS",
+   "label_a": "إنزال الأصناف",
+   "label_e": "Load items",
+   "confirm_a": "هل تريد إنزال أصناف نطاق المجموعات والأصناف للعميل؟",
+   "confirm_e": "Load the items of the group / item ranges for the customer?",
+   "call": "app_rules3_sa.cgp_get_items(:PAGE_ROWID)",
+   "message": "app_rules3_sa.last_message",
+   "success_a": "تم الانتهاء من اضافة اصناف العميل",
+   "success_e": "The customer items were added"
+  },
+  {
+   "name": "COPY_TO",
+   "label_a": "نسخ اصناف و مجموعات العميل الحالي الي عميل اخر",
+   "label_e": "Copy the current customer's items to another customer",
+   "confirm_a": "هل تريد نسخ أصناف العميل الحالى إلى العميل المختار؟",
+   "confirm_e": "Copy the current customer's lines to the chosen customer?",
+   "params": [
+    {
+     "name": "TO_CUST",
+     "label_a": "إلي عميل",
+     "label_e": "To customer",
+     "type": "number",
+     "required": true,
+     "lov_sql": "select code || ' - ' || decode(:G_LANG, 'en', nvl(name_e, name_a), name_a) d, code r from customer where code <> nvl(:PAGE_CUST_CODE, -1) order by code"
+    },
+    {
+     "name": "COPY_RATIO",
+     "label_a": "نسخ النسبة مع كل صنف",
+     "label_e": "Copy the ratio with each item",
+     "type": "number",
+     "required": true,
+     "default": "1",
+     "lov_sql": "select decode(:G_LANG, 'en', 'Yes', 'نعم') d, 1 r from dual union all select decode(:G_LANG, 'en', 'No', 'لا'), 0 from dual"
+    }
+   ],
+   "call": "app_rules3_sa.cgp_copy(:PAGE_ROWID, :TO_CUST, :COPY_RATIO)",
+   "message": "app_rules3_sa.last_message",
+   "success_a": "تم الانتهاء من نسخ اصناف العميل",
+   "success_e": "The customer items were copied"
+  }
+ ]
+}

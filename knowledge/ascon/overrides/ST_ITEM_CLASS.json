@@ -1,0 +1,95 @@
+{
+ "pattern": "GRID",
+ "notes": "Update item discounts: the legacy form is a copy of the item card whose class-discount lines (AR_ST_ITEMS_DISC) and customer lines (ST_CUST_ITEMS, see ST_CUST_ITEMS) are edited per item; the generated grid on ST_ITEM_CLASSES (item class codes) was wrong. Corrected to the class-discount lines per item (search by item), same line rules as AR_ST_ITEM_CLASSES, new lines from the load-all-classes button (APP_RULES3_SA). Wave 3b: CLASS_CODE shows the discount classes (the automatic list was AS_CLASS, asset classes), units of the item, item name.",
+ "master": {
+  "table": "AR_ST_ITEMS_DISC",
+  "columns": [
+   "ITEM_CODE",
+   "ITEM_GROUP_CODE",
+   "CLASS_CODE",
+   "UNIT_CODE",
+   "SALES_PRICE",
+   "DISC_RATIO1",
+   "DISC_RATIO2",
+   "DISC_RATIO3",
+   "BONUS_RATIO",
+   "EXTRA_BONUS_RATIO"
+  ]
+ },
+ "insert": false,
+ "update": true,
+ "delete": true,
+ "rules": {
+  "add_columns": {
+   "AR_ST_ITEMS_DISC.CLASS_CODE": {
+    "label_a": "الفئة",
+    "label_e": "Class"
+   },
+   "AR_ST_ITEMS_DISC.ITEM_GROUP_CODE": {
+    "label_a": "المجموعة",
+    "label_e": "Group"
+   }
+  },
+  "readonly": [
+   "AR_ST_ITEMS_DISC.ITEM_CODE",
+   "AR_ST_ITEMS_DISC.ITEM_GROUP_CODE",
+   "AR_ST_ITEMS_DISC.CLASS_CODE"
+  ],
+  "row_rules": {
+   "AR_ST_ITEMS_DISC": "-- legacy line WHEN-VALIDATE-ITEM / PRE-INSERT: class, active group of the item, unit of the item (basic by default),\n-- retail price and MOH discount by default, price 0..99999.99, non-negative discounts / bonus, no repeated item per class\napp_rules3_sa.disc_line_row('AR_ST_ITEMS_DISC', inserting, :new.class_code, null, :new.item_group_code, :new.item_code, :new.unit_code,\n  :new.sales_price, :new.disc_ratio1, :new.disc_ratio2, :new.disc_ratio3, :new.bonus_ratio, :new.extra_bonus_ratio);"
+  },
+  "columns": {
+   "AR_ST_ITEMS_DISC.CLASS_CODE": {
+    "lov": "select class_code || ' - ' || nvl(desc_a, desc_e) d, class_code r from ar_st_item_classes order by class_code",
+    "widget": "SELECT"
+   },
+   "AR_ST_ITEMS_DISC.UNIT_CODE": {
+    "lov": "select u.unit_code || ' - ' || u.name_a || decode(iu.basic_unit, 1, ' (وحدة أساسية)', '') d, u.unit_code r from st_item_unit iu, st_unit u where iu.item_code = :PAGE_ITEM_CODE and (iu.group_code = :PAGE_ITEM_GROUP_CODE or :PAGE_ITEM_GROUP_CODE is null) and iu.unit_code = u.unit_code order by 2",
+    "widget": "SELECT",
+    "cascade": [
+     "ITEM_CODE",
+     "ITEM_GROUP_CODE"
+    ]
+   }
+  },
+  "computed": {
+   "AR_ST_ITEMS_DISC.ITEM_NAME": {
+    "sql": "(select max(nvl(i.name_a, i.name_e)) from st_item i where i.item_code = t.item_code and i.item_group_code = t.item_group_code)",
+    "label_a": "إســم الصنـــف",
+    "label_e": "Item Name"
+   }
+  }
+ },
+ "actions": [
+  {
+   "name": "LOAD_CLASSES",
+   "label_a": "إنزال كل الفئات",
+   "label_e": "Load all classes",
+   "confirm_a": "هل تريد أضافة كل الفئات الحالية ..........",
+   "confirm_e": "Add all the current classes to the item?",
+   "params": [
+    {
+     "name": "ITEM",
+     "label_a": "رقم الصنف",
+     "label_e": "Item",
+     "type": "text",
+     "required": true,
+     "lov_sql": "select item_code || ' - ' || decode(:G_LANG, 'en', nvl(name_e, name_a), name_a) d, item_code r from st_item where nvl(stop_flag, 0) = 0 and (nvl(:G_PASSWORD_NUMBER, 0) = 0 or item_group_code in (select group_code from st_group_password where password_number = :G_PASSWORD_NUMBER)) order by item_code"
+    },
+    {
+     "name": "LOAD_MODE",
+     "label_a": "طريقة الإضافة",
+     "label_e": "Mode",
+     "type": "number",
+     "required": true,
+     "default": "1",
+     "lov_sql": "select decode(:G_LANG, 'en', 'Add without deleting', 'أضافة بدون حذف') d, 1 r from dual union all select decode(:G_LANG, 'en', 'Delete all and add', 'حذف الكل والأضافة'), 2 from dual"
+    }
+   ],
+   "call": "app_rules3_sa.item_load_classes(:ITEM, :LOAD_MODE)",
+   "message": "app_rules3_sa.last_message",
+   "success_a": "تم إضافة الفئات",
+   "success_e": "The classes were added"
+  }
+ ]
+}

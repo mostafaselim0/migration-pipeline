@@ -1,0 +1,12 @@
+{
+ "pattern": "AUTO",
+ "notes": "item classes: code > 0, Arabic or English name, duplicate code message (.fmx)",
+ "rules": {
+  "columns": {
+   "ST_ITEM_CLASSES.CLASS_CODE": {"lov": null}
+  },
+  "row_rules": {
+   "ST_ITEM_CLASSES": "app_rules3_st.class_row('ST_ITEM_CLASSES', inserting, :new.class_code, :new.desc_a, :new.desc_e);"
+  }
+ }
+}

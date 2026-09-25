@@ -1,0 +1,407 @@
+{
+ "pattern": "MASTER_DETAIL",
+ "notes": "Supplier agreements: the generated screen showed the SUPPLIER file (wrong); corrected to ST_SUPP_AGRMNT with its suppliers (ST_SUPP_AGRMNT_SUPP) and items (ST_SUPP_AGRMNT_DET). Legacy rules: dates, one agreement per manufacturer / contract type and period, approval levels (USERS.SUPP_AGRMNT_APPROVAL), end-date change right (EDIT_AGRMNT_DATE), line derivations, copy and load-items buttons (APP_RULES3_PR) Wave 3b: STOP_FLAG check box; legacy LOVs (suppliers of the agreement's manufacturer, active groups, active items with a basic unit of the group, units of the item) as cascading lists.",
+ "master": {
+  "table": "ST_SUPP_AGRMNT",
+  "columns": [
+   "SERIAL",
+   "KIND_CODE",
+   "CNTRCT_CODE",
+   "START_DATE",
+   "END_DATE",
+   "NOTES",
+   "STOP_FLAG",
+   "APPROVE",
+   "ORG_SERIAL"
+  ]
+ },
+ "details": [
+  {
+   "table": "ST_SUPP_AGRMNT_SUPP",
+   "join": [
+    [
+     "SERIAL",
+     "SERIAL"
+    ]
+   ],
+   "title_a": "الموردين",
+   "title_e": "Suppliers",
+   "columns": [
+    "SUPPLIER_CODE"
+   ]
+  },
+  {
+   "table": "ST_SUPP_AGRMNT_DET",
+   "join": [
+    [
+     "SERIAL",
+     "SERIAL"
+    ]
+   ],
+   "title_a": "أصناف الإتفاقية",
+   "title_e": "Agreement items",
+   "columns": [
+    "ITEM_CODE",
+    "GROUP_CODE",
+    "ITEM_NAME_DUMMY",
+    "SUPPLIER_CODE",
+    "UNIT_CODE",
+    "SALES_PRICE",
+    "QUANTITY",
+    "BONUS_RATIO",
+    "BONUS",
+    "EXTRA_BONUS_RATIO",
+    "EXTRA_BONUS",
+    "DISC1_RATIO",
+    "DISC1_VALUE",
+    "DISC2_RATIO",
+    "DISC2_VALUE",
+    "DISC3_RATIO",
+    "DISC3_VALUE",
+    "M_DISC_RATIO",
+    "M_DISC_VALUE",
+    "P1_VALUE",
+    "P2_VALUE",
+    "P3_VALUE",
+    "P4_VALUE",
+    "PURCH_PRICE",
+    "DISC_QUARTER",
+    "DISC_HALF",
+    "DISC_END_YEAR",
+    "RTRN_LMT",
+    "BASIC_QTY"
+   ]
+  }
+ ],
+ "insert": true,
+ "update": true,
+ "delete": true,
+ "rules": {
+  "add_columns": {
+   "ST_SUPP_AGRMNT.SERIAL": {
+    "label_a": "مسلسل التعاقد",
+    "label_e": "Agreement serial"
+   },
+   "ST_SUPP_AGRMNT.KIND_CODE": {
+    "label_a": "المصنع",
+    "label_e": "Manufacturer"
+   },
+   "ST_SUPP_AGRMNT.CNTRCT_CODE": {
+    "label_a": "نوع التعاقد",
+    "label_e": "Contract type"
+   },
+   "ST_SUPP_AGRMNT.START_DATE": {
+    "label_a": "تاريخ التعاقد",
+    "label_e": "Contract date"
+   },
+   "ST_SUPP_AGRMNT.END_DATE": {
+    "label_a": "حتي تاريخ",
+    "label_e": "Until"
+   },
+   "ST_SUPP_AGRMNT.NOTES": {
+    "label_a": "ملاحظات",
+    "label_e": "Notes"
+   },
+   "ST_SUPP_AGRMNT.STOP_FLAG": {
+    "label_a": "متوقف",
+    "label_e": "Stopped"
+   },
+   "ST_SUPP_AGRMNT.APPROVE": {
+    "label_a": "مستوى الإعتماد",
+    "label_e": "Approval level"
+   },
+   "ST_SUPP_AGRMNT.ORG_SERIAL": {
+    "label_a": "منسوخ من مسلسل تعاقد",
+    "label_e": "Copied from agreement"
+   },
+   "ST_SUPP_AGRMNT.INSERT_USER": {
+    "label_a": "مدخل البيانات",
+    "label_e": "Entered by"
+   },
+   "ST_SUPP_AGRMNT.UPDATE_USER": {
+    "label_a": "معدل البيانات",
+    "label_e": "Changed by"
+   },
+   "ST_SUPP_AGRMNT.UPDATE_DATE": {
+    "label_a": "تاريخ التعديل",
+    "label_e": "Change date"
+   },
+   "ST_SUPP_AGRMNT_SUPP.SUPPLIER_CODE": {
+    "label_a": "المورد",
+    "label_e": "Supplier"
+   },
+   "ST_SUPP_AGRMNT_DET.ITEM_CODE": {
+    "label_a": "رقم الصنف",
+    "label_e": "Item"
+   },
+   "ST_SUPP_AGRMNT_DET.GROUP_CODE": {
+    "label_a": "المجموعة",
+    "label_e": "Group"
+   },
+   "ST_SUPP_AGRMNT_DET.ITEM_NAME_DUMMY": {
+    "label_a": "إسم الصنف",
+    "label_e": "Item name"
+   },
+   "ST_SUPP_AGRMNT_DET.SUPPLIER_CODE": {
+    "label_a": "المورد",
+    "label_e": "Supplier"
+   },
+   "ST_SUPP_AGRMNT_DET.UNIT_CODE": {
+    "label_a": "الوحدة",
+    "label_e": "Unit"
+   },
+   "ST_SUPP_AGRMNT_DET.SALES_PRICE": {
+    "label_a": "سعر البيع",
+    "label_e": "Sales price"
+   },
+   "ST_SUPP_AGRMNT_DET.QUANTITY": {
+    "label_a": "الكمية",
+    "label_e": "Quantity"
+   },
+   "ST_SUPP_AGRMNT_DET.BONUS_RATIO": {
+    "label_a": "المجاني %",
+    "label_e": "Bonus %"
+   },
+   "ST_SUPP_AGRMNT_DET.BONUS": {
+    "label_a": "الكمية المجانية",
+    "label_e": "Bonus"
+   },
+   "ST_SUPP_AGRMNT_DET.EXTRA_BONUS_RATIO": {
+    "label_a": "المجاني الأضافي %",
+    "label_e": "Extra bonus %"
+   },
+   "ST_SUPP_AGRMNT_DET.EXTRA_BONUS": {
+    "label_a": "المجاني الأضافي",
+    "label_e": "Extra bonus"
+   },
+   "ST_SUPP_AGRMNT_DET.DISC1_RATIO": {
+    "label_a": "الخصم 1 MOH %",
+    "label_e": "Discount 1 (MOH) %"
+   },
+   "ST_SUPP_AGRMNT_DET.DISC1_VALUE": {
+    "label_a": "الخصم 1",
+    "label_e": "Discount 1"
+   },
+   "ST_SUPP_AGRMNT_DET.DISC2_RATIO": {
+    "label_a": "الخصم 2 %",
+    "label_e": "Discount 2 %"
+   },
+   "ST_SUPP_AGRMNT_DET.DISC2_VALUE": {
+    "label_a": "الخصم 2",
+    "label_e": "Discount 2"
+   },
+   "ST_SUPP_AGRMNT_DET.DISC3_RATIO": {
+    "label_a": "الخصم 3 %",
+    "label_e": "Discount 3 %"
+   },
+   "ST_SUPP_AGRMNT_DET.DISC3_VALUE": {
+    "label_a": "الخصم 3",
+    "label_e": "Discount 3"
+   },
+   "ST_SUPP_AGRMNT_DET.M_DISC_RATIO": {
+    "label_a": "خصم 2 خارجي %",
+    "label_e": "External discount 2 %"
+   },
+   "ST_SUPP_AGRMNT_DET.M_DISC_VALUE": {
+    "label_a": "خصم 2 خارجي",
+    "label_e": "External discount 2"
+   },
+   "ST_SUPP_AGRMNT_DET.P1_VALUE": {
+    "label_a": "الحالة 1",
+    "label_e": "Case 1"
+   },
+   "ST_SUPP_AGRMNT_DET.P2_VALUE": {
+    "label_a": "الحالة 2",
+    "label_e": "Case 2"
+   },
+   "ST_SUPP_AGRMNT_DET.P3_VALUE": {
+    "label_a": "الحالة 3",
+    "label_e": "Case 3"
+   },
+   "ST_SUPP_AGRMNT_DET.P4_VALUE": {
+    "label_a": "الحالة 4",
+    "label_e": "Case 4"
+   },
+   "ST_SUPP_AGRMNT_DET.PURCH_PRICE": {
+    "label_a": "سعر الشراء",
+    "label_e": "Purchase price"
+   },
+   "ST_SUPP_AGRMNT_DET.DISC_QUARTER": {
+    "label_a": "خصم ربع سنوي",
+    "label_e": "Quarterly discount"
+   },
+   "ST_SUPP_AGRMNT_DET.DISC_HALF": {
+    "label_a": "خصم نصف سنوي",
+    "label_e": "Half-year discount"
+   },
+   "ST_SUPP_AGRMNT_DET.DISC_END_YEAR": {
+    "label_a": "خصم نهاية العام",
+    "label_e": "Year-end discount"
+   },
+   "ST_SUPP_AGRMNT_DET.RTRN_LMT": {
+    "label_a": "حد المرتجع",
+    "label_e": "Return limit"
+   },
+   "ST_SUPP_AGRMNT_DET.BASIC_QTY": {
+    "label_a": "الكمية بالوحدة الأساسية",
+    "label_e": "Basic quantity"
+   }
+  },
+  "readonly": [
+   "ST_SUPP_AGRMNT.SERIAL",
+   "ST_SUPP_AGRMNT.APPROVE",
+   "ST_SUPP_AGRMNT.ORG_SERIAL",
+   "ST_SUPP_AGRMNT.INSERT_USER",
+   "ST_SUPP_AGRMNT.UPDATE_USER",
+   "ST_SUPP_AGRMNT.UPDATE_DATE",
+   "ST_SUPP_AGRMNT_DET.M_DISC_VALUE",
+   "ST_SUPP_AGRMNT_DET.BASIC_QTY"
+  ],
+  "optional": [
+   "ST_SUPP_AGRMNT_DET.GROUP_CODE"
+  ],
+  "defaults": {
+   "ST_SUPP_AGRMNT.START_DATE": {
+    "type": "EXPRESSION",
+    "value": "to_char(sysdate, 'DD/MM/YYYY')"
+   },
+   "ST_SUPP_AGRMNT.END_DATE": {
+    "type": "EXPRESSION",
+    "value": "to_char(app_rules3_pr.year_end, 'DD/MM/YYYY')"
+   },
+   "ST_SUPP_AGRMNT.STOP_FLAG": {
+    "type": "STATIC",
+    "value": "0"
+   },
+   "ST_SUPP_AGRMNT.APPROVE": {
+    "type": "STATIC",
+    "value": "0"
+   }
+  },
+  "row_rules": {
+   "ST_SUPP_AGRMNT": "-- approval level only through the approve / cancel buttons; changing the end date needs USERS.EDIT_AGRMNT_DATE\napp_rules3_pr.agrmnt_row(inserting, :new.approve, :old.approve, :new.end_date, :old.end_date, :new.stop_flag);",
+   "ST_SUPP_AGRMNT_SUPP": "-- legacy supplier LOV: active suppliers of the agreement's manufacturer (VN_SUPP_KIND)\napp_rules3_pr.agrmnt_supp_row(:new.serial, :new.supplier_code);",
+   "ST_SUPP_AGRMNT_DET": "-- legacy line WHEN-VALIDATE-ITEM: item with a basic unit, group, unit, sales price and MOH discount of the item,\n-- non-negative values, ratios 0..100, bonus / discount pairs, basic quantity\napp_rules3_pr.agrmnt_det_row(inserting, :new.serial, :new.group_code, :new.item_code, :new.unit_code, :new.supplier_code,\n  :new.quantity, :old.quantity, :new.basic_qty, :new.sales_price, :old.sales_price,\n  :new.bonus_ratio, :old.bonus_ratio, :new.bonus, :old.bonus, :new.extra_bonus_ratio, :old.extra_bonus_ratio, :new.extra_bonus, :old.extra_bonus,\n  :new.disc1_ratio, :old.disc1_ratio, :new.disc1_value, :old.disc1_value, :new.disc2_ratio, :old.disc2_ratio, :new.disc2_value, :old.disc2_value,\n  :new.disc3_ratio, :old.disc3_ratio, :new.disc3_value, :old.disc3_value, :new.m_disc_ratio, :new.m_disc_value, :new.item_name_dummy);"
+  },
+  "validations": [
+   {
+    "name": "إتفاقية المورد: البيانات والتواريخ والفترة",
+    "when": "CREATE,SAVE",
+    "plsql": "return app_rules3_pr.agrmnt_validate(:REQUEST, :PAGE_ROWID, :PAGE_KIND_CODE, :PAGE_CNTRCT_CODE, :PAGE_START_DATE, :PAGE_END_DATE);"
+   }
+  ],
+  "columns": {
+   "ST_SUPP_AGRMNT.STOP_FLAG": {
+    "widget": "CHECK",
+    "values": [
+     "1",
+     "0"
+    ],
+    "label_a": "متوقف",
+    "label_e": "Stopped"
+   },
+   "ST_SUPP_AGRMNT_SUPP.SUPPLIER_CODE": {
+    "widget": "POPUP",
+    "cascade": "SERIAL",
+    "lov": "select s.code || ' - ' || s.name_a d, s.code r from supplier s where nvl(s.supplier_status, 0) = 1 and (s.code in (select k.supp_code from vn_supp_kind k where k.kind_code = (select a.kind_code from st_supp_agrmnt a where a.serial = :PAGE_SERIAL)) or not exists (select 1 from vn_supp_kind k where k.kind_code = (select a.kind_code from st_supp_agrmnt a where a.serial = :PAGE_SERIAL))) order by 2"
+   },
+   "ST_SUPP_AGRMNT_DET.GROUP_CODE": {
+    "widget": "SELECT",
+    "lov": "select item_group_code || ' - ' || name_a d, item_group_code r from st_item_group where nvl(stop_flag, 0) = 0 and group_status = 1 order by 2"
+   },
+   "ST_SUPP_AGRMNT_DET.ITEM_CODE": {
+    "widget": "POPUP",
+    "cascade": "GROUP_CODE",
+    "lov": "select it.item_code || ' - ' || nvl(it.name_a, it.name_e) d, it.item_code r from st_item it, st_item_unit iu where (it.item_group_code = :PAGE_GROUP_CODE or :PAGE_GROUP_CODE is null) and nvl(it.stop_flag, 0) = 0 and it.item_group_code = iu.group_code and it.item_code = iu.item_code and nvl(iu.basic_unit, 0) = 1 order by 2"
+   },
+   "ST_SUPP_AGRMNT_DET.UNIT_CODE": {
+    "widget": "SELECT",
+    "cascade": [
+     "GROUP_CODE",
+     "ITEM_CODE"
+    ],
+    "lov": "select u.unit_code || ' - ' || u.name_a || decode(iu.basic_unit, 1, ' (وحدة أساسية)', '') d, u.unit_code r from st_item_unit iu, st_unit u where iu.group_code = :PAGE_GROUP_CODE and iu.item_code = :PAGE_ITEM_CODE and iu.unit_code = u.unit_code order by 2"
+   }
+  }
+ },
+ "actions": [
+  {
+   "name": "APPROVE",
+   "label_a": "إعتماد",
+   "label_e": "Approve",
+   "confirm_a": "هل تريد إعتماد الإتفاقية؟",
+   "confirm_e": "Approve this agreement?",
+   "condition": "app_rules3_pr.agrmnt_can(:PAGE_ROWID, 'APPROVE') = 'Y'",
+   "call": "app_rules3_pr.agrmnt_approve(:PAGE_ROWID)",
+   "message": "app_rules3_pr.last_message",
+   "success_a": "تم الإعتماد",
+   "success_e": "Approved"
+  },
+  {
+   "name": "UNAPPROVE",
+   "label_a": "الغاء إعتماد",
+   "label_e": "Cancel approval",
+   "confirm_a": "هل تريد إلغاء إعتماد الإتفاقية؟",
+   "confirm_e": "Cancel the approval of this agreement?",
+   "condition": "app_rules3_pr.agrmnt_can(:PAGE_ROWID, 'UNAPPROVE') = 'Y'",
+   "call": "app_rules3_pr.agrmnt_unapprove(:PAGE_ROWID)",
+   "message": "app_rules3_pr.last_message",
+   "success_a": "تم إلغاء الإعتماد",
+   "success_e": "The approval was cancelled"
+  },
+  {
+   "name": "LOAD_ITEMS",
+   "label_a": "إنزال أصناف المورد/المصنع",
+   "label_e": "Load the supplier / manufacturer items",
+   "confirm_a": "هل تريد إنزال أصناف المصنع لموردي الإتفاقية؟",
+   "confirm_e": "Load the manufacturer's items of the agreement suppliers?",
+   "call": "app_rules3_pr.agrmnt_load_items(:PAGE_ROWID)",
+   "message": "app_rules3_pr.last_message",
+   "success_a": "تم إنزال الأصناف",
+   "success_e": "The items were loaded"
+  },
+  {
+   "name": "COPY",
+   "label_a": "نسخ اتفاقية مورد",
+   "label_e": "Copy supplier agreement",
+   "confirm_a": "هل تريد نسخ الإتفاقية بمصنع ونوع تعاقد وتاريخ نهاية جديد؟",
+   "confirm_e": "Copy the agreement with a new manufacturer, contract type and end date?",
+   "params": [
+    {
+     "name": "NEW_KIND",
+     "label_a": "المصنع",
+     "label_e": "Manufacturer",
+     "type": "number",
+     "required": true,
+     "default": ":PAGE_KIND_CODE",
+     "default_type": "EXPRESSION",
+     "lov_sql": "select kind_code || ' - ' || decode(:G_LANG, 'en', nvl(name_e, name_a), name_a) d, kind_code r from st_good_kind order by 2"
+    },
+    {
+     "name": "NEW_CNTRCT",
+     "label_a": "نوع التعاقد",
+     "label_e": "Contract type",
+     "type": "number",
+     "required": true,
+     "default": ":PAGE_CNTRCT_CODE",
+     "default_type": "EXPRESSION",
+     "lov_sql": "select cntrct_code || ' - ' || decode(:G_LANG, 'en', nvl(name_e, name_a), name_a) d, cntrct_code r from st_cntrct_types order by 2"
+    },
+    {
+     "name": "NEW_END",
+     "label_a": "حتي تاريخ",
+     "label_e": "Until",
+     "type": "date",
+     "required": true,
+     "default": "to_char(app_rules3_pr.year_end, 'DD/MM/YYYY')",
+     "default_type": "EXPRESSION"
+    }
+   ],
+   "call": "app_rules3_pr.agrmnt_copy(:PAGE_ROWID, :NEW_KIND, :NEW_CNTRCT, :NEW_END)",
+   "message": "app_rules3_pr.last_message",
+   "target_form": "ST_SUPPLIER_AGREEMENT",
+   "success_a": "تم اضافة مسلسل تعاقد",
+   "success_e": "The agreement was copied"
+  }
+ ]
+}

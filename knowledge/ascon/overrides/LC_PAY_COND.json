@@ -1,0 +1,9 @@
+{
+ "pattern": "AUTO",
+ "notes": "Payment methods (LC_PAY_COND): number > 0, no duplicate, delete refused while letters of credit use the method (APP_RULES3_PR, trigger APP_R3_LC_PAY_COND_BD)",
+ "rules": {
+  "row_rules": {
+   "LC_PAY_COND": "-- legacy WHEN-VALIDATE-ITEM / PRE-INSERT: number > 0, no duplicate (delete check: trigger APP_R3_LC_PAY_COND_BD)\napp_rules3_pr.pay_cond_row(inserting, :new.pay_cond_code);"
+  }
+ }
+}

@@ -1,0 +1,49 @@
+{
+  "pattern": "AUTO",
+  "notes": "Tax obligation per GL account: posting accounts / active cost centres, ACC_SERIAL = max + 1 over the table, range button (تطبيق) - APP_RULES3_TX, see processes/TX_ACCOUNTS.md",
+  "rules": {
+    "key_expr": {
+      "TX_TAXES_ACCOUNTS.ACC_SERIAL": "app_rules3_tx.next_acc_serial"
+    },
+    "row_rules": {
+      "TX_TAXES_ACCOUNTS": "app_rules3_tx.accounts_row(:new.account_number, :new.cost_code, :new.cost_code2);"
+    },
+    "hidden": ["TX_TAXES_ACCOUNTS.ACC_SERIAL"],
+    "add_columns": {
+      "TX_TAXES_ACCOUNTS.TAX_CODE": {"label_a": "رقم الضريبة", "label_e": "Tax no."},
+      "TX_TAXES_ACCOUNTS.ACCOUNT_NUMBER": {"label_a": "رقم الحساب", "label_e": "Account"},
+      "TX_TAXES_ACCOUNTS.COST_CODE": {"label_a": "مركز تكلفة 1", "label_e": "Cost centre 1"},
+      "TX_TAXES_ACCOUNTS.COST_CODE2": {"label_a": "مركز تكلفة 2", "label_e": "Cost centre 2"},
+      "TX_TAXES_ACCOUNTS.TAX_PER": {"label_a": "النسبة", "label_e": "Percentage"}
+    }
+  },
+  "actions": [
+    {
+      "name": "APPLY",
+      "label_a": "تطبيق",
+      "label_e": "Apply",
+      "confirm_a": "هل تريد تطبيق النسبة على الحسابات المحددة؟",
+      "confirm_e": "Apply the percentage to the account range?",
+      "condition": "app_sec.can_page(:APP_PAGE_ID, 'I')",
+      "params": [
+        {"name": "TAX", "label_a": "رقم الضريبة", "label_e": "Tax no.", "type": "number", "required": true,
+         "default": "select min(tax_code) from tx_taxes_types", "default_type": "SQL_QUERY",
+         "lov_sql": "select tax_code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, tax_code r from tx_taxes_types order by tax_code"},
+        {"name": "FROM_ACC", "label_a": "من حساب", "label_e": "From account", "type": "number", "required": true,
+         "lov_sql": "select account_number || ' - ' || case when app_sec.lang = 'en' then nvl(account_name_e, account_name) else account_name end d, account_number r from ac_master where account_status = 1 order by account_number"},
+        {"name": "TO_ACC", "label_a": "إلى حساب", "label_e": "To account", "type": "number", "required": true,
+         "lov_sql": "select account_number || ' - ' || case when app_sec.lang = 'en' then nvl(account_name_e, account_name) else account_name end d, account_number r from ac_master where account_status = 1 order by account_number"},
+        {"name": "COST1", "label_a": "مركز تكلفة 1", "label_e": "Cost centre 1", "type": "number",
+         "lov_sql": "select cost_code || ' - ' || case when app_sec.lang = 'en' then nvl(cost_desc_e, cost_desc) else cost_desc end d, cost_code r from ac_cost_centers where cost_status = 1 order by cost_code"},
+        {"name": "COST2", "label_a": "مركز تكلفة 2", "label_e": "Cost centre 2", "type": "number",
+         "lov_sql": "select cost_code || ' - ' || case when app_sec.lang = 'en' then nvl(cost_desc_e, cost_desc) else cost_desc end d, cost_code r from ac_cost_centers2 where cost_status = 1 order by cost_code"},
+        {"name": "PER", "label_a": "النسبة", "label_e": "Percentage", "type": "number", "required": true}
+      ],
+      "call": "app_rules3_tx.apply_accounts(:TAX, :FROM_ACC, :TO_ACC, :COST1, :COST2, :PER)",
+      "message": "app_rules3_tx.last_message",
+      "success_a": "تم التطبيق",
+      "success_e": "Applied",
+      "icon": "fa-check"
+    }
+  ]
+}

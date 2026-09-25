@@ -1,0 +1,176 @@
+{
+  "pattern": "AUTO",
+  "notes": "Branch material requests (ST_ITEM_REQ, types EFFECT 7 / TRNS_TYPE 12; unused, no types configured): numbering (DATE_SERIAL per store/date), store from type, offline-branch and same-store checks, quantities and BASIC_QTY, lock once converted (APP_RULES_SA); fill helpers تزويد عام / أصناف حد الطلب, outstanding-PO and project-estimate warnings, delete refused when converted, item count / project reference (APP_ACT_ST)",
+  "rules": {
+  "computed": {
+   "ST_ITEM_REQ_DET.ITEM_NAME": {"sql": "(select max(nvl(i.name_e, i.name_a)) from st_item i where i.item_group_code = t.group_code and i.item_code = t.item_code)", "label_a": "إســم الصنـــف", "label_e": "Item Nm"},
+   "ST_ITEM_REQ_DET.CURR_BAL": {"sql": "case when (nvl(to_number(v('G_USER_CODE')), 0) = 0 or (select nvl(max(u.allow_view_balance), 0) from users u where u.users_code = to_number(v('G_USER_CODE'))) = 1) then round(nvl(get_balance((select r.store_code from st_item_req r where r.trns_type_code = t.trns_type_code and r.trns_serial = t.trns_serial), t.group_code, t.item_code), 0) / nvl((select max(u.factor) from st_item_unit u where u.group_code = t.group_code and u.item_code = t.item_code and u.unit_code = t.unit_code), 1), 3) end", "label_a": "رصيد مخزن الطلب", "label_e": "Req. Store Balance", "type": "NUMBER"},
+   "ST_ITEM_REQ_DET.FROM_STORE_BAL": {"sql": "case when (nvl(to_number(v('G_USER_CODE')), 0) = 0 or (select nvl(max(u.allow_view_balance), 0) from users u where u.users_code = to_number(v('G_USER_CODE'))) = 1) then round(nvl(get_balance((select r.from_store_code from st_item_req r where r.trns_type_code = t.trns_type_code and r.trns_serial = t.trns_serial), t.group_code, t.item_code), 0) / nvl((select max(u.factor) from st_item_unit u where u.group_code = t.group_code and u.item_code = t.item_code and u.unit_code = t.unit_code), 1), 3) end", "label_a": "رصيد المخزن المحول منه", "label_e": "Trnsfred Frm. Store Bal", "type": "NUMBER"}
+  },
+    "where": "TRNS_TYPE_CODE IN (SELECT T.TRNS_TYPE_CODE FROM ST_TRNS_TYPE T WHERE T.EFFECT = 7 AND T.TRNS_TYPE = 12 AND T.STORE_CODE IS NOT NULL) AND (NVL(:G_PASSWORD_NUMBER,0) = 0 OR TRNS_TYPE_CODE IN (SELECT TP.TRNS_TYPE_CODE FROM ST_TRNSTYPE_PASSWORD TP WHERE TP.PASSWORD_NUMBER = :G_PASSWORD_NUMBER))",
+    "defaults": {
+      "ST_ITEM_REQ.TRNS_TYPE_CODE": {
+        "type": "SQL_QUERY",
+        "value": "select app_rules_sa.first_type('REQ') from dual"
+      },
+      "ST_ITEM_REQ.APPROVE_FLAG": {
+        "type": "STATIC",
+        "value": "0"
+      }
+    },
+    "readonly": [
+      "ST_ITEM_REQ_DET.BASIC_QTY",
+      "ST_ITEM_REQ_DET.NEED_APPROVE"
+    ],
+    "optional": [
+      "ST_ITEM_REQ_DET.QUANTITY",
+      "ST_ITEM_REQ_DET.GROUP_CODE",
+      "ST_ITEM_REQ_DET.UNIT_CODE",
+      "ST_ITEM_REQ_DET.BASIC_QTY"
+    ],
+    "row_rules": {
+      "ST_ITEM_REQ": "app_rules_sa.req_mast_row(inserting, :new.trns_type_code, :new.trns_serial, :new.req_date, :new.date_serial, :new.store_code, :new.from_store_code, :new.approve_flag, :new.close_flag);",
+      "ST_ITEM_REQ_DET": "app_rules_sa.req_det_row(inserting, :new.trns_type_code, :new.trns_serial, :new.group_code, :new.item_code, :new.unit_code, :new.req_qty, :new.quantity, :new.basic_qty, :new.expected_sales_price, :new.req_date, :new.date_serial, :old.pr_flag);"
+    },
+    "validations": [
+      {
+        "name": "قواعد طلب النواقص",
+        "when": "CREATE,SAVE",
+        "plsql": "return app_rules_sa.req_validate(:REQUEST, :PAGE_ROWID, :PAGE_TRNS_TYPE_CODE, :PAGE_REQ_DATE, :PAGE_STORE_CODE, :PAGE_FROM_STORE_CODE);"
+      }
+    ],
+    "after_save": [
+      {
+        "name": "أصناف طلب النواقص",
+        "when": "CREATE,SAVE",
+        "plsql": "app_rules_sa.req_after_save(:REQUEST, :PAGE_ROWID);"
+      },
+      {
+        "name": "حذف طلب نواقص له طلب شراء أو طلب تحويل",
+        "when": "DELETE",
+        "plsql": "app_act_st.rq_delete_check(:PAGE_TRNS_TYPE_CODE, :PAGE_TRNS_SERIAL);"
+      }
+    ],
+    "warnings": [
+      {
+        "name": "كميات أوامر شراء لم يتم إستلامها",
+        "plsql": "return app_act_st.rq_warn_outstanding(:PAGE_ROWID, 'ST_ITEM_REQ');",
+        "when": "SAVE"
+      },
+      {
+        "name": "تقدير المشروع",
+        "plsql": "return app_act_st.rq_warn_estimate(:PAGE_ROWID);",
+        "when": "SAVE"
+      }
+    ],
+    "info": [
+      {
+        "name": "ITEM_COUNT",
+        "label_a": "عدد الأصناف",
+        "label_e": "No. of items",
+        "sql": "select app_act_st.rq_item_count(:PAGE_ROWID) from dual"
+      },
+      {
+        "name": "PROJ_REF",
+        "label_a": "المسمى المرجعى للمشروع",
+        "label_e": "Estimation location reference",
+        "sql": "select app_act_st.rq_proj_ref(:PAGE_ROWID) from dual"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "name": "GENERAL_REQ",
+      "label_a": "تزويد عام",
+      "label_e": "General providing",
+      "confirm_a": "هل تريد إضافة الأصناف التي انخفض رصيدها فى المخزن الطالب عن الحد المدخل؟ الكمية المطلوبة = الحد الأدنى للصنف فى المخزن.",
+      "confirm_e": "Add the items whose balance in the requesting store is below the limit? Requested quantity = the item's minimum limit in the store.",
+      "condition": "app_act_st.rq_can_fill(:PAGE_ROWID) = 'Y'",
+      "params": [
+        {
+          "name": "QUAN_LIMIT",
+          "label_a": "الحد الأدنى للكمية الذي سيتم الطلب إذا انخفض رصيد الصنف عنه",
+          "label_e": "The minimum balance before demand",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "FROM_GROUP",
+          "label_a": "من مجموعة",
+          "label_e": "From group",
+          "type": "number",
+          "lov_sql": "select g.item_group_code || ' - ' || decode(:G_LANG, 'en', g.name_e, g.name_a) d, g.item_group_code r from st_item_group g where nvl(g.stop_flag, 0) = 0 and g.group_status = 1 and (nvl(:G_PASSWORD_NUMBER, 0) = 0 or g.item_group_code in (select gp.group_code from st_group_password gp where gp.password_number = :G_PASSWORD_NUMBER)) order by g.item_group_code"
+        },
+        {
+          "name": "TO_GROUP",
+          "label_a": "إلى مجموعة",
+          "label_e": "To group",
+          "type": "number",
+          "lov_sql": "select g.item_group_code || ' - ' || decode(:G_LANG, 'en', g.name_e, g.name_a) d, g.item_group_code r from st_item_group g where nvl(g.stop_flag, 0) = 0 and g.group_status = 1 and (nvl(:G_PASSWORD_NUMBER, 0) = 0 or g.item_group_code in (select gp.group_code from st_group_password gp where gp.password_number = :G_PASSWORD_NUMBER)) order by g.item_group_code"
+        },
+        {
+          "name": "FROM_ITEM",
+          "label_a": "من صنف",
+          "label_e": "From item",
+          "type": "text",
+          "lov_sql": "select i.item_code || ' - ' || decode(:G_LANG, 'en', i.name_e, i.name_a) d, i.item_code r from st_item i where nvl(i.stop_flag, 0) = 0 order by i.item_code"
+        },
+        {
+          "name": "TO_ITEM",
+          "label_a": "إلى صنف",
+          "label_e": "To item",
+          "type": "text",
+          "lov_sql": "select i.item_code || ' - ' || decode(:G_LANG, 'en', i.name_e, i.name_a) d, i.item_code r from st_item i where nvl(i.stop_flag, 0) = 0 order by i.item_code"
+        }
+      ],
+      "call": "app_act_st.rq_fill_general(p_rowid => :PAGE_ROWID, p_quan_limit => :QUAN_LIMIT, p_from_group => :FROM_GROUP, p_to_group => :TO_GROUP, p_from_item => :FROM_ITEM, p_to_item => :TO_ITEM)",
+      "message": "app_act_st.last_message",
+      "success_a": "تم التزويد العام",
+      "success_e": "General providing done",
+      "icon": "fa-plus"
+    },
+    {
+      "name": "REC_LIMIT",
+      "label_a": "أصناف حد الطلب",
+      "label_e": "Request limit items",
+      "confirm_a": "هل تريد إضافة أصناف المخزن الطالب التي انخفض رصيدها عن حد الطلب؟ الكمية المطلوبة = الحد الأدنى للصنف فى المخزن.",
+      "confirm_e": "Add the items of the requesting store whose balance is below the reorder limit? Requested quantity = the item's minimum limit in the store.",
+      "condition": "app_act_st.rq_can_fill(:PAGE_ROWID) = 'Y'",
+      "params": [
+        {
+          "name": "FROM_GROUP",
+          "label_a": "من مجموعة",
+          "label_e": "From group",
+          "type": "number",
+          "lov_sql": "select g.item_group_code || ' - ' || decode(:G_LANG, 'en', g.name_e, g.name_a) d, g.item_group_code r from st_item_group g where nvl(g.stop_flag, 0) = 0 and g.group_status = 1 and (nvl(:G_PASSWORD_NUMBER, 0) = 0 or g.item_group_code in (select gp.group_code from st_group_password gp where gp.password_number = :G_PASSWORD_NUMBER)) order by g.item_group_code"
+        },
+        {
+          "name": "TO_GROUP",
+          "label_a": "إلى مجموعة",
+          "label_e": "To group",
+          "type": "number",
+          "lov_sql": "select g.item_group_code || ' - ' || decode(:G_LANG, 'en', g.name_e, g.name_a) d, g.item_group_code r from st_item_group g where nvl(g.stop_flag, 0) = 0 and g.group_status = 1 and (nvl(:G_PASSWORD_NUMBER, 0) = 0 or g.item_group_code in (select gp.group_code from st_group_password gp where gp.password_number = :G_PASSWORD_NUMBER)) order by g.item_group_code"
+        },
+        {
+          "name": "FROM_ITEM",
+          "label_a": "من صنف",
+          "label_e": "From item",
+          "type": "text",
+          "lov_sql": "select i.item_code || ' - ' || decode(:G_LANG, 'en', i.name_e, i.name_a) d, i.item_code r from st_item i where nvl(i.stop_flag, 0) = 0 order by i.item_code"
+        },
+        {
+          "name": "TO_ITEM",
+          "label_a": "إلى صنف",
+          "label_e": "To item",
+          "type": "text",
+          "lov_sql": "select i.item_code || ' - ' || decode(:G_LANG, 'en', i.name_e, i.name_a) d, i.item_code r from st_item i where nvl(i.stop_flag, 0) = 0 order by i.item_code"
+        }
+      ],
+      "call": "app_act_st.rq_fill_reorder(p_rowid => :PAGE_ROWID, p_from_group => :FROM_GROUP, p_to_group => :TO_GROUP, p_from_item => :FROM_ITEM, p_to_item => :TO_ITEM)",
+      "message": "app_act_st.last_message",
+      "success_a": "تم إضافة أصناف حد الطلب",
+      "success_e": "Request limit items added",
+      "icon": "fa-plus"
+    }
+  ]
+}

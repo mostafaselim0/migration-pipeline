@@ -1,0 +1,46 @@
+{
+  "pattern": "AUTO",
+  "notes": "Target periods of a year: serial max+1 per year, FROM = previous TO + 1 (1 January for the first), TO > FROM, only the last period may be changed or deleted; button 'انزال شهور السنه' (APP_RULES3_AR).",
+  "rules": {
+    "row_rules": {
+      "AR_TARGET_PERIODS": "app_rules3_ar.tperiod_row(inserting, :new.t_year, :old.serial, :new.from_p, :new.to_p);"
+    },
+    "readonly": [
+      "AR_TARGET_PERIODS.FROM_P",
+      "AR_TARGET_PERIODS.SERIAL"
+    ],
+    "optional": [
+      "AR_TARGET_PERIODS.FROM_P"
+    ],
+    "add_columns": {
+      "AR_TARGET_PERIODS.T_YEAR": {
+        "label_a": "السنة",
+        "label_e": "Year"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "INSERT_MONTHS",
+      "label_a": "انزال شهور السنه",
+      "label_e": "Insert the months of the year",
+      "confirm_a": "هل تريد انزال شهور السنة كفترات للمستهدف؟",
+      "confirm_e": "Create the twelve months of the year as target periods?",
+      "params": [
+        {
+          "name": "T_YEAR",
+          "label_a": "السنة",
+          "label_e": "Year",
+          "type": "number",
+          "required": true,
+          "default": "to_char(sysdate, 'YYYY')",
+          "default_type": "EXPRESSION"
+        }
+      ],
+      "call": "app_rules3_ar.insert_months(:T_YEAR)",
+      "success_a": "تم انزال شهور السنة",
+      "success_e": "The months of the year were created",
+      "icon": "fa-calendar"
+    }
+  ]
+}

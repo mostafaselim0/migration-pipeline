@@ -1,0 +1,64 @@
+{
+  "pattern": "AUTO",
+  "notes": "AR transaction types: effect / type compatibility, GL link settings (voucher type, all directions, type / customer / discount accounts, distinct accounts), discount periods, group filter (APP_RULES3_AR).",
+  "rules": {
+    "where": "(nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or ID in (select TRNS_ID from AR_TRNSTYPE_PASSWORD where FLAG = 1 and PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)))",
+    "row_rules": {
+      "AR_TRNSTYPE": "if app_rules3_ar.is_form('ARTRNSTYPE') then app_rules3_ar.trnstype_row(:new.id, :new.effect, :new.trns_type, :new.account_joint, :new.entry_type, :new.account_type, :new.customer_account_type, :new.disc_account_type, :new.account_no, :new.customer_account, :new.disc_account, :new.cost_no_type, :new.cost_no2_type); end if;",
+      "AR_TRNSTYPE_DSCNT": "app_rules3_ar.trnstype_dscnt_row(inserting, :new.id, :new.period_serial, :new.dscnt_prcnt, :new.dscnt_value);"
+    },
+    "readonly": [
+      "AR_TRNSTYPE.LAST_SERIAL"
+    ],
+    "add_columns": {
+      "AR_TRNSTYPE.EFFECT": {
+        "label_a": "تأثير الحركة على العميل (0 مدين / 1 دائن)",
+        "label_e": "Effect on customer (0 debit / 1 credit)"
+      },
+      "AR_TRNSTYPE.TRNS_TYPE": {
+        "label_a": "نوع الحركة (0 مبيعات / 1 مردودات / 3 مدفوعات / 4 تسوية / 6 أخرى)",
+        "label_e": "Kind (0 sales / 1 returns / 3 payments / 4 adjustments / 6 other)"
+      },
+      "AR_TRNSTYPE.ACCOUNT_TYPE": {
+        "label_a": "توجيه حساب الحركة (0 بدون / 1 المنطقة / 2 الفرع / 3 العميل / 4 نوع الحركة / 5 الحركة)",
+        "label_e": "Transaction account direction (0 .. 5)"
+      },
+      "AR_TRNSTYPE.CUSTOMER_ACCOUNT_TYPE": {
+        "label_a": "توجيه حساب العميل (0 .. 5)",
+        "label_e": "Customer account direction (0 .. 5)"
+      },
+      "AR_TRNSTYPE.DISC_ACCOUNT_TYPE": {
+        "label_a": "توجيه حساب الخصم (0 .. 5)",
+        "label_e": "Discount account direction (0 .. 5)"
+      },
+      "AR_TRNSTYPE.COST_NO_TYPE": {
+        "label_a": "توجيه مركز تكلفة 1 (0 بدون / 4 نوع الحركة / 5 الحركة / 6 المندوب)",
+        "label_e": "Cost centre 1 direction"
+      },
+      "AR_TRNSTYPE.COST_NO2_TYPE": {
+        "label_a": "توجيه مركز تكلفة 2 (0 بدون / 4 نوع الحركة / 5 الحركة / 6 المندوب)",
+        "label_e": "Cost centre 2 direction"
+      },
+      "AR_TRNSTYPE.POST_TYPE": {
+        "label_a": "نوع الترحيل (1 قيد لكل حركة / 2 قيد لكل نوع حركة)",
+        "label_e": "Voucher per (1 transaction / 2 type)"
+      },
+      "AR_TRNSTYPE.MAINAREA_ID": {
+        "label_a": "المنطقة",
+        "label_e": "Area"
+      },
+      "AR_TRNSTYPE.SUBAREA_ID": {
+        "label_a": "الفرع",
+        "label_e": "Branch"
+      },
+      "AR_TRNSTYPE.LAST_SERIAL": {
+        "label_a": "آخر مسلسل للحركة",
+        "label_e": "Last serial"
+      },
+      "AR_TRNSTYPE.TOT_TRNS_FLAG": {
+        "label_a": "تحصيلات خارجية",
+        "label_e": "External collections"
+      }
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "pattern": "REPORT_FORM",
+  "master": {
+    "table": "AR_BASIC",
+    "columns": [
+      "COMPANY_CODE",
+      "MIN_DATE",
+      "MAX_DATE",
+      "AUTO_SERIAL",
+      "CALC_COMM",
+      "SALESMAN_CUST_FLAG",
+      "STOP_CUST_FLAG"
+    ]
+  },
+  "where": null,
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "AR system parameters (legacy single-record form): transaction date limits and the indicators of the legacy screen, with the legacy confirmation when an indicator changes while transactions exist (APP_RULES3_AR).",
+  "rules": {
+    "hidden": [
+      "AR_BASIC.COMPANY_CODE"
+    ],
+    "defaults": {
+      "AR_BASIC.COMPANY_CODE": {
+        "type": "ITEM",
+        "value": "G_COMPANY_CODE"
+      }
+    },
+    "add_columns": {
+      "AR_BASIC.MIN_DATE": {
+        "label_a": "الحد الأدنى لتاريخ الحركة",
+        "label_e": "Minimum transaction date"
+      },
+      "AR_BASIC.MAX_DATE": {
+        "label_a": "الحد الأقصى لتاريخ الحركة",
+        "label_e": "Maximum transaction date"
+      },
+      "AR_BASIC.AUTO_SERIAL": {
+        "label_a": "تكوين رقم العميل آليا",
+        "label_e": "Automatic customer code"
+      },
+      "AR_BASIC.CALC_COMM": {
+        "label_a": "إحتساب عمولات المندوبين (1 على المبيعات / 2 على التحصيل)",
+        "label_e": "Salesman commission on (1 sales / 2 collection)"
+      },
+      "AR_BASIC.SALESMAN_CUST_FLAG": {
+        "label_a": "ربط المندوب والعميل بالقسم إجباري",
+        "label_e": "Salesman and customer must be linked to the department"
+      },
+      "AR_BASIC.STOP_CUST_FLAG": {
+        "label_a": "ايقاف العملاء غير مستوفي الشروط",
+        "label_e": "Stop customers not meeting the conditions"
+      }
+    },
+    "warnings": [
+      {
+        "name": "مؤشرات النظام",
+        "when": "SAVE",
+        "plsql": "return app_rules3_ar.basic_warning(:PAGE_ROWID, :PAGE_AUTO_SERIAL, :PAGE_CALC_COMM, :PAGE_SALESMAN_CUST_FLAG, :PAGE_STOP_CUST_FLAG);"
+      }
+    ]
+  }
+}

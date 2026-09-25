@@ -1,0 +1,470 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "SALESMAN",
+    "columns": [
+      "CODE",
+      "NAME_A",
+      "NAME_E",
+      "COMMENTS",
+      "MAINAREA_ID",
+      "SUBAREA_ID",
+      "CTGRY_CODE",
+      "SUPERVISOR_SLSMAN",
+      "ACCOUNT_NO",
+      "COST_CODE1",
+      "COST_CODE2",
+      "DISC_RATIO",
+      "DISC_VALUE",
+      "RETAIL_SALE_PRICE_FLAG",
+      "WIDE_SALE_PRICE_FLAG",
+      "REDUCTION_PRICE_FLAG",
+      "STOP_FLAG",
+      "STOP_RES",
+      "STOP_DATE",
+      "CUSTOMER_CODE",
+      "CREDIT_LIMIT",
+      "SALESMAN_TYPE",
+      "MOBILE_SALES_FLAG",
+      "DB_SEQ",
+      "USERS_CODE",
+      "STORE_CODE",
+      "ISSUE_TRNS_TYPE",
+      "SLS_SEQ",
+      "RETURN_TRNS_TYPE",
+      "RSLS_SEQ",
+      "SALESORD_TRNS_TYPE",
+      "SLS_ORD_SEQ",
+      "AR_PAY_TRNS_ID",
+      "AR_PAY_SEQ",
+      "COL_LIMIT",
+      "COL_LIMIT_DAY",
+      "DEPOSITE_COUNT",
+      "AR_PAY_TRNS_ID2",
+      "AR_PAY_SEQ2",
+      "COL_LIMIT2",
+      "COL_LIMIT_DAY2",
+      "DEPOSITE_COUNT2",
+      "AR_PAY_TRNS_ID3",
+      "AR_PAY_SEQ3",
+      "COL_LIMIT3",
+      "COL_LIMIT_DAY3",
+      "DEPOSITE_COUNT3",
+      "TRNSFR_TRNS_TYPE",
+      "TRNSFR_SEQ",
+      "TRNSFR_TO_TRNS_TYPE",
+      "TRNSFR_TO_SEQ",
+      "PRINTER_ADDR",
+      "MAX_VISIT_TIME",
+      "AR_DEPOSITE_SEQ",
+      "ALLOW_NO_INV_RETURN",
+      "AR_BOOKS_NOTIF"
+    ]
+  },
+  "details": [
+    {
+      "table": "AR_CTGRY_SALESMAN",
+      "join": [
+        [
+          "SALESMAN_CODE",
+          "CODE"
+        ]
+      ],
+      "title_a": "اقسام المندوب",
+      "title_e": "Salesman departments"
+    },
+    {
+      "table": "AR_CUST_SALESMAN",
+      "join": [
+        [
+          "SALESMAN_CODE",
+          "CODE"
+        ]
+      ],
+      "title_a": "عملاء المندوب",
+      "title_e": "Salesman customers"
+    },
+    {
+      "table": "AR_SALESMAN_STORES",
+      "join": [
+        [
+          "SALESMAN_ID",
+          "CODE"
+        ]
+      ],
+      "title_a": "الربط بمبيعات السيارات (المخازن)",
+      "title_e": "Van sales stores"
+    },
+    {
+      "table": "AR_SALESMAN_ACCOUNT",
+      "join": [
+        [
+          "SALESMAN_ID",
+          "CODE"
+        ]
+      ],
+      "title_a": "حسابات ومراكز تكلفة المندوب",
+      "title_e": "Salesman accounts and cost centres"
+    },
+    {
+      "table": "AR_SALESMAN_BOOKS",
+      "join": [
+        [
+          "SALESMAN_CODE",
+          "CODE"
+        ]
+      ],
+      "title_a": "دفاتر سداد العملاء",
+      "title_e": "Receipt books"
+    },
+    {
+      "table": "AR_SALESMAN_BOOKS_DET",
+      "join": [
+        [
+          "SALESMAN_CODE",
+          "CODE"
+        ]
+      ],
+      "title_a": "سندات الدفاتر",
+      "title_e": "Receipt book numbers"
+    }
+  ],
+  "where": null,
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Salesmen file: the legacy blocks SALESMAN, AR_CTGRY_SALESMAN, AR_CUST_SALESMAN, AR_SALESMAN_STORES, AR_SALESMAN_ACCOUNT, AR_SALESMAN_BOOKS(_DET) (the generated AR_SLSMAN_TARGETS grid is not part of the current form); rules in APP_RULES3_AR.",
+  "rules": {
+    "where": "(nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (CODE >= (select min(FROM_SALESMAN) from AR_CUSTOMER_PASSWORD where PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)) and CODE <= (select max(TO_SALESMAN) from AR_CUSTOMER_PASSWORD where PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER))))",
+    "key_expr": {
+      "AR_CUST_SALESMAN.SALESMAN_CODE": "app_rules3_ar.need_salesman_code",
+      "AR_SALESMAN_BOOKS.BOOK_SERIAL": "app_rules3_ar.next_book_serial",
+      "AR_SALESMAN_BOOKS_DET.BOOK_NO": "app_rules3_ar.need_num('يجب إدخال رقم السند', 'Enter the receipt number')"
+    },
+    "hidden": [
+      "AR_SALESMAN_STORES.ALT_KEY"
+    ],
+    "row_rules": {
+      "SALESMAN": "if app_rules3_ar.is_form('AR_SALESMAN') then app_rules3_ar.salesman_row(:new.code, :new.disc_ratio, :new.store_code, :new.customer_code, :old.customer_code, :new.users_code, :new.account_no, :new.cost_code1, :new.cost_code2, :new.supervisor_slsman, :new.issue_trns_type, :new.return_trns_type, :new.salesord_trns_type, :new.trnsfr_trns_type, :new.trnsfr_to_trns_type, :new.ar_pay_trns_id, :new.ar_pay_trns_id2, :new.ar_pay_trns_id3, :new.mainarea_id, :new.subarea_id, :new.ctgry_code); end if;",
+      "AR_CTGRY_SALESMAN": "app_rules3_ar.ctgry_salesman_row(inserting, :new.salesman_code, :new.ctgry_code);",
+      "AR_CUST_SALESMAN": "app_rules3_ar.cust_salesman_row(inserting, :new.customer_code, :new.ctgry_code, :new.salesman_code, :new.credit_limit, :old.salesman_code, :old.ctgry_code, :new.sales_mngr, :new.ctgry_mngr, :new.mrch_slsman);",
+      "AR_SALESMAN_STORES": "app_rules3_ar.salesman_store_row(inserting, :new.salesman_id, :new.store_code);",
+      "AR_SALESMAN_ACCOUNT": "app_rules3_ar.salesman_account_row(inserting, :new.salesman_id, :new.salesman_account_no, :new.salesman_cost_code, :new.salesman_cost_code2);",
+      "AR_SALESMAN_BOOKS": "app_rules3_ar.book_row(inserting, :new.salesman_code, :new.book_serial, :new.from_serial, :new.to_serial, :new.book_type);",
+      "AR_SALESMAN_BOOKS_DET": "app_rules3_ar.book_det_row(inserting, :new.salesman_code, :new.book_serial, :new.book_no);"
+    },
+    "optional": [
+      "AR_SALESMAN_BOOKS.BOOK_SERIAL"
+    ],
+    "add_columns": {
+      "SALESMAN.CODE": {
+        "label_a": "كود المندوب",
+        "label_e": "Salesman code"
+      },
+      "SALESMAN.NAME_A": {
+        "label_a": "الإسم عربي",
+        "label_e": "Arabic name"
+      },
+      "SALESMAN.NAME_E": {
+        "label_a": "الإسم لاتيني",
+        "label_e": "English name"
+      },
+      "SALESMAN.COMMENTS": {
+        "label_a": "ملاحظـات",
+        "label_e": "Comments"
+      },
+      "SALESMAN.MAINAREA_ID": {
+        "label_a": "المنـطــقــــة",
+        "label_e": "Area"
+      },
+      "SALESMAN.SUBAREA_ID": {
+        "label_a": "الفــــــــرع",
+        "label_e": "Branch"
+      },
+      "SALESMAN.CTGRY_CODE": {
+        "label_a": "القــــــــسم",
+        "label_e": "Department"
+      },
+      "SALESMAN.SUPERVISOR_SLSMAN": {
+        "label_a": "رقم المشرف",
+        "label_e": "Supervisor"
+      },
+      "SALESMAN.ACCOUNT_NO": {
+        "label_a": "رقـــم الحساب",
+        "label_e": "Account"
+      },
+      "SALESMAN.COST_CODE1": {
+        "label_a": "مركز تكلفة 1",
+        "label_e": "Cost centre 1"
+      },
+      "SALESMAN.COST_CODE2": {
+        "label_a": "مركز تكلفة 2",
+        "label_e": "Cost centre 2"
+      },
+      "SALESMAN.DISC_RATIO": {
+        "label_a": "نسبة الخصم لهذا المندوب على إجمالى فواتير المبيعات",
+        "label_e": "Discount % of the salesman"
+      },
+      "SALESMAN.DISC_VALUE": {
+        "label_a": "بحد اقصى قيمة",
+        "label_e": "Maximum value"
+      },
+      "SALESMAN.RETAIL_SALE_PRICE_FLAG": {
+        "label_a": "سعر البيع",
+        "label_e": "Retail price"
+      },
+      "SALESMAN.WIDE_SALE_PRICE_FLAG": {
+        "label_a": "سعر الجملة",
+        "label_e": "Wholesale price"
+      },
+      "SALESMAN.REDUCTION_PRICE_FLAG": {
+        "label_a": "سعر خاص",
+        "label_e": "Special price"
+      },
+      "SALESMAN.STOP_FLAG": {
+        "label_a": "متوقف",
+        "label_e": "Stopped"
+      },
+      "SALESMAN.STOP_RES": {
+        "label_a": "سبب الايقاف",
+        "label_e": "Stop reason"
+      },
+      "SALESMAN.STOP_DATE": {
+        "label_a": "تاريخ الايقاف",
+        "label_e": "Stop date"
+      },
+      "SALESMAN.CUSTOMER_CODE": {
+        "label_a": "رقمه كعميل",
+        "label_e": "Customer code"
+      },
+      "SALESMAN.CREDIT_LIMIT": {
+        "label_a": "حد الإئتمان",
+        "label_e": "Credit limit"
+      },
+      "SALESMAN.SALESMAN_TYPE": {
+        "label_a": "النوع (0 مندوب / 1 سائق / 2 مشرف / 3 مروج)",
+        "label_e": "Type (0 salesman / 1 driver / 2 supervisor / 3 promoter)"
+      },
+      "SALESMAN.MOBILE_SALES_FLAG": {
+        "label_a": "مستخدم للموبيل",
+        "label_e": "Mobile user"
+      },
+      "SALESMAN.DB_SEQ": {
+        "label_a": "اخر مسلسل للعملاء",
+        "label_e": "Last customer serial"
+      },
+      "SALESMAN.USERS_CODE": {
+        "label_a": "رقمه كمستخدم",
+        "label_e": "User"
+      },
+      "SALESMAN.STORE_CODE": {
+        "label_a": "رقم مخزن البيع",
+        "label_e": "Sales store"
+      },
+      "SALESMAN.ISSUE_TRNS_TYPE": {
+        "label_a": "رقم حركة البيع",
+        "label_e": "Sales transaction type"
+      },
+      "SALESMAN.SLS_SEQ": {
+        "label_a": "اخر فاتورة",
+        "label_e": "Last invoice"
+      },
+      "SALESMAN.RETURN_TRNS_TYPE": {
+        "label_a": "رقم حركة المرتجع",
+        "label_e": "Return transaction type"
+      },
+      "SALESMAN.RSLS_SEQ": {
+        "label_a": "اخر مرتجع",
+        "label_e": "Last return"
+      },
+      "SALESMAN.SALESORD_TRNS_TYPE": {
+        "label_a": "رقم حركة امر البيع",
+        "label_e": "Sales order type"
+      },
+      "SALESMAN.SLS_ORD_SEQ": {
+        "label_a": "اخر امر بيع",
+        "label_e": "Last sales order"
+      },
+      "SALESMAN.AR_PAY_TRNS_ID": {
+        "label_a": "رقم حركة السداد النقدي",
+        "label_e": "Cash payment type"
+      },
+      "SALESMAN.AR_PAY_SEQ": {
+        "label_a": "اخر ت.نقدي",
+        "label_e": "Last cash payment"
+      },
+      "SALESMAN.COL_LIMIT": {
+        "label_a": "حد التحصيل (نقدي)",
+        "label_e": "Collection limit (cash)"
+      },
+      "SALESMAN.COL_LIMIT_DAY": {
+        "label_a": "مدته (نقدي)",
+        "label_e": "Days (cash)"
+      },
+      "SALESMAN.DEPOSITE_COUNT": {
+        "label_a": "عدد عمليات الايداع (نقدي)",
+        "label_e": "Deposits (cash)"
+      },
+      "SALESMAN.AR_PAY_TRNS_ID2": {
+        "label_a": "رقم حركة سداد الشيك",
+        "label_e": "Cheque payment type"
+      },
+      "SALESMAN.AR_PAY_SEQ2": {
+        "label_a": "اخر ت.شيك",
+        "label_e": "Last cheque payment"
+      },
+      "SALESMAN.COL_LIMIT2": {
+        "label_a": "حد التحصيل (شيك)",
+        "label_e": "Collection limit (cheque)"
+      },
+      "SALESMAN.COL_LIMIT_DAY2": {
+        "label_a": "مدته (شيك)",
+        "label_e": "Days (cheque)"
+      },
+      "SALESMAN.DEPOSITE_COUNT2": {
+        "label_a": "عدد عمليات الايداع (شيك)",
+        "label_e": "Deposits (cheque)"
+      },
+      "SALESMAN.AR_PAY_TRNS_ID3": {
+        "label_a": "رقم حركة سداد التحويل",
+        "label_e": "Transfer payment type"
+      },
+      "SALESMAN.AR_PAY_SEQ3": {
+        "label_a": "اخر ت.حوالة",
+        "label_e": "Last transfer payment"
+      },
+      "SALESMAN.COL_LIMIT3": {
+        "label_a": "حد التحصيل (حوالة)",
+        "label_e": "Collection limit (transfer)"
+      },
+      "SALESMAN.COL_LIMIT_DAY3": {
+        "label_a": "مدته (حوالة)",
+        "label_e": "Days (transfer)"
+      },
+      "SALESMAN.DEPOSITE_COUNT3": {
+        "label_a": "عدد عمليات الايداع (حوالة)",
+        "label_e": "Deposits (transfer)"
+      },
+      "SALESMAN.TRNSFR_TRNS_TYPE": {
+        "label_a": "رقم حركة التحويل من",
+        "label_e": "Transfer-out type"
+      },
+      "SALESMAN.TRNSFR_SEQ": {
+        "label_a": "اخر تحويل",
+        "label_e": "Last transfer"
+      },
+      "SALESMAN.TRNSFR_TO_TRNS_TYPE": {
+        "label_a": "رقم حركة استلام التحويل",
+        "label_e": "Transfer-in type"
+      },
+      "SALESMAN.TRNSFR_TO_SEQ": {
+        "label_a": "اخر تحويل الي",
+        "label_e": "Last transfer in"
+      },
+      "SALESMAN.PRINTER_ADDR": {
+        "label_a": "الطابعة",
+        "label_e": "Printer"
+      },
+      "SALESMAN.MAX_VISIT_TIME": {
+        "label_a": "وقت الزيارة",
+        "label_e": "Visit time"
+      },
+      "SALESMAN.AR_DEPOSITE_SEQ": {
+        "label_a": "مسلسل الايداع",
+        "label_e": "Deposit serial"
+      },
+      "SALESMAN.ALLOW_NO_INV_RETURN": {
+        "label_a": "السماح بمرتجع بدون فواتير",
+        "label_e": "Allow returns without invoice"
+      },
+      "SALESMAN.AR_BOOKS_NOTIF": {
+        "label_a": "تذكير المندوب قبل انتهاء السندات (عدد)",
+        "label_e": "Remind before the receipts end (count)"
+      },
+      "AR_CTGRY_SALESMAN.CTGRY_CODE": {
+        "label_a": "القسم",
+        "label_e": "Department"
+      },
+      "AR_CTGRY_SALESMAN.JOIN_DATE": {
+        "label_a": "تاريخ الالتحاق",
+        "label_e": "Joining date"
+      },
+      "AR_CUST_SALESMAN.CUSTOMER_CODE": {
+        "label_a": "العميل",
+        "label_e": "Customer"
+      },
+      "AR_CUST_SALESMAN.CTGRY_CODE": {
+        "label_a": "القسم",
+        "label_e": "Department"
+      },
+      "AR_CUST_SALESMAN.CREDIT_LIMIT": {
+        "label_a": "حد الإئتمان",
+        "label_e": "Credit limit"
+      },
+      "AR_CUST_SALESMAN.MRCH_SLSMAN": {
+        "label_a": "المسوق",
+        "label_e": "Marketer"
+      },
+      "AR_CUST_SALESMAN.CTGRY_MNGR": {
+        "label_a": "مدير القسم",
+        "label_e": "Department manager"
+      },
+      "AR_CUST_SALESMAN.SALES_MNGR": {
+        "label_a": "مدير المبيعات",
+        "label_e": "Sales manager"
+      },
+      "AR_SALESMAN_STORES.STORE_CODE": {
+        "label_a": "رقم المخزن",
+        "label_e": "Store"
+      },
+      "AR_SALESMAN_ACCOUNT.SALESMAN_ACCOUNT_NO": {
+        "label_a": "رقم الحساب",
+        "label_e": "Account"
+      },
+      "AR_SALESMAN_ACCOUNT.SALESMAN_COST_CODE": {
+        "label_a": "مركز تكلفة 1",
+        "label_e": "Cost centre 1"
+      },
+      "AR_SALESMAN_ACCOUNT.SALESMAN_COST_CODE2": {
+        "label_a": "مركز تكلفة 2",
+        "label_e": "Cost centre 2"
+      },
+      "AR_SALESMAN_ACCOUNT.ACCOUNT_TYPE": {
+        "label_a": "نوع الحساب (نقدى / حوالة / بدون)",
+        "label_e": "Account type"
+      },
+      "AR_SALESMAN_BOOKS.BOOK_SERIAL": {
+        "label_a": "رقم دفتر",
+        "label_e": "Book no."
+      },
+      "AR_SALESMAN_BOOKS.FROM_SERIAL": {
+        "label_a": "من سند",
+        "label_e": "From receipt"
+      },
+      "AR_SALESMAN_BOOKS.TO_SERIAL": {
+        "label_a": "الي سند",
+        "label_e": "To receipt"
+      },
+      "AR_SALESMAN_BOOKS.NOTES": {
+        "label_a": "ملاحظات",
+        "label_e": "Notes"
+      },
+      "AR_SALESMAN_BOOKS.BOOK_FINSH": {
+        "label_a": "منتهي",
+        "label_e": "Finished"
+      },
+      "AR_SALESMAN_BOOKS_DET.BOOK_SERIAL": {
+        "label_a": "رقم دفتر",
+        "label_e": "Book no."
+      },
+      "AR_SALESMAN_BOOKS_DET.BOOK_NO": {
+        "label_a": "رقم السند",
+        "label_e": "Receipt no."
+      },
+      "AR_SALESMAN_BOOKS_DET.NOTES": {
+        "label_a": "ملاحظات",
+        "label_e": "Notes"
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "pattern": "AUTO",
+  "notes": "Mobile skip reasons: SKIP_CODE = max+1 (character key), operation list COL / SLSI / SLSR / SLSO / STCNT (APP_RULES3_AR).",
+  "rules": {
+    "key_expr": {
+      "MOB_SKIP_REASONS.SKIP_CODE": "app_rules3_ar.next_skip_code"
+    },
+    "row_rules": {
+      "MOB_SKIP_REASONS": "app_rules3_ar.skip_reason_row(:new.op_code);"
+    },
+    "optional": [
+      "MOB_SKIP_REASONS.SKIP_CODE"
+    ],
+    "add_columns": {
+      "MOB_SKIP_REASONS.SKIP_CODE": {
+        "label_a": "الرقم",
+        "label_e": "Code"
+      },
+      "MOB_SKIP_REASONS.OP_CODE": {
+        "label_a": "الارتباط (COL تحصيل / SLSI مبيعات / SLSR مرتجع / SLSO امر بيع / STCNT جرد)",
+        "label_e": "Operation (COL / SLSI / SLSR / SLSO / STCNT)"
+      },
+      "MOB_SKIP_REASONS.SKIP_DESC_A": {
+        "label_a": "الأسم عربى",
+        "label_e": "Arabic name"
+      },
+      "MOB_SKIP_REASONS.SKIP_DESC_E": {
+        "label_a": "الأسم لاتينى",
+        "label_e": "English name"
+      }
+    }
+  }
+}

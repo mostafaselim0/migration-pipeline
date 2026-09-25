@@ -1,0 +1,16 @@
+{
+ "_about": "Reference client of the ASCON knowledge: SMART, the first installation migrated and reviewed (repository smart-transformation, app 100 / 1101). Its schema was restored by hand before this pipeline existed, so the restore stage is not used for it; run only catalog + learn, or the other stages into work/ for regression checks.",
+ "knowledge": "ascon",
+ "schema": "SMART",
+ "workspace": "SMART",
+ "workspace_id": 1600195100832328,
+ "app_id": 100,
+ "translated_app_id": 1101,
+ "id_offset": 0,
+ "app_name": "ASCON ERP",
+ "app_alias": "ascon-erp",
+ "customer_code": "SMART",
+ "dsn": "localhost:1521/ORCLPDB",
+ "sources": {"xml": "C:/Smart Transformation", "binaries": "C:/Smart Transformation/ASCON"},
+ "test_user": "0"
+}

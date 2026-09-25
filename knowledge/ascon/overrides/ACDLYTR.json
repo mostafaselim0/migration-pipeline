@@ -1,0 +1,218 @@
+{
+  "pattern": "AUTO",
+  "notes": "Daily GL entries: legacy numbering CALC_SERIAL, line defaults (VAT customer of AC_BENF_TAX, VAT memo, invoice date), header/line/cost-centre checks, balance and budget checks, running totals and account balances, buttons TAX_IN / TAX_NOTES / POST_VOUCHER, delete rules (APP_RULES_GL / APP_ACT_AR / APP_PROC_GL, see processes/ACDLYTR.md)",
+  "rules": {
+    "where": "(nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (ENTRY_YEAR, ENTRY_TYPE) in (select ENTRY_YEAR, ENTRY_TYPE from AC_PASSWORD_ENTRY where PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)))",
+    "key_expr": {
+      "AC_DAILY_TRN.ENTRY_NO": "app_rules_gl.next_entry_no(:new.entry_year, :new.entry_type, :new.entry_date)",
+      "AC_DAILY_TRN_DET.SEQ": "app_rules_gl.next_line_seq(:new.entry_year, :new.entry_type, :new.entry_no)"
+    },
+    "row_rules": {
+      "AC_DAILY_TRN_DET": "if v('REQUEST') in ('CREATE', 'SAVE') then\n  app_rules_gl.line_row(inserting, :old.account_number, :old.cust_code, :old.cust_name, :old.cust_inv_no, :old.cust_inv_val, :new.entry_year, :new.entry_type, :new.entry_no, :new.account_number, :new.cost_code, :new.cost_code2, :new.entry_desc, :new.entry_desc_e, :new.memo, :new.memo_e, :new.cust_code, :new.cust_tax_no, :new.cust_name, :new.cust_inv_no, :new.cust_notes, :new.cust_inv_val);\n  if inserting and :new.cust_inv_date is null then\n    :new.cust_inv_date := trunc(sysdate);\n  end if;\nend if;"
+    },
+    "validations": [
+      {
+        "name": "رأس القيد: النوع والتاريخ والفترة المقفلة والعملة ورقم المستند",
+        "plsql": "return app_rules_gl.check_header(:PAGE_ROWID, to_number(:PAGE_ENTRY_YEAR), to_number(:PAGE_ENTRY_TYPE), to_number(:PAGE_ENTRY_NO), to_date(:PAGE_ENTRY_DATE, 'DD/MM/YYYY'), to_number(:PAGE_DOC_NO), to_number(:PAGE_CURRENCY_CODE), to_number(:PAGE_RATE));",
+        "when": "CREATE,SAVE"
+      },
+      {
+        "name": "صلاحية تعديل قيود المستخدمين الآخرين",
+        "plsql": "return app_rules_gl.check_user_rights(:PAGE_ROWID);",
+        "when": "SAVE"
+      }
+    ],
+    "warnings": [
+      {
+        "name": "رقم المستند مكرر",
+        "plsql": "return app_rules_gl.warn_doc_repeat(:PAGE_ROWID, to_number(:PAGE_DOC_NO));",
+        "when": "CREATE,SAVE"
+      }
+    ],
+    "after_save": [
+      {
+        "name": "تفاصيل القيد: الحسابات ومراكز التكلفة والتوازن والموازنة التقديرية",
+        "plsql": "declare\n  l_warn varchar2(4000);\nbegin\n  l_warn := app_rules_gl.after_save_entry(:PAGE_ROWID, :REQUEST);\n  if l_warn is not null then\n    apex_application.g_print_success_message := trim(apex_application.g_print_success_message || ' ' || l_warn);\n  end if;\nend;",
+        "when": "CREATE,SAVE"
+      }
+    ],
+    "info": [
+      {
+        "name": "DEBIT_TOTAL",
+        "label_a": "القيمة المدينة",
+        "label_e": "Debit total",
+        "sql": "select app_rules_gl.entry_totals(:PAGE_ROWID, 'D') from dual"
+      },
+      {
+        "name": "CREDIT_TOTAL",
+        "label_a": "القيمة الدائنة",
+        "label_e": "Credit total",
+        "sql": "select app_rules_gl.entry_totals(:PAGE_ROWID, 'C') from dual"
+      },
+      {
+        "name": "DIFF",
+        "label_a": "الفرق بين المدين والدائن",
+        "label_e": "Debit - credit",
+        "sql": "select app_rules_gl.entry_totals(:PAGE_ROWID, 'X') from dual"
+      },
+      {
+        "name": "BALANCES",
+        "label_a": "أرصدة الحسابات المرحلة",
+        "label_e": "Posted balances of the accounts",
+        "sql": "select app_rules_gl.account_balances(:PAGE_ROWID) from dual"
+      }
+    ],
+    "defaults": {
+      "AC_DAILY_TRN_DET.T_TAX_FLAG1": {
+        "type": "STATIC",
+        "value": "0"
+      }
+    },
+    "readonly": [
+      "AC_DAILY_TRN.ENTRY_NO",
+      "AC_DAILY_TRN_DET.ENTRY_DESC",
+      "AC_DAILY_TRN_DET.ENTRY_DESC_E",
+      "AC_DAILY_TRN_DET.TAX_FLAG"
+    ],
+    "columns": {
+      "AC_DAILY_TRN.ENTRY_YEAR": {
+        "lov": "select distinct entry_year d, entry_year r from ac_trn_codes order by 1",
+        "widget": "SELECT",
+        "readonly_after_insert": true
+      },
+      "AC_DAILY_TRN.ENTRY_TYPE": {
+        "lov": "select entry_type || ' - ' || case when app_sec.lang = 'en' then nvl(entry_desc_e, entry_desc) else entry_desc end d, entry_type r from ac_trn_codes where entry_year = :PAGE_ENTRY_YEAR and nvl(ac_flag, 0) = 0 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (entry_year, entry_type) in (select p1.entry_year, p1.entry_type from ac_password_entry p1 where p1.password_number = to_number(:G_PASSWORD_NUMBER) and p1.company_code = to_number(:G_COMPANY_CODE))) order by entry_type",
+        "widget": "POPUP",
+        "readonly_after_insert": true,
+        "cascade": "ENTRY_YEAR"
+      },
+      "AC_DAILY_TRN.MEMO_E": {
+        "label_a": "الشرح لاتيني",
+        "label_e": "Memo (En)"
+      },
+      "AC_DAILY_TRN_DET.CUST_CODE": {
+        "lov": "select benf_code || ' - ' || benf_name || ' (' || tax_no || ')' d, benf_code r from ac_benf_tax order by benf_code",
+        "widget": "POPUP",
+        "label_a": "رقم العميل (ضريبة)",
+        "label_e": "VAT customer"
+      },
+      "AC_DAILY_TRN_DET.CUST_NAME": {
+        "readonly": true
+      },
+      "AC_DAILY_TRN_DET.CUST_TAX_NO": {
+        "readonly": true,
+        "label_a": "الرقم الضريبي",
+        "label_e": "VAT number"
+      },
+      "AC_DAILY_TRN_DET.CUST_INV_VAL": {
+        "readonly": true,
+        "label_a": "قيمة الفاتورة",
+        "label_e": "Invoice value"
+      },
+      "AC_DAILY_TRN_DET.CUST_INV_NO": {
+        "label_a": "رقم الفاتورة",
+        "label_e": "Invoice no."
+      },
+      "AC_DAILY_TRN_DET.CUST_INV_DATE": {
+        "label_a": "تاريخ الفاتورة",
+        "label_e": "Invoice date"
+      },
+      "AC_DAILY_TRN_DET.CUST_NOTES": {
+        "label_a": "ملاحظات",
+        "label_e": "Notes"
+      },
+      "AC_DAILY_TRN_DET.T_TAX_FLAG1": {
+        "required": true,
+        "label_a": "نوع الضريبة",
+        "label_e": "Tax kind"
+      },
+      "AC_DAILY_TRN_DET.TAX_FLAG": {
+        "label_a": "سطر ضريبة",
+        "label_e": "Tax line"
+      }
+    },
+    "computed": {
+      "AC_DAILY_TRN.CREATE_USER_NAME": {
+        "sql": "(select max(u.users_name) from users u where u.users_code = t.create_user_code) || ' ' || to_char(t.create_date, 'DD/MM/YYYY')",
+        "label_a": "مدخل السجل",
+        "label_e": "Created by"
+      },
+      "AC_DAILY_TRN.UPDATE_USER_NAME": {
+        "sql": "(select max(u.users_name) from users u where u.users_code = t.update_user_code) || ' ' || to_char(t.update_date, 'DD/MM/YYYY')",
+        "label_a": "معدل السجل",
+        "label_e": "Modified by"
+      },
+      "AC_DAILY_TRN_DET.CUST_TAX_VAL": {
+        "sql": "case when nvl(t.tax_flag, 0) = 1 then abs(t.value) else abs(t.value) - t.cust_inv_val end",
+        "label_a": "قيمة الضريبة",
+        "label_e": "Tax value",
+        "type": "NUMBER"
+      },
+      "AC_DAILY_TRN_DET.CUST_TOT_VAL": {
+        "sql": "nvl(t.cust_inv_val, 0) + nvl(case when nvl(t.tax_flag, 0) = 1 then abs(t.value) else abs(t.value) - t.cust_inv_val end, 0)",
+        "label_a": "إجمالي الفاتورة",
+        "label_e": "Invoice total",
+        "type": "NUMBER"
+      },
+      "AC_DAILY_TRN_DET.CURRENT_LOC_F": {
+        "sql": "(select case when b.v > 0 then to_char(b.v, 'FM999G999G999G990D00') || case when app_sec.lang = 'en' then ' Debit' else ' مـديـن' end when b.v < 0 then to_char(-b.v, 'FM999G999G999G990D00') || case when app_sec.lang = 'en' then ' Credit' else ' دائــن' end end from (select get_account_bal_level(to_number(:G_COMPANY_CODE), t.account_number) v from dual) b)",
+        "label_a": "رصيد الحساب",
+        "label_e": "Account balance"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "TAX_IN",
+      "label_a": "انزال الضريبة",
+      "label_e": "Add tax line",
+      "condition": "app_act_ar.can_tax_line(:PAGE_ROWID) = 'Y'",
+      "params": [
+        {
+          "name": "LINE",
+          "label_a": "سطر القيد",
+          "label_e": "Entry line",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select d.seq || ' - ' || d.account_number || ' ' || d.entry_desc || ' (' || to_char(d.value, 'FM999G999G990D00') || ')' d, d.seq r from ac_daily_trn_det d, ac_daily_trn h where h.rowid = chartorowid(:PAGE_ROWID) and d.entry_year = h.entry_year and d.entry_type = h.entry_type and d.entry_no = h.entry_no order by d.seq"
+        }
+      ],
+      "call": "app_act_ar.tax_in(:PAGE_ROWID, :LINE)",
+      "message": "app_act_ar.last_message",
+      "success_a": "تم إضافة سطر الضريبة",
+      "success_e": "Tax line added"
+    },
+    {
+      "name": "TAX_NOTES",
+      "label_a": "تفاصيل الضريبة (قيمة الفاتورة)",
+      "label_e": "Tax details (invoice value)",
+      "condition": "app_act_ar.can_tax_line(:PAGE_ROWID) = 'Y'",
+      "params": [
+        {
+          "name": "LINE",
+          "label_a": "سطر القيد",
+          "label_e": "Entry line",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select d.seq || ' - ' || d.account_number || ' ' || d.entry_desc || ' (' || to_char(d.value, 'FM999G999G990D00') || ')' d, d.seq r from ac_daily_trn_det d, ac_daily_trn h where h.rowid = chartorowid(:PAGE_ROWID) and d.entry_year = h.entry_year and d.entry_type = h.entry_type and d.entry_no = h.entry_no order by d.seq"
+        }
+      ],
+      "call": "app_act_ar.tax_notes(:PAGE_ROWID, :LINE)",
+      "message": "app_act_ar.last_message",
+      "success_a": "تم",
+      "success_e": "Done"
+    },
+    {
+      "name": "POST_VOUCHER",
+      "label_a": "ترحيل القيد",
+      "label_e": "Post Entry",
+      "confirm_a": "هل تريد ترحيل القيد الحالي ؟",
+      "confirm_e": "Do You Want To Post Current Entry?",
+      "condition": "app_act_ar.can_post_voucher(:PAGE_ROWID) = 'Y'",
+      "call": "app_act_ar.post_voucher(:PAGE_ROWID)",
+      "message": "app_act_ar.last_message",
+      "success_a": "لقد تم ترحيل القيد بنجـــاح",
+      "success_e": "Entry Posted Successfuly"
+    }
+  ]
+}

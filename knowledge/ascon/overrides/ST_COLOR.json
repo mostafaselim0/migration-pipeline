@@ -1,0 +1,9 @@
+{
+ "pattern": "AUTO",
+ "notes": "colours: code max+1 (generated key); the code is a plain number field (no list of values: the own-key fallback picked MN_COLORS)",
+ "rules": {
+  "columns": {
+   "ST_COLOR.COLOR_CODE": {"lov": null}
+  }
+ }
+}

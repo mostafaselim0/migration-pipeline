@@ -1,0 +1,74 @@
+{
+  "pattern": "PROCESS",
+  "notes": "Supplier invoice adjustment (legacy grid of leaf suppliers with 'تسكين السدادات للمورد', 'اختيار الكل', delete = remove the allocations, recalc buttons): rebuilt from the SQL of VN_INVOICE_ADJESTMENT.fmx and the .fmb of its AR twin in app_rules3_vn.invoice_adjust.",
+  "proc": {
+    "procedure": "app_rules3_vn.invoice_adjust",
+    "description_a": "تسوية فواتير الموردين: عملية (تسكين السدادات للمورد) توزع القيمة غير المسواة من كل حركة مدينة للمورد (سداد، تسوية مدينة، مردود، رصيد افتتاحي مدين) على فواتير المورد المفتوحة بنفس العملة ونوع الدفعة، الأقدم أولاً، وتضيف سطور السداد على الحركة المدينة وتعيد حساب المتبقي. إذا ترك المورد فارغاً تتم التسوية لكل موردي القائمة (اختيار الكل). عملية (حذف تسكينات المورد) تحذف كل سطور السداد على الحركات المدينة للمورد وتعيد احتساب إجمالي الفواتير والمتبقي منها. الجدول يعرض رصيد كل مورد وإجمالي المتبقي من الفواتير والسدادات غير المسواة.",
+    "description_e": "Supplier invoice adjustment: 'Allocate the payments' spreads the unallocated value of every debit document of the supplier (payment, debit settlement, return, debit opening balance) over his open invoices of the same currency and payment type, oldest first, adding payment lines and recalculating the residuals; with no supplier chosen every supplier of the list is processed (select all). 'Remove the allocations' deletes all payment lines of the supplier's debit documents and recalculates the invoice totals and residuals. The table shows each supplier's balance, open invoices and unallocated payments.",
+    "params": [
+      {
+        "name": "ACTION",
+        "arg": "p_action",
+        "label_a": "العملية",
+        "label_e": "Action",
+        "type": "number",
+        "required": true,
+        "lov_sql": "select decode(:G_LANG, 'en', 'Allocate the payments of the supplier', 'تسكين السدادات للمورد') d, 1 r from dual union all select decode(:G_LANG, 'en', 'Remove the allocations of the supplier', 'حذف تسكينات المورد (ازالة السدادات)') d, 2 r from dual",
+        "default": "1",
+        "default_type": "STATIC"
+      },
+      {
+        "name": "SUPPLIER",
+        "arg": "p_supplier",
+        "label_a": "المورد (فارغ = كل الموردين)",
+        "label_e": "Supplier (empty = all)",
+        "type": "number",
+        "required": false,
+        "lov_sql": "select s.code || ' - ' || decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) d, s.code r from supplier s where nvl(s.supplier_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (s.code >= (select min(from_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)) and s.code <= (select max(to_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)))) order by s.code"
+      }
+    ],
+    "fixed_args": {
+      "p_company_code": "to_number(:G_COMPANY_CODE)",
+      "p_user_code": "to_number(:G_USER_CODE)",
+      "p_password_number": "to_number(:G_PASSWORD_NUMBER)"
+    },
+    "button_a": "تنفيذ",
+    "button_e": "Execute",
+    "confirm_a": "هل تريد تنفيذ العملية المختارة على الموردين؟",
+    "success_a": "تم التنفيذ بنجاح",
+    "preview_title_a": "الموردين: الرصيد والمتبقي من الفواتير والسدادات غير المسواة",
+    "preview_sql": "select s.code, decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) name_a, s.currency_code, app_rules3_vn.supp_balance(s.code) vn_bal, app_rules3_vn.supp_open_invoices(s.code) vn_inv_total, app_rules3_vn.supp_open_payments(s.code) open_payments from supplier s where nvl(s.supplier_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (s.code >= (select min(from_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)) and s.code <= (select max(to_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)))) and (nvl(to_number(v('P' || :APP_PAGE_ID || '_SUPPLIER')), -1) = -1 or s.code = nvl(to_number(v('P' || :APP_PAGE_ID || '_SUPPLIER')), -1)) and exists (select 1 from vn_maintrns m where m.supplier_id = s.code) order by s.code",
+    "preview_columns": [
+      {
+        "name": "CODE",
+        "label_a": "كود المورد",
+        "type": "NUMBER"
+      },
+      {
+        "name": "NAME_A",
+        "label_a": "اسم المورد",
+        "type": "STRING"
+      },
+      {
+        "name": "CURRENCY_CODE",
+        "label_a": "العملة",
+        "type": "NUMBER"
+      },
+      {
+        "name": "VN_BAL",
+        "label_a": "رصيد المورد",
+        "type": "NUMBER"
+      },
+      {
+        "name": "VN_INV_TOTAL",
+        "label_a": "إجمالي المتبقي من الفواتير",
+        "type": "NUMBER"
+      },
+      {
+        "name": "OPEN_PAYMENTS",
+        "label_a": "سدادات غير مسواة",
+        "type": "NUMBER"
+      }
+    ]
+  }
+}

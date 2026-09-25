@@ -1,0 +1,70 @@
+{
+  "pattern": "AUTO",
+  "notes": "AP transaction types: code required and > 0, effect / type compatibility, GL link settings (directions, voucher type, type / supplier / discount accounts, distinct accounts), definition locked once posted transactions exist, group filter (APP_RULES3_VN).",
+  "rules": {
+    "where": "(nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or ID in (select TRNS_ID from VN_TRNSTYPE_PASSWORD where FLAG = 1 and PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)))",
+    "key_expr": {
+      "VN_TRNSTYPE.ID": "app_rules3_vn.need_num('يجب إدخال حقل كود نوع الحركة', 'Field must be entered: transaction type code')"
+    },
+    "row_rules": {
+      "VN_TRNSTYPE": "if app_rules3_vn.is_form('VNTRNSTYPE') then\n  app_rules3_vn.trnstype_row(:new.id, :new.effect, :new.trns_type, :new.account_joint, :new.entry_type, :new.account_type, :new.supp_account_type, :new.disc_account_type, :new.account_no, :new.supplier_account, :new.disc_account, :new.currency_account, :new.cost_no, :new.cost_no2);\n  if updating and app_rules3_vn.chg(:new.effect, :old.effect) + app_rules3_vn.chg(:new.trns_type, :old.trns_type) + app_rules3_vn.chg(:new.desc_flag, :old.desc_flag) + app_rules3_vn.chg(:new.doc_flag, :old.doc_flag) + app_rules3_vn.chg(:new.description_a, :old.description_a) + app_rules3_vn.chg(:new.description_e, :old.description_e) + app_rules3_vn.chg(:new.account_no, :old.account_no) + app_rules3_vn.chg(:new.supplier_account, :old.supplier_account) + app_rules3_vn.chg(:new.disc_account, :old.disc_account) + app_rules3_vn.chg(:new.cost_no, :old.cost_no) + app_rules3_vn.chg(:new.cost_no2, :old.cost_no2) > 0 then\n    app_rules3_vn.trnstype_locked(:old.id);\n  end if;\nend if;"
+    },
+    "readonly": [
+      "VN_TRNSTYPE.LAST_SERIAL"
+    ],
+    "add_columns": {
+      "VN_TRNSTYPE.EFFECT": {
+        "label_a": "تأثير الحركة على المورد (0 مدين / 1 دائن)",
+        "label_e": "Effect on supplier (0 debit / 1 credit)"
+      },
+      "VN_TRNSTYPE.TRNS_TYPE": {
+        "label_a": "نوع الحركة (0 مشتريات / 1 دفعات / 3 مردودات / 4 تسوية / 5 أخرى)",
+        "label_e": "Kind (0 purchases / 1 payments / 3 returns / 4 settlement / 5 other)"
+      },
+      "VN_TRNSTYPE.DESC_FLAG": {
+        "label_a": "إظهار الشرح (1 الشرح / رقم المستند، 2 الشرح فقط، 3 إخفاء)",
+        "label_e": "Description (1 with doc no / 2 only / 3 hide)"
+      },
+      "VN_TRNSTYPE.ACCOUNT_TYPE": {
+        "label_a": "توجيه حساب الحركة (0 بدون / 1 المنطقة الرئيسية / 2 المنطقة الفرعية / 3 المورد / 4 نوع الحركة / 5 الحركة)",
+        "label_e": "Transaction account direction (0 .. 5)"
+      },
+      "VN_TRNSTYPE.SUPP_ACCOUNT_TYPE": {
+        "label_a": "توجيه حساب المورد (0 بدون / 1 المنطقة الرئيسية / 2 المنطقة الفرعية / 3 المورد / 4 نوع الحركة / 5 الحركة)",
+        "label_e": "Supplier account direction (0 .. 5)"
+      },
+      "VN_TRNSTYPE.DISC_ACCOUNT_TYPE": {
+        "label_a": "توجيه حساب الخصم (0 بدون / 1 المنطقة الرئيسية / 2 المنطقة الفرعية / 3 المورد / 4 نوع الحركة / 5 الحركة)",
+        "label_e": "Discount account direction (0 .. 5)"
+      },
+      "VN_TRNSTYPE.COST_NO_TYPE": {
+        "label_a": "توجيه مركز تكلفة 1 (0 بدون / 4 نوع الحركة / 5 الحركة)",
+        "label_e": "Cost centre 1 direction"
+      },
+      "VN_TRNSTYPE.COST_NO2_TYPE": {
+        "label_a": "توجيه مركز تكلفة 2 (0 بدون / 4 نوع الحركة / 5 الحركة)",
+        "label_e": "Cost centre 2 direction"
+      },
+      "VN_TRNSTYPE.COST_FLAG": {
+        "label_a": "مؤشر مركز التكلفة (8 بدون)",
+        "label_e": "Cost centre flag (8 none)"
+      },
+      "VN_TRNSTYPE.POST_TYPE": {
+        "label_a": "نوع الترحيل (1 قيد لكل حركة / 2 قيد لكل نوع حركة)",
+        "label_e": "Voucher per (1 transaction / 2 type)"
+      },
+      "VN_TRNSTYPE.SUPPLIER_TYPE": {
+        "label_a": "نوع المورد (1 مورد / 2 مقاول)",
+        "label_e": "Supplier kind (1 supplier / 2 contractor)"
+      },
+      "VN_TRNSTYPE.SUM_TRNS": {
+        "label_a": "حركة مجمعة",
+        "label_e": "Grouped transaction"
+      },
+      "VN_TRNSTYPE.DISC_TRNS": {
+        "label_a": "حركة خصومات",
+        "label_e": "Discount transaction"
+      }
+    }
+  }
+}

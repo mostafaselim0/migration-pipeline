@@ -1,0 +1,33 @@
+{
+  "pattern": "PROCESS",
+  "notes": "Legacy ACCLOSE (CLOSE_ENTRY_PROC/GET_BALANCE): closing entry (CLOSE_FLAG=1) reversing every income/expense leaf account balance per cost-centre pair up to the closing date against AC_BASIC.PROFIT_ACCT, then AC_BASIC.CLOSE_DATE; reproduced in app_proc_gl.create_closing_entry (recreates the existing 2025 closing entry line for line).",
+  "proc": {
+    "procedure": "app_proc_gl.create_closing_entry",
+    "description_a": "قيد الإقفال: ينشئ قيد إقفال بتاريخ الإقفال يُصفّر أرصدة جميع حسابات الإيرادات والمصروفات (على أدنى مستوى) لكل مركز تكلفة 1 و 2 حتى تاريخ الإقفال، ويحمّل الفرق (الربح أو الخسارة) على حساب الأرباح والخسائر المعرف فى بيانات النظام، ثم يصبح تاريخ الإقفال فى بيانات النظام هو التاريخ المدخل فلا يمكن إضافة أو تعديل أو إلغاء ترحيل قيود حتى هذا التاريخ. يجب أن يكون التاريخ بعد آخر تاريخ إقفال وألا يتجاوز تاريخ اليوم. تمنع القيود اليومية غير المرحلة على حسابات الإيرادات أو المصروفات فى الفترة عمل الإقفال، أما الحركات غير المرحلة فى الحسابات العامة أو العملاء أو الموردين أو المخازن فتظهر كتنبيه فقط. الجدول أدناه يعرض أطراف قيد الإقفال المتوقعة للتاريخ المدخل.",
+    "description_e": "Closing entry: creates a closing entry dated on the closing date that zeroes the balance of every income and expense account (lowest level) per cost centre 1 / 2 pair up to that date and puts the difference (profit or loss) on the profit account of the system parameters; the system closing date then becomes this date, so no entry can be added, changed or unposted up to it. The date must be after the last closing date and not in the future. Unposted daily entries on income or expense accounts in the period block the closing; unposted GL, customer, vendor or inventory transactions only give a warning. The table below shows the lines the closing entry would have for the date entered.",
+    "params": [
+      {"name": "ENTRY_YEAR", "arg": "p_entry_year", "label_a": "سنة قيد الإقفال", "label_e": "Closing entry year", "type": "number", "required": true,
+       "default": "app_proc_gl.current_year(to_number(:G_COMPANY_CODE))", "default_type": "EXPRESSION"},
+      {"name": "ENTRY_TYPE", "arg": "p_entry_type", "label_a": "رقم الحركة (اليومية)", "label_e": "Entry type (journal)", "type": "number", "required": true,
+       "lov_sql": "select t.entry_type || ' - ' || max(decode(:G_LANG, 'en', nvl(t.entry_desc_e, t.entry_desc), t.entry_desc)) d, t.entry_type r from ac_trn_codes t where app_proc_gl.type_allowed(t.entry_year, t.entry_type, to_number(:G_COMPANY_CODE), to_number(:G_PASSWORD_NUMBER)) = 1 group by t.entry_type order by t.entry_type"},
+      {"name": "CLOSE_DATE", "arg": "p_close_date", "label_a": "تاريـخ الإقفــال", "label_e": "Closing date", "type": "date", "required": true}
+    ],
+    "fixed_args": {"p_company_code": "to_number(:G_COMPANY_CODE)", "p_user_code": "to_number(:G_USER_CODE)",
+                   "p_password_number": "to_number(:G_PASSWORD_NUMBER)"},
+    "button_a": "إنشاء قيد الإقفال",
+    "button_e": "Create closing entry",
+    "confirm_a": "سيتم إنشاء قيد الإقفال وتغيير تاريخ الإقفال إلى التاريخ المدخل، ولا يمكن بعده إضافة أو تعديل قيود حتى هذا التاريخ. هل تريد الاستمرار؟",
+    "success_a": "تمت العملية.",
+    "preview_title_a": "أطراف قيد الإقفال المتوقعة لتاريخ الإقفال المدخل",
+    "preview_sql": "select p.seq, p.account_number, decode(:G_LANG, 'en', nvl(p.entry_desc_e, p.entry_desc), p.entry_desc) account_name, p.cost_code, p.cost_code2, case when p.value > 0 then p.value end debit, case when p.value < 0 then -p.value end credit from table(app_proc_gl.closing_preview(to_date(v('P' || :APP_PAGE_ID || '_CLOSE_DATE'), 'DD/MM/YYYY'), to_number(:G_COMPANY_CODE), to_number(:G_PASSWORD_NUMBER))) p order by p.seq",
+    "preview_columns": [
+      {"name": "SEQ", "label_a": "م", "type": "NUMBER"},
+      {"name": "ACCOUNT_NUMBER", "label_a": "رقم الحساب", "type": "NUMBER"},
+      {"name": "ACCOUNT_NAME", "label_a": "اسم الحساب", "type": "STRING"},
+      {"name": "COST_CODE", "label_a": "مركز التكلفة 1", "type": "NUMBER"},
+      {"name": "COST_CODE2", "label_a": "مركز التكلفة 2", "type": "NUMBER"},
+      {"name": "DEBIT", "label_a": "مدين", "type": "NUMBER"},
+      {"name": "CREDIT", "label_a": "دائن", "type": "NUMBER"}
+    ]
+  }
+}

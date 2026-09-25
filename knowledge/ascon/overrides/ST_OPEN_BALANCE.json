@@ -1,0 +1,204 @@
+{
+ "pattern": "AUTO",
+ "notes": "opening balance: types EFFECT 1 / TRNS_TYPE 8, lot found or created from the lot number and expiry date (GET_CONFG_ID); wave 3: expiry date on the lines, soft delete, totals, Excel load (APP_ACT_ST)",
+ "rules": {
+  "computed": {
+   "ST_TRNS_DET.ITEM_NAME": {"sql": "(select max(nvl(i.name_e, i.name_a)) from st_item i where i.item_group_code = t.group_code and i.item_code = t.item_code)", "label_a": "إســم الصنـــف", "label_e": "Item Nm"},
+   "ST_TRNS_DET.LINE_TOTAL_RYAL": {"sql": "t.unit_cost * t.quantity", "label_a": "الإجمالي ( الريال )", "label_e": "Tot. Cost ( SR )", "type": "NUMBER"}
+  },
+  "columns": {
+   "ST_TRNS_DET.EXPIRY_DATE": {"default": {"type": "EXPRESSION", "value": "to_char(add_months(sysdate, 12), 'DD/MM/YYYY')"}}
+  },
+  "where": "TRNS_TYPE_CODE in (select t.trns_type_code from st_trns_type t where t.effect = 1 and t.trns_type in (8)) and nvl(DELETE_FLAG, 0) = 0 and (:G_PASSWORD_NUMBER = 0 or TRNS_TYPE_CODE in (select tp.trns_type_code from st_trnstype_password tp where tp.password_number = :G_PASSWORD_NUMBER))",
+  "defaults": {
+   "ST_TRNS_MAST.TRNS_TYPE_CODE": {
+    "type": "EXPRESSION",
+    "value": "app_rules_st.default_type('ST_OPEN_BALANCE')"
+   },
+   "ST_TRNS_MAST.STORE_CODE": {
+    "type": "EXPRESSION",
+    "value": "app_rules_st.type_store(app_rules_st.default_type('ST_OPEN_BALANCE'))"
+   },
+   "ST_TRNS_MAST.DELETE_FLAG": {
+    "type": "STATIC",
+    "value": "0"
+   },
+   "ST_TRNS_MAST.POST_FLAG": {
+    "type": "STATIC",
+    "value": "0"
+   }
+  },
+  "validations": [
+   {
+    "name": "legacy header rules (type of the screen, CHECK_DATE, store, account, transfer, posted)",
+    "plsql": "return app_rules_st.val_trns('ST_OPEN_BALANCE', :PAGE_ROWID, :REQUEST, :PAGE_TRNS_TYPE_CODE, :PAGE_TRNS_DATE, :PAGE_STORE_CODE, :PAGE_DOC_NO, null, null, null, null, :PAGE_CURRENCY_CODE, :PAGE_CURRENCY_RATE);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "legacy commit rules (lines required, balances)",
+    "plsql": "app_rules_st.after_trns('ST_OPEN_BALANCE', :REQUEST, :PAGE_ROWID);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "row_rules": {
+   "ST_TRNS_MAST": "app_rules_st.mast_row(inserting, updating, :new.trns_type_code, :new.trns_serial, :new.trns_date, :new.store_code, :new.doc_no, :new.desc_a, :new.desc_e, :new.delete_flag, :new.post_flag, :new.account_number1, :new.trnsfer_type, :new.trnsfer_serial, :new.trnsfer_from_store, :new.trnsfer_to_store, :old.trns_date, :old.trnsfer_serial, :old.trnsfer_from_store, :old.store_code);",
+   "ST_TRNS_DET": "app_rules_st.det_row(inserting, updating, :new.trns_type_code, :new.trns_serial, :new.item_serial, :new.group_code, :new.item_code, :new.unit_code, :new.item_confg_id, :new.quantity, :new.bonus, :new.basic_qty, :new.unit_price, :new.unit_cost, :new.cost_flag, :new.lot_number, :new.expiry_date, :new.disc1_ratio, :old.group_code, :old.item_code, :old.unit_code, :old.item_confg_id, :old.quantity, :old.basic_qty, :old.unit_price, :old.unit_cost, :new.trnsfer_serial, :new.trnsfer_from_store, :new.trnsfer_to_store);"
+  },
+  "readonly": [
+   "ST_TRNS_MAST.TRNS_SERIAL",
+   "ST_TRNS_MAST.DATE_SERIAL",
+   "ST_TRNS_MAST.POST_FLAG",
+   "ST_TRNS_MAST.AC_ENTRY_NO",
+   "ST_TRNS_MAST.AC_ENTRY_YEAR",
+   "ST_TRNS_MAST.AC_ENTRY_TYPE"
+  ],
+  "hidden": [
+   "ST_TRNS_MAST.DATE_SERIAL",
+   "ST_TRNS_MAST.DELETE_FLAG",
+   "ST_TRNS_DET.BASIC_QTY",
+   "ST_TRNS_DET.COST_FLAG"
+  ],
+  "optional": [
+   "ST_TRNS_MAST.DATE_SERIAL",
+   "ST_TRNS_MAST.DELETE_FLAG",
+   "ST_TRNS_DET.BASIC_QTY",
+   "ST_TRNS_DET.COST_FLAG",
+   "ST_TRNS_DET.GROUP_CODE",
+   "ST_TRNS_DET.UNIT_CODE",
+   "ST_TRNS_DET.ITEM_CONFG_ID"
+  ],
+  "add_columns": {
+   "ST_TRNS_DET.EXPIRY_DATE": {
+    "label_a": "تاريخ الصلاحية",
+    "label_e": "Exp.Dt"
+   }
+  },
+  "soft_delete": {
+   "set": {
+    "DELETE_FLAG": "1"
+   },
+   "lines": "keep",
+   "check": "return app_act_st.obl_delete_check(:PAGE_ROWID);",
+   "message_a": "تم حذف المستند"
+  },
+  "info": [
+   {
+    "name": "QTY",
+    "label_a": "اجمالى",
+    "label_e": "Tot",
+    "sql": "select app_act_st.obl_totals(:PAGE_ROWID, 'QTY') from dual"
+   },
+   {
+    "name": "COST",
+    "label_a": "اجمالى التكلفة",
+    "label_e": "Tot. Cost",
+    "sql": "select app_act_st.obl_totals(:PAGE_ROWID, 'COST') from dual"
+   }
+  ]
+ },
+ "actions": [
+  {
+   "name": "LOT_LINE",
+   "label_a": "إضافة صنف بمحددات الشحنة",
+   "label_e": "Add an item with its lot parameters",
+   "condition": "app_act_st.obl_can_load(:PAGE_ROWID) = 'Y'",
+   "params": [
+    {
+     "name": "ITEM_CODE",
+     "label_a": "رقم الصنف",
+     "label_e": "Item code",
+     "type": "text",
+     "required": true,
+     "lov_sql": "select i.item_code || ' - ' || decode(:G_LANG, 'en', i.name_e, i.name_a) d, i.item_code r from st_item i where nvl(i.stop_flag, 0) = 0 and (nvl(:G_PASSWORD_NUMBER, 0) = 0 or i.item_group_code in (select gp.group_code from st_group_password gp where gp.password_number = :G_PASSWORD_NUMBER)) order by i.item_code"
+    },
+    {
+     "name": "UNIT_CODE",
+     "label_a": "الوحدة (فارغ = الوحدة الأساسية)",
+     "label_e": "Unit (empty = basic unit)",
+     "type": "number"
+    },
+    {
+     "name": "QTY",
+     "label_a": "الكمية",
+     "label_e": "Quantity",
+     "type": "number",
+     "required": true
+    },
+    {
+     "name": "LOT_NO",
+     "label_a": "رقم التشغيلة",
+     "label_e": "Lot number",
+     "type": "text",
+     "required": true
+    },
+    {
+     "name": "EXP_DATE",
+     "label_a": "تاريخ الصلاحية",
+     "label_e": "Expiry date",
+     "type": "date",
+     "required": true
+    },
+    {
+     "name": "PROD_DATE",
+     "label_a": "تاريخ الإنتاج",
+     "label_e": "Production date",
+     "type": "date",
+     "required": false
+    },
+    {
+     "name": "PRICE",
+     "label_a": "سعر البيع",
+     "label_e": "Sales price",
+     "type": "number",
+     "required": true
+    },
+    {
+     "name": "DISC",
+     "label_a": "نسبة الخصم",
+     "label_e": "Discount ratio",
+     "type": "number",
+     "required": false,
+     "default": "0",
+     "default_type": "STATIC"
+    },
+    {
+     "name": "COST",
+     "label_a": "تكلفة الوحدة",
+     "label_e": "Unit cost",
+     "type": "number",
+     "required": true
+    }
+   ],
+   "icon": "fa-plus",
+   "call": "app_act_st.obl_add_line(p_rowid => :PAGE_ROWID, p_item => :ITEM_CODE, p_unit => :UNIT_CODE, p_qty => :QTY, p_lot => :LOT_NO, p_expiry => :EXP_DATE, p_price => :PRICE, p_cost => :COST, p_disc => :DISC, p_prod => :PROD_DATE)",
+   "message": "app_act_st.last_message",
+   "success_a": "تم إضافة الصنف",
+   "success_e": "The item was added"
+  },
+  {
+   "name": "LOAD_EXCEL",
+   "label_a": "تحميل EXCEL",
+   "label_e": "Load from Excel",
+   "confirm_a": "هل تريد تحميل أصناف ملف الأكسل إلى هذه الحركة؟",
+   "confirm_e": "Load the items of the Excel file into this transaction?",
+   "condition": "app_act_st.obl_can_load(:PAGE_ROWID) = 'Y'",
+   "params": [
+    {
+     "name": "XLS_FILE",
+     "label_a": "ملف الأكسل (رقم المجموعة، رقم الصنف، رقم الوحدة، الكمية، رقم التشغيلة، تاريخ الصلاحية، سعر البيع، سعر التكلفة، تاريخ الإنتاج، نسبة الخصم؛ من الصف الثاني)",
+     "label_e": "Excel file (group, item code, unit code, quantity, lot number, expiry date, sales price, cost price, manufacturing date, discount ratio; from row 2)",
+     "type": "file",
+     "required": true,
+     "file_types": ".xlsx,.csv"
+    }
+   ],
+   "call": "app_act_st.obl_load_excel(p_rowid => :PAGE_ROWID, p_file => :XLS_FILE)",
+   "message": "app_act_st.last_message",
+   "icon": "fa-upload",
+   "success_a": "تم تحميل ملف الأكسل",
+   "success_e": "File loaded"
+  }
+ ]
+}

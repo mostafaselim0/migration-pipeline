@@ -1,0 +1,13 @@
+{
+ "pattern": "AUTO",
+ "notes": "units of measure: code max+1 (generated key), name required (.fmx 'يجب إدخال الإسم'); delete refused while items use the unit (APP_RULES3_ST_UNIT_BD)",
+ "rules": {
+  "columns": {
+   "ST_UNIT.UNIT_CODE": {"lov": null},
+   "ST_UNIT.NAME_A": {"required": true}
+  },
+  "row_rules": {
+   "ST_UNIT": "app_rules3_st.unit_row(:new.name_a);"
+  }
+ }
+}

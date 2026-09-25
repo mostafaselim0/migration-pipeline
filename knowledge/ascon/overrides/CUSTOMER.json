@@ -1,0 +1,243 @@
+{
+  "pattern": "AUTO",
+  "notes": "Customers file: code structure (12 digits, level, parent, leaf status), identity checks, telephones, required area / branch / class, locked fields once transactions exist, departments and salesmen, credit limits, delete rules, balances and activity panel (APP_RULES3_AR).",
+  "rules": {
+    "where": "(nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or CODE in (select CUSTOMER_CODE from AR_CUST_PASSWORD where PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)))",
+    "key_expr": {
+      "CUSTOMER.CODE": "app_rules3_ar.need_num('يجب إدخال رقم العميل', 'Enter the customer code')",
+      "AR_CUST_SALESMAN.SALESMAN_CODE": "app_rules3_ar.need_salesman_code",
+      "AR_CUST_RESP.RESP_CODE": "app_rules3_ar.next_cust_resp_code"
+    },
+    "row_rules": {
+      "CUSTOMER": "if app_rules3_ar.is_form('CUSTOMER') then app_rules3_ar.customer_row(inserting, :new.code, :old.code, :new.customer_level, :new.customer_status, :new.customer_type, :new.customer_id, :new.company_id, :new.company_registry_id, :new.telephone1, :new.telephone2, :new.telephone3, :new.fax, :new.day_no, :new.credit_limit, :new.stopflag, :new.stopdate, :new.stopreason, :new.mainarea_id, :old.mainarea_id, :new.subarea_id, :old.subarea_id, :new.cust_class, :new.account_no, :new.disc_account, :new.cost_code1, :new.cost_code2, :new.currency_code, :old.currency_code, :new.open_date, :old.open_date, :old.stopdate); end if;",
+      "AR_CUST_SALESMAN": "app_rules3_ar.cust_salesman_row(inserting, :new.customer_code, :new.ctgry_code, :new.salesman_code, :new.credit_limit, :old.salesman_code, :old.ctgry_code, :new.sales_mngr, :new.ctgry_mngr, :new.mrch_slsman);",
+      "AR_CUST_DSCNT": "app_rules3_ar.dscnt_row('CUST', inserting, :new.customer_code, :new.period_serial, :new.dscnt_prcnt, :new.dscnt_value);"
+    },
+    "validations": [
+      {
+        "name": "حدود الائتمان قبل الحفظ",
+        "plsql": "return app_rules3_ar.customer_snapshot(:PAGE_ROWID);",
+        "when": "SAVE"
+      }
+    ],
+    "after_save": [
+      {
+        "name": "العميل الرئيسي والأقسام وحدود الائتمان وحساب العميل",
+        "plsql": "begin\n  app_rules3_ar.customer_after(:REQUEST, :PAGE_ROWID, :PAGE_CODE, :PAGE_CUSTOMER_LEVEL);\nend;",
+        "when": "CREATE,SAVE,DELETE"
+      }
+    ],
+    "warnings": [
+      {
+        "name": "قسم العميل",
+        "when": "CREATE",
+        "plsql": "return app_rules3_ar.msg('لابد من ادخال قسم للعميل (بعد الحفظ في جدول الأقسام و المندوبين)', 'You Should Insert Dept. for Customer (after saving, in the departments and salesmen grid)');"
+      }
+    ],
+    "hidden": [
+      "CUSTOMER.REQ_CODE"
+    ],
+    "columns": {
+      "CUSTOMER.REQ_CODE": {
+        "lov": null
+      },
+      "CUSTOMER.MAINAREA_ID": {
+        "lov": "select id || ' - ' || name_a d, id r from ar_mainarea order by 2",
+        "widget": "SELECT"
+      },
+      "CUSTOMER.SUBAREA_ID": {
+        "lov": "select main_id || '/' || id || ' - ' || name_a d, id r from ar_subarea order by main_id, id"
+      },
+      "CUSTOMER.CUST_CLASS": {
+        "lov": "select serial || ' - ' || class_name d, serial r from ar_cust_class where nvl(dscnt_stop_flag, 0) = 0 order by 2",
+        "widget": "SELECT"
+      },
+      "CUSTOMER.ACCOUNT_NO": {
+        "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 order by 2"
+      },
+      "CUSTOMER.DISC_ACCOUNT": {
+        "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 order by 2"
+      },
+      "CUSTOMER.COST_CODE1": {
+        "lov": "select cost_code || ' - ' || cost_desc d, cost_code r from ac_cost_centers where nvl(cost_status, 0) = 1 order by 2"
+      }
+    },
+    "readonly": [
+      "CUSTOMER.CUSTOMER_LEVEL",
+      "CUSTOMER.CRN_BAL_TOTAL",
+      "AR_CUST_RESP.RESP_CODE"
+    ],
+    "add_columns": {
+      "CUSTOMER.CUSTOMER_TYPE": {
+        "label_a": "نوع العميل (0 فرد / 1 شركة)",
+        "label_e": "Customer type (0 person / 1 company)"
+      },
+      "CUSTOMER.RESPONSE_NAME_E": {
+        "label_a": "المسئول (لاتيني)",
+        "label_e": "Responsible (English)"
+      },
+      "CUSTOMER.CUST_GLN": {
+        "label_a": "رقم GLN",
+        "label_e": "GLN"
+      },
+      "CUSTOMER.INV_DUE_DAY_NO": {
+        "label_a": "أيام استحقاق الفاتورة",
+        "label_e": "Invoice due days"
+      },
+      "CUSTOMER.LAT": {
+        "label_a": "خط العرض",
+        "label_e": "Latitude"
+      },
+      "CUSTOMER.LON": {
+        "label_a": "خط الطول",
+        "label_e": "Longitude"
+      },
+      "CUSTOMER.NOLOC_FLAG": {
+        "label_a": "بدون موقع",
+        "label_e": "No location"
+      },
+      "CUSTOMER.TAX_NO": {
+        "label_a": "الرقم الضريبي",
+        "label_e": "Tax number"
+      },
+      "CUSTOMER.CASH_FLAG": {
+        "label_a": "عميل نقدي",
+        "label_e": "Cash customer"
+      },
+      "AR_CUST_RESP.RESP_CODE": {
+        "label_a": "مسلسل",
+        "label_e": "Serial"
+      },
+      "AR_CUST_RESP.RESP_NAME": {
+        "label_a": "الاسم عربي",
+        "label_e": "Arabic name"
+      },
+      "AR_CUST_RESP.RESP_NAME_E": {
+        "label_a": "الاسم لاتيني",
+        "label_e": "English name"
+      },
+      "AR_CUST_RESP.JOB_DESC": {
+        "label_a": "الوظيفة",
+        "label_e": "Job"
+      },
+      "AR_CUST_RESP.MOBILE_NO": {
+        "label_a": "الجوال",
+        "label_e": "Mobile"
+      },
+      "AR_CUST_RESP.CONTACT_FLAG": {
+        "label_a": "مسئول التواصل",
+        "label_e": "Contact person"
+      }
+    },
+    "info": [
+      {
+        "name": "BAL",
+        "label_a": "الرصـــــيد الجــــارى",
+        "label_e": "Current balance",
+        "sql": "select app_rules3_ar.cust_info(:PAGE_CODE, 'BAL') from dual"
+      },
+      {
+        "name": "IND",
+        "label_a": "مدين / دائن",
+        "label_e": "Debit / credit",
+        "sql": "select app_rules3_ar.cust_info(:PAGE_CODE, 'IND') from dual"
+      },
+      {
+        "name": "BAL_LOC",
+        "label_a": "الرصيد ( ريال )",
+        "label_e": "Balance (local currency)",
+        "sql": "select app_rules3_ar.cust_info(:PAGE_CODE, 'BAL_LOC') from dual"
+      },
+      {
+        "name": "BEG",
+        "label_a": "الرصــــيد الإفتتـــاحى",
+        "label_e": "Opening balance",
+        "sql": "select app_rules3_ar.cust_info(:PAGE_CODE, 'BEG') from dual"
+      },
+      {
+        "name": "FIRST",
+        "label_a": "تاريخ اول فاتورة",
+        "label_e": "First invoice date",
+        "sql": "select app_rules3_ar.cust_info(:PAGE_CODE, 'FIRST') from dual"
+      },
+      {
+        "name": "LAST",
+        "label_a": "تاريخ اخر فاتورة",
+        "label_e": "Last invoice date",
+        "sql": "select app_rules3_ar.cust_info(:PAGE_CODE, 'LAST') from dual"
+      },
+      {
+        "name": "DAYS",
+        "label_a": "فترة التعامل (يوم)",
+        "label_e": "Dealing period (days)",
+        "sql": "select app_rules3_ar.cust_info(:PAGE_CODE, 'DAYS') from dual"
+      },
+      {
+        "name": "SALES",
+        "label_a": "المبيعات حتى تاريخه",
+        "label_e": "Sales to date",
+        "sql": "select app_rules3_ar.cust_info(:PAGE_CODE, 'SALES') from dual"
+      },
+      {
+        "name": "RET",
+        "label_a": "المرتجعات حتى تاريخه",
+        "label_e": "Returns to date",
+        "sql": "select app_rules3_ar.cust_info(:PAGE_CODE, 'RETURNS') from dual"
+      },
+      {
+        "name": "AVGSM",
+        "label_a": "متوسط المبيعات حتى تاريخه(شهري)",
+        "label_e": "Average monthly sales",
+        "sql": "select app_rules3_ar.cust_info(:PAGE_CODE, 'AVG_SALES_M') from dual"
+      },
+      {
+        "name": "AVGRM",
+        "label_a": "متوسط المرتجع حتى تاريخه(شهري)",
+        "label_e": "Average monthly returns",
+        "sql": "select app_rules3_ar.cust_info(:PAGE_CODE, 'AVG_RET_M') from dual"
+      },
+      {
+        "name": "AVGSD",
+        "label_a": "متوسط المبيعات (يومي)",
+        "label_e": "Average daily sales",
+        "sql": "select app_rules3_ar.cust_info(:PAGE_CODE, 'AVG_SALES_D') from dual"
+      },
+      {
+        "name": "AVGRD",
+        "label_a": "متوسط المرتجع (يومي)",
+        "label_e": "Average daily returns",
+        "sql": "select app_rules3_ar.cust_info(:PAGE_CODE, 'AVG_RET_D') from dual"
+      },
+      {
+        "name": "COLL",
+        "label_a": "التحصيلات حتى تاريخه",
+        "label_e": "Collections to date",
+        "sql": "select app_rules3_ar.cust_info(:PAGE_CODE, 'COLL') from dual"
+      },
+      {
+        "name": "AVGCD",
+        "label_a": "متوسط التحصيل اليومي",
+        "label_e": "Average daily collection",
+        "sql": "select app_rules3_ar.cust_info(:PAGE_CODE, 'AVG_COLL_D') from dual"
+      },
+      {
+        "name": "AREA",
+        "label_a": "المنطقـة / الفـرع",
+        "label_e": "Area / branch",
+        "sql": "select max(decode(:G_LANG, 'en', nvl(m.name_e, m.name_a), m.name_a) || ' / ' || decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a)) from ar_mainarea m, ar_subarea s where m.id = to_number(:PAGE_MAINAREA_ID) and s.main_id (+) = m.id and s.id (+) = to_number(:PAGE_SUBAREA_ID)"
+      },
+      {
+        "name": "CLASS",
+        "label_a": "فئة العميل",
+        "label_e": "Customer class",
+        "sql": "select max(decode(:G_LANG, 'en', nvl(class_name_e, class_name), class_name)) from ar_cust_class where serial = to_number(:PAGE_CUST_CLASS)"
+      },
+      {
+        "name": "ACC",
+        "label_a": "حساب العميل / حساب الخصم",
+        "label_e": "Customer / discount account",
+        "sql": "select max(decode(:G_LANG, 'en', nvl(a.account_name_e, a.account_name), a.account_name)) || ' / ' || max(decode(:G_LANG, 'en', nvl(d.account_name_e, d.account_name), d.account_name)) from dual left join ac_master a on a.account_number = to_number(:PAGE_ACCOUNT_NO) left join ac_master d on d.account_number = to_number(:PAGE_DISC_ACCOUNT)"
+      }
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "pattern": "AUTO",
+  "notes": "Customer complaints: serial max+1 per customer and date, customer must be active, complaint code must exist and is required, repeated code refused (APP_RULES3_AR).",
+  "rules": {
+    "key_expr": {
+      "COMPLAINT_CUSTOMER_DETAIL.COMPLAINT_CODE": "app_rules3_ar.need_num('خطء في رقم المشكلة', 'Enter the complaint code')"
+    },
+    "row_rules": {
+      "COMPLAINT_CUSTOMER_MASTER": "app_rules3_ar.complaint_mast_row(:new.complaint_customer_m_code);",
+      "COMPLAINT_CUSTOMER_DETAIL": "app_rules3_ar.complaint_det_row(:new.complaint_code);"
+    },
+    "info": [
+      {
+        "name": "CUST",
+        "label_a": "اسم العميل",
+        "label_e": "Customer name",
+        "sql": "select max(decode(:G_LANG, 'en', nvl(name_e, name_a), name_a)) from customer where code = to_number(:PAGE_COMPLAINT_CUSTOMER_M_CODE)"
+      }
+    ]
+  }
+}

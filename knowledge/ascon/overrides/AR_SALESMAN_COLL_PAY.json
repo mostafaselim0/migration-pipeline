@@ -1,0 +1,281 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "AR_SLS_COLL_MAST"
+  },
+  "details": [
+    {
+      "table": "AR_SLS_COLL_DET",
+      "join": [
+        [
+          "SERIAL",
+          "SERIAL"
+        ],
+        [
+          "SALESMAN_ID",
+          "SALESMAN_ID"
+        ]
+      ],
+      "title_a": "سدادات العملاء (1) وسندات القبض (0)",
+      "title_e": "Customer payments (1) and cash-box receipts (0)"
+    },
+    {
+      "table": "AR_SLS_COLL_TRNSFER",
+      "join": [
+        [
+          "SERIAL",
+          "SERIAL"
+        ],
+        [
+          "SALESMAN_ID",
+          "SALESMAN_ID"
+        ]
+      ],
+      "title_a": "حركات الايداعات البنكية للمندوب",
+      "title_e": "Salesman bank deposits"
+    }
+  ],
+  "where": null,
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Linking the salesmen's collections (customer payments collected by mobile) with the cash-box receipts and bank deposits (AR_SLS_COLL_MAST / _DET / _TRNSFER); three load buttons and the balance check; the generated grid on AR_SALESMAN_PASSWORD was corrected; rules in APP_RULES3_AR.",
+  "rules": {
+    "where": "(nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or SALESMAN_ID in (select SALESMAN_CODE from AR_SALESMAN_PASSWORD where PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)))",
+    "key_expr": {
+      "AR_SLS_COLL_MAST.SERIAL": "app_rules3_ar.next_coll_serial(:new.salesman_id)",
+      "AR_SLS_COLL_MAST.SALESMAN_ID": "app_rules3_ar.need_num('يجب إدخال المندوب', 'Enter the salesman')"
+    },
+    "row_rules": {
+      "AR_SLS_COLL_MAST": "app_rules3_ar.coll_mast_row(inserting, :new.salesman_id, :new.trns_date, :old.trns_date, :new.doc_no, :new.notes);",
+      "AR_SLS_COLL_DET": "app_rules3_ar.coll_det_row(inserting, :new.salesman_id, :new.serial, :new.ar_flag, :new.ar_trns_id, :new.ar_mainarea_id, :new.ar_subarea_id, :new.ar_trns_serial, :new.rp_trns_id, :new.rp_trns_serial, :new.choose_flag, :old.choose_flag, :new.trns_value, :new.ar_doc_no, :new.rp_doc_no);",
+      "AR_SLS_COLL_TRNSFER": "app_rules3_ar.coll_trf_row(inserting, :new.salesman_id, :new.serial, :new.mob_trns_seq, :new.mob_trns_value, :new.mob_trns_date, :new.mob_bank_code, :new.mob_branch_code, :new.mob_pay_type);"
+    },
+    "after_save": [
+      {
+        "name": "الحركة غير متوازنة",
+        "plsql": "begin\n  app_rules3_ar.coll_balance(:PAGE_ROWID);\nend;",
+        "when": "CREATE,SAVE"
+      }
+    ],
+    "defaults": {
+      "AR_SLS_COLL_MAST.TRNS_DATE": {
+        "type": "EXPRESSION",
+        "value": "to_char(sysdate, 'DD/MM/YYYY')"
+      },
+      "AR_SLS_COLL_DET.AR_FLAG": {
+        "type": "STATIC",
+        "value": "1"
+      },
+      "AR_SLS_COLL_DET.CHOOSE_FLAG": {
+        "type": "STATIC",
+        "value": "0"
+      }
+    },
+    "columns": {
+      "AR_SLS_COLL_MAST.SALESMAN_ID": {
+        "lov": "select code || ' - ' || name_a d, code r from salesman where (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or code in (select salesman_code from ar_salesman_password where password_number = to_number(:G_PASSWORD_NUMBER))) order by 2",
+        "readonly_after_insert": true
+      },
+      "AR_SLS_COLL_DET.AR_FLAG": {
+        "static": [
+          [
+            "سداد عميل",
+            "1"
+          ],
+          [
+            "سند قبض",
+            "0"
+          ]
+        ],
+        "readonly_after_insert": true
+      },
+      "AR_SLS_COLL_DET.CHOOSE_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      }
+    },
+    "optional": [
+      "AR_SLS_COLL_MAST.SERIAL",
+      "AR_SLS_COLL_DET.DET_SERIAL",
+      "AR_SLS_COLL_TRNSFER.DET_SERIAL"
+    ],
+    "readonly": [
+      "AR_SLS_COLL_MAST.SERIAL",
+      "AR_SLS_COLL_DET.DET_SERIAL",
+      "AR_SLS_COLL_DET.AR_DOC_NO",
+      "AR_SLS_COLL_DET.RP_DOC_NO",
+      "AR_SLS_COLL_TRNSFER.DET_SERIAL",
+      "AR_SLS_COLL_TRNSFER.MOB_TRNS_DATE",
+      "AR_SLS_COLL_TRNSFER.MOB_BANK_CODE",
+      "AR_SLS_COLL_TRNSFER.MOB_BRANCH_CODE",
+      "AR_SLS_COLL_TRNSFER.MOB_PAY_TYPE"
+    ],
+    "add_columns": {
+      "AR_SLS_COLL_MAST.SERIAL": {
+        "label_a": "مسلسل",
+        "label_e": "Serial"
+      },
+      "AR_SLS_COLL_MAST.SALESMAN_ID": {
+        "label_a": "المندوب",
+        "label_e": "Salesman"
+      },
+      "AR_SLS_COLL_MAST.TRNS_DATE": {
+        "label_a": "تاريخ الحركة",
+        "label_e": "Date"
+      },
+      "AR_SLS_COLL_MAST.DOC_NO": {
+        "label_a": "رقم المستند",
+        "label_e": "Document no."
+      },
+      "AR_SLS_COLL_MAST.NOTES": {
+        "label_a": "البيان",
+        "label_e": "Description"
+      },
+      "AR_SLS_COLL_MAST.REMARKS": {
+        "label_a": "ملاحظات",
+        "label_e": "Remarks"
+      },
+      "AR_SLS_COLL_DET.AR_FLAG": {
+        "label_a": "النوع (1 سداد عميل / 0 سند قبض)",
+        "label_e": "Type (1 customer payment / 0 receipt)"
+      },
+      "AR_SLS_COLL_DET.DET_SERIAL": {
+        "label_a": "مسلسل",
+        "label_e": "Serial"
+      },
+      "AR_SLS_COLL_DET.AR_TRNS_ID": {
+        "label_a": "رقم الحركة",
+        "label_e": "Transaction type"
+      },
+      "AR_SLS_COLL_DET.AR_MAINAREA_ID": {
+        "label_a": "المنطقة",
+        "label_e": "Area"
+      },
+      "AR_SLS_COLL_DET.AR_SUBAREA_ID": {
+        "label_a": "الفــرع",
+        "label_e": "Branch"
+      },
+      "AR_SLS_COLL_DET.AR_TRNS_SERIAL": {
+        "label_a": "مسلسل الحركة",
+        "label_e": "Transaction serial"
+      },
+      "AR_SLS_COLL_DET.AR_DOC_NO": {
+        "label_a": "رقم المستند",
+        "label_e": "Document no."
+      },
+      "AR_SLS_COLL_DET.RP_TRNS_ID": {
+        "label_a": "نوع حركة القبض",
+        "label_e": "Receipt type"
+      },
+      "AR_SLS_COLL_DET.RP_TRNS_SERIAL": {
+        "label_a": "مسلسل سند القبض",
+        "label_e": "Receipt serial"
+      },
+      "AR_SLS_COLL_DET.RP_DOC_NO": {
+        "label_a": "رقم سند القبض",
+        "label_e": "Receipt no."
+      },
+      "AR_SLS_COLL_DET.TRNS_VALUE": {
+        "label_a": "اجمالى الحركة / مبلغ الخصم من السند",
+        "label_e": "Value"
+      },
+      "AR_SLS_COLL_DET.CHOOSE_FLAG": {
+        "label_a": "اختيار",
+        "label_e": "Chosen"
+      },
+      "AR_SLS_COLL_TRNSFER.DET_SERIAL": {
+        "label_a": "مسلسل",
+        "label_e": "Serial"
+      },
+      "AR_SLS_COLL_TRNSFER.MOB_TRNS_SEQ": {
+        "label_a": "مسلسل الحركة",
+        "label_e": "Deposit no."
+      },
+      "AR_SLS_COLL_TRNSFER.MOB_TRNS_DATE": {
+        "label_a": "تاريخ الحركة",
+        "label_e": "Date"
+      },
+      "AR_SLS_COLL_TRNSFER.MOB_TRNS_VALUE": {
+        "label_a": "مبلغ الخصم من السند",
+        "label_e": "Value"
+      },
+      "AR_SLS_COLL_TRNSFER.MOB_BANK_CODE": {
+        "label_a": "رقم البنك",
+        "label_e": "Bank"
+      },
+      "AR_SLS_COLL_TRNSFER.MOB_BRANCH_CODE": {
+        "label_a": "رقم الفرع",
+        "label_e": "Branch"
+      },
+      "AR_SLS_COLL_TRNSFER.MOB_PAY_TYPE": {
+        "label_a": "نوع السداد (0 نقدى / 1 شيكات / 2 حوالات)",
+        "label_e": "Pay type (0 cash / 1 cheque / 2 transfer)"
+      }
+    },
+    "info": [
+      {
+        "name": "AR",
+        "label_a": "إجمالى قيمة الحركات المختارة",
+        "label_e": "Chosen payments",
+        "sql": "select to_char(app_rules3_ar.coll_total(to_number(:PAGE_SALESMAN_ID), to_number(:PAGE_SERIAL), 'AR'), 'FM999G999G999G990D00') from dual"
+      },
+      {
+        "name": "ARN",
+        "label_a": "إجمالى عدد الحركات المختارة",
+        "label_e": "Chosen payments count",
+        "sql": "select to_char(app_rules3_ar.coll_total(to_number(:PAGE_SALESMAN_ID), to_number(:PAGE_SERIAL), 'ARN'), 'FM999G999G999G990D00') from dual"
+      },
+      {
+        "name": "RP",
+        "label_a": "إجمالى قيمة سندات القبض",
+        "label_e": "Cash-box receipts",
+        "sql": "select to_char(app_rules3_ar.coll_total(to_number(:PAGE_SALESMAN_ID), to_number(:PAGE_SERIAL), 'RP'), 'FM999G999G999G990D00') from dual"
+      },
+      {
+        "name": "TRF",
+        "label_a": "إجمالى قيمة الايداعات البنكية",
+        "label_e": "Bank deposits",
+        "sql": "select to_char(app_rules3_ar.coll_total(to_number(:PAGE_SALESMAN_ID), to_number(:PAGE_SERIAL), 'TRF'), 'FM999G999G999G990D00') from dual"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "name": "LOAD_AR",
+      "label_a": "انزال سدادات العملاء",
+      "label_e": "Load customer payments",
+      "confirm_a": "هل تريد انزال سدادات العملاء النقدية غير المربوطة للمندوب؟",
+      "confirm_e": "Load the salesman's unlinked cash customer payments?",
+      "call": "app_rules3_ar.coll_load_ar(:PAGE_ROWID)",
+      "success_a": "تم انزال سدادات العملاء",
+      "success_e": "Customer payments loaded",
+      "icon": "fa-download"
+    },
+    {
+      "name": "LOAD_RP",
+      "label_a": "انزال سندات القبض",
+      "label_e": "Load cash-box receipts",
+      "confirm_a": "هل تريد انزال سندات قبض الصناديق المتبقية للمندوب؟",
+      "confirm_e": "Load the salesman's remaining cash-box receipts?",
+      "call": "app_rules3_ar.coll_load_rp(:PAGE_ROWID)",
+      "success_a": "تم انزال سندات القبض",
+      "success_e": "Receipts loaded",
+      "icon": "fa-download"
+    },
+    {
+      "name": "LOAD_MOB",
+      "label_a": "انزال الايداعات البنكية",
+      "label_e": "Load bank deposits",
+      "confirm_a": "هل تريد انزال الايداعات البنكية المعتمدة المتبقية للمندوب؟",
+      "confirm_e": "Load the salesman's remaining approved bank deposits?",
+      "call": "app_rules3_ar.coll_load_mob(:PAGE_ROWID)",
+      "success_a": "تم انزال الايداعات البنكية",
+      "success_e": "Bank deposits loaded",
+      "icon": "fa-download"
+    }
+  ]
+}

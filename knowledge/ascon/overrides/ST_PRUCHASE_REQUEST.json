@@ -1,0 +1,156 @@
+{
+ "pattern": "AUTO",
+ "notes": "Purchase requests (PR_ORDER_REQUEST, types EFFECT 7 / TRNS_TYPE 13; unused, no types configured): numbering (DATE_SERIAL per store/date), store from type, offline-branch check, BASIC_QTY / supplier derivations, lock of converted lines (APP_RULES_SA); actions TO_PO / TO_RFQ = legacy buttons 'عمل أمر شراء' / 'عمل طلب عرض أسعار' (APP_CONV) Wave 3b: request-type and order-type lists, supplier and unit lists, item name and the item's outstanding purchase quantity (CHK_OUTSTANDING_QTY formula) on each line.",
+ "rules": {
+  "where": "TRNS_TYPE_CODE IN (SELECT T.TRNS_TYPE_CODE FROM ST_TRNS_TYPE T WHERE T.EFFECT = 7 AND T.TRNS_TYPE = 13) AND (NVL(:G_PASSWORD_NUMBER,0) = 0 OR TRNS_TYPE_CODE IN (SELECT TP.TRNS_TYPE_CODE FROM ST_TRNSTYPE_PASSWORD TP WHERE TP.PASSWORD_NUMBER = :G_PASSWORD_NUMBER))",
+  "defaults": {
+   "PR_ORDER_REQUEST.TRNS_TYPE_CODE": {
+    "type": "SQL_QUERY",
+    "value": "select app_rules_sa.first_type('PRQ') from dual"
+   }
+  },
+  "readonly": [
+   "PR_ORDER_REQUEST.DATE_SERIAL",
+   "PR_ORDER_DET_REQUEST.BASIC_QTY"
+  ],
+  "optional": [
+   "PR_ORDER_REQUEST.DATE_SERIAL",
+   "PR_ORDER_DET_REQUEST.BASIC_QTY",
+   "PR_ORDER_DET_REQUEST.GROUP_CODE",
+   "PR_ORDER_DET_REQUEST.UNIT_CODE"
+  ],
+  "row_rules": {
+   "PR_ORDER_REQUEST": "app_rules_sa.prq_mast_row(inserting, :new.trns_type_code, :new.trns_serial, :new.req_date, :new.date_serial, :new.store_code);",
+   "PR_ORDER_DET_REQUEST": "app_rules_sa.prq_det_row(inserting, :new.trns_type_code, :new.trns_serial, :new.item_serial, :new.group_code, :new.item_code, :new.unit_code, :new.quantity, :new.basic_qty, :new.supp_code, :new.req_date, :new.date_serial, :old.group_code, :old.item_code, :old.unit_code, :old.quantity);"
+  },
+  "validations": [
+   {
+    "name": "قواعد طلب الشراء",
+    "when": "CREATE,SAVE",
+    "plsql": "return app_rules_sa.prq_validate(:REQUEST, :PAGE_ROWID, :PAGE_TRNS_TYPE_CODE, :PAGE_REQ_DATE, :PAGE_STORE_CODE);"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "أصناف طلب الشراء",
+    "when": "CREATE,SAVE",
+    "plsql": "app_rules_sa.prq_after_save(:REQUEST, :PAGE_ROWID);"
+   }
+  ],
+  "info": [
+   {
+    "name": "OUTSTANDING",
+    "label_a": "كميات أوامر شراء لم يتم إستلامها",
+    "label_e": "Purchase-order quantities not received",
+    "sql": "select app_act_pr.prq_outstanding(:PAGE_ROWID) from dual"
+   }
+  ],
+  "columns": {
+   "PR_ORDER_REQUEST.TRNS_TYPE_CODE": {
+    "widget": "SELECT",
+    "lov": "select trns_type_code || ' - ' || desc_a d, trns_type_code r from st_trns_type where effect = 7 and trns_type = 13 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or trns_type_code in (select tp.trns_type_code from st_trnstype_password tp where tp.flag = 1 and tp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2"
+   },
+   "PR_ORDER_REQUEST.REQUISITION_TYPE": {
+    "widget": "SELECT",
+    "lov": "select serial || ' - ' || nvl(name_a, name_e) d, serial r from st_pr_order_types order by 2"
+   },
+   "PR_ORDER_DET_REQUEST.UNIT_CODE": {
+    "widget": "SELECT",
+    "cascade": [
+     "ITEM_CODE",
+     "GROUP_CODE"
+    ],
+    "lov": "select u.unit_code || ' - ' || u.name_a || decode(iu.basic_unit, 1, ' (وحدة أساسية)', '') d, u.unit_code r from st_item_unit iu, st_unit u where iu.item_code = :PAGE_ITEM_CODE and (iu.group_code = :PAGE_GROUP_CODE or :PAGE_GROUP_CODE is null) and iu.unit_code = u.unit_code order by 2"
+   },
+   "PR_ORDER_DET_REQUEST.SUPP_CODE": {
+    "widget": "POPUP",
+    "lov": "select s.code || ' - ' || s.name_a d, s.code r from supplier s where nvl(s.stopflag, 0) = 0 and nvl(s.supplier_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (s.code >= (select max(from_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)) and s.code <= (select max(to_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)))) order by 2"
+   },
+   "PR_ORDER_SRVC_REQUEST.SUPP_CODE_SRVC": {
+    "widget": "POPUP",
+    "lov": "select s.code || ' - ' || s.name_a d, s.code r from supplier s where nvl(s.stopflag, 0) = 0 and nvl(s.supplier_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (s.code >= (select max(from_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)) and s.code <= (select max(to_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)))) order by 2"
+   },
+   "PR_ORDER_ASST_REQUEST.SUPP_CODE_ASST": {
+    "widget": "POPUP",
+    "lov": "select s.code || ' - ' || s.name_a d, s.code r from supplier s where nvl(s.stopflag, 0) = 0 and nvl(s.supplier_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (s.code >= (select max(from_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)) and s.code <= (select max(to_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)))) order by 2"
+   }
+  },
+  "computed": {
+   "PR_ORDER_DET_REQUEST.ITEM_NAME_A": {
+    "sql": "(select max(nvl(i.name_a, i.name_e)) from st_item i where i.item_code = t.item_code and i.item_group_code = t.group_code)",
+    "label_a": "اسم الصنف",
+    "label_e": "Item name"
+   },
+   "PR_ORDER_DET_REQUEST.OUTSTANDING_QTY": {
+    "sql": "((select nvl(sum(o.quantity), 0) from pr_order_det o where o.group_code = t.group_code and o.item_code = t.item_code) - (select nvl(sum(nvl(ld.income_quantity, 0)), 0) from pr_income_lot_det ld, pr_income_lot lm where ld.trns_type_code = lm.trns_type_code and ld.trns_serial = lm.trns_serial and ld.group_code = t.group_code and ld.item_code = t.item_code))",
+    "label_a": "كمية لم يتم إستلامها",
+    "label_e": "Outstanding quantity",
+    "type": "NUMBER"
+   }
+  }
+ },
+ "actions": [
+  {
+   "name": "TO_PO",
+   "label_a": "عمل أمر شراء",
+   "label_e": "Make purchase order",
+   "confirm_a": "هل تريد عمل أوامر شراء للأصناف المختارة؟ يتم عمل أمر شراء لكل مورد، أو تضاف الأصناف إلى أمر الشراء المفتوح (غير المعتمد) لنفس المورد.",
+   "confirm_e": "Create purchase orders for the chosen items? One order per supplier; the items are added to the open (unconfirmed) order of the same supplier when one exists.",
+   "condition": "app_conv.can_prq_to_order(:PAGE_ROWID) = 'Y'",
+   "params": [
+    {
+     "name": "TRNS_DATE2",
+     "label_a": "تاريخ أمر الشراء",
+     "label_e": "Purchase order date",
+     "type": "date",
+     "required": true,
+     "default": "to_char(sysdate, 'DD/MM/YYYY')",
+     "default_type": "EXPRESSION"
+    },
+    {
+     "name": "LINES",
+     "label_a": "الأصناف المختارة: أرقام الأصناف مفصولة بفاصلة (فارغ = كل الأصناف)",
+     "label_e": "Chosen items: item codes separated by commas (empty = all items)",
+     "type": "text",
+     "required": false
+    }
+   ],
+   "call": "app_conv.prq_to_order(p_rowid => :PAGE_ROWID, p_date => :TRNS_DATE2, p_lines => :LINES)",
+   "message": "app_conv.last_message",
+   "target_form": "PR_ORDER",
+   "success_a": "تم عمل أوامر الشراء (أمر لكل مورد)، ويعرض أول أمر شراء",
+   "success_e": "Purchase orders created (one per supplier); the first one is shown"
+  },
+  {
+   "name": "TO_RFQ",
+   "label_a": "عمل طلب عرض أسعار",
+   "label_e": "Make request for quotation",
+   "confirm_a": "هل تريد عمل طلب عرض أسعار من الموردين للأصناف المختارة؟",
+   "confirm_e": "Create a request for quotation for the chosen items?",
+   "condition": "app_conv.can_prq_to_rfq(:PAGE_ROWID) = 'Y'",
+   "params": [
+    {
+     "name": "TRNS_DATE2",
+     "label_a": "تاريخ طلب عرض الأسعار",
+     "label_e": "Request for quotation date",
+     "type": "date",
+     "required": true,
+     "default": "to_char(sysdate, 'DD/MM/YYYY')",
+     "default_type": "EXPRESSION"
+    },
+    {
+     "name": "LINES",
+     "label_a": "الأصناف المختارة: أرقام الأصناف مفصولة بفاصلة (فارغ = كل الأصناف)",
+     "label_e": "Chosen items: item codes separated by commas (empty = all items)",
+     "type": "text",
+     "required": false
+    }
+   ],
+   "call": "app_conv.prq_to_rfq(p_rowid => :PAGE_ROWID, p_date => :TRNS_DATE2, p_lines => :LINES)",
+   "message": "app_conv.last_message",
+   "target_form": "PR_MR",
+   "success_a": "تم عمل طلب عرض الأسعار",
+   "success_e": "The request for quotation was created"
+  }
+ ]
+}

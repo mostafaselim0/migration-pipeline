@@ -1,0 +1,52 @@
+{
+ "pattern": "AUTO",
+ "notes": "stock system parameters (ST_BASIC.fmx): a single record, maximum items per document > 0 or empty, 'continue?' alerts when document flags change while documents exist, when the assembled-item flag changes while assembled items have movements and when a group flag (expiry / size / colour) is switched off while groups use it; the flags without GN_FORM_ITEM prompts are added to the form",
+ "rules": {
+  "validations": [
+   {
+    "name": "سجل واحد لمؤشرات النظام والحد الأقصى للأصناف",
+    "plsql": "return app_rules3_st.val_basic(:PAGE_ROWID, :REQUEST, :PAGE_TRNS_MAX_ITEMS);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "warnings": [
+   {"name": "SINGLE_ITEM", "plsql": "return app_rules3_st.basic_warning(:PAGE_ROWID, 'SINGLE_ITEM', :PAGE_SINGLE_ITEM);", "when": "SAVE"},
+   {"name": "POST_TYPE", "plsql": "return app_rules3_st.basic_warning(:PAGE_ROWID, 'POST_TYPE', :PAGE_POST_TYPE);", "when": "SAVE"},
+   {"name": "DOC_REPEAT", "plsql": "return app_rules3_st.basic_warning(:PAGE_ROWID, 'DOC_REPEAT', :PAGE_DOC_REPEAT);", "when": "SAVE"},
+   {"name": "STOCK_STAND_ITEM", "plsql": "return app_rules3_st.basic_warning(:PAGE_ROWID, 'STOCK_STAND_ITEM', :PAGE_STOCK_STAND_ITEM);", "when": "SAVE"},
+   {"name": "EXPIRE_FLAG", "plsql": "return app_rules3_st.basic_warning(:PAGE_ROWID, 'EXPIRE_FLAG', :PAGE_EXPIRE_FLAG);", "when": "SAVE"},
+   {"name": "SIZE_FLAG", "plsql": "return app_rules3_st.basic_warning(:PAGE_ROWID, 'SIZE_FLAG', :PAGE_SIZE_FLAG);", "when": "SAVE"},
+   {"name": "COLOR_FLAG", "plsql": "return app_rules3_st.basic_warning(:PAGE_ROWID, 'COLOR_FLAG', :PAGE_COLOR_FLAG);", "when": "SAVE"}
+  ],
+  "add_columns": {
+   "ST_BASIC.POST_TYPE": {"label_a": "نوع الترحيل (1 قيد لكل حركة / 2 قيد لكل نوع حركة / 3 قيد واحد مجمع / 4 كما هو محدد فى ملف الحركات)", "label_e": "Posting type (1 per document / 2 per type / 3 one voucher / 4 as defined per type)"},
+   "ST_BASIC.DOC_REPEAT": {"label_a": "تكرار رقم المستند فى الحركات", "label_e": "Repeat document number"},
+   "ST_BASIC.CASH_CUSTOMER": {"label_a": "رقم العميل النقدي", "label_e": "Cash customer"},
+   "ST_BASIC.EXPIRE_FLAG": {"label_a": "تاريخ صلاحية", "label_e": "Expiry date"},
+   "ST_BASIC.SIZE_FLAG": {"label_a": "مقاس", "label_e": "Size"},
+   "ST_BASIC.COLOR_FLAG": {"label_a": "اللون", "label_e": "Colour"},
+   "ST_BASIC.GROUP_PRE_CODE": {"label_a": "مساعدة تكويد المجموعات", "label_e": "Group coding help"},
+   "ST_BASIC.INSERT_SALE_CNFG": {"label_a": "اختيار الشحنة بالمبيعات", "label_e": "Lot choice in sales"},
+   "ST_BASIC.STOCK_STAND_ITEM": {"label_a": "الصنف المجمع بارصدة", "label_e": "Assembled items with balances"},
+   "ST_BASIC.AUTO_TRANSFER": {"label_a": "استلام التحويل آليا", "label_e": "Automatic transfer receipt"},
+   "ST_BASIC.REFRESH_TIMER": {"label_a": "وقت التحديث (ثانية)", "label_e": "Refresh time (seconds)"},
+   "ST_BASIC.GNRLZ_STORE": {"label_a": "نوع مستودع الاستلام", "label_e": "Receiving store type"},
+   "ST_BASIC.DISTRB_STORE": {"label_a": "نوع مستودع التوزيعات", "label_e": "Distribution store type"},
+   "ST_BASIC.DMG_STORE": {"label_a": "نوع مستودع منتهى الصلاحية", "label_e": "Expired goods store type"}
+  },
+  "columns": {
+   "ST_BASIC.AUTO_ITEM_SER": {"label_a": "مسلسل آلى للصنف", "label_e": "Automatic item serial"},
+   "ST_BASIC.POST_TYPE": {"widget": "RADIO", "label_a": "نوع الترحيل", "label_e": "Posting type",
+    "static": [["قيد لكل حركة", "1", "One entry per transaction"], ["قيد لكل نوع حركة", "2", "One entry per transaction type"],
+               ["قيد واحد مجمع", "3", "One combined entry"], ["كما هو محدد فى ملف الحركات", "4", "As defined per transaction type"]]},
+   "ST_BASIC.EXPIRE_FLAG": {"widget": "CHECK", "values": ["1", "0"]},
+   "ST_BASIC.SIZE_FLAG": {"widget": "CHECK", "values": ["1", "0"]},
+   "ST_BASIC.COLOR_FLAG": {"widget": "CHECK", "values": ["1", "0"]},
+   "ST_BASIC.BASIC_STORE_CODE": {"widget": "SELECT",
+    "lov": "select s.store_code || ' - ' || s.name_a d, s.store_code r from st_store s where s.store_status = 1 and nvl(s.stop_flag, 0) = 0 order by s.store_code"},
+   "ST_BASIC.GNRLZ_STORE": {"widget": "SELECT", "lov": "select t.store_type || ' - ' || t.desc_a d, t.store_type r from st_store_type t order by t.store_type"},
+   "ST_BASIC.DISTRB_STORE": {"widget": "SELECT", "lov": "select t.store_type || ' - ' || t.desc_a d, t.store_type r from st_store_type t order by t.store_type"},
+   "ST_BASIC.DMG_STORE": {"widget": "SELECT", "lov": "select t.store_type || ' - ' || t.desc_a d, t.store_type r from st_store_type t order by t.store_type"}
+  }
+ }
+}

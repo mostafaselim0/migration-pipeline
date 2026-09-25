@@ -1,0 +1,36 @@
+{
+ "pattern": "AUTO",
+ "notes": "Year periods (ST_PERIODS, menus 30/27 and 31/12): number >= 0, no duplicate, from < to, dates within the allowed range, periods may not overlap (APP_RULES3_PR, compound trigger APP_R3_ST_PERIODS_CT). Wave 3b: the wrong automatic list AC_ESTIMATE_PERIODS (empty) removed from PERIOD_CODE; an empty number still gets the next number.",
+ "rules": {
+  "key_expr": {
+   "ST_PERIODS.PERIOD_CODE": "app_rules3_pr.next_period_code"
+  },
+  "optional": [
+   "ST_PERIODS.PERIOD_CODE"
+  ],
+  "row_rules": {
+   "ST_PERIODS": "-- legacy WHEN-VALIDATE-ITEM / PRE-INSERT: number >= 0, no duplicate, from < to, minimum / maximum date (overlap: trigger APP_R3_ST_PERIODS_CT)\napp_rules3_pr.period_row(inserting, :new.period_code, :new.from_date, :new.till_date);"
+  },
+  "add_columns": {
+   "ST_PERIODS.PERIOD_NAME": {
+    "label_a": "البيان عربي",
+    "label_e": "Arabic Description"
+   },
+   "ST_PERIODS.PERIOD_NAME_E": {
+    "label_a": "البيان لاتيني",
+    "label_e": "English Description"
+   },
+   "ST_PERIODS.TILL_DATE": {
+    "label_a": "الى تاريخ",
+    "label_e": "To Date"
+   }
+  },
+  "columns": {
+   "ST_PERIODS.PERIOD_CODE": {
+    "lov": null,
+    "label_a": "رقم الفترة",
+    "label_e": "Period No"
+   }
+  }
+ }
+}

@@ -1,0 +1,82 @@
+{
+  "pattern": "AUTO",
+  "notes": "Tax obligation per sales area (AR_MAINAREA, read by GET_TAX_VALUE_DB): area must exist, percentage > 0, no automatic area number, range button (تطبيق) - APP_RULES3_TX, see processes/TX_AREAS.md",
+  "rules": {
+    "key_expr": {
+      "TX_TAXES_AREAS.MAINAREA_ID": "null"
+    },
+    "row_rules": {
+      "TX_TAXES_AREAS": "app_rules3_tx.oblig_row('AREA', inserting, :new.mainarea_id, null, :old.tax_per, :new.tax_per);"
+    },
+    "add_columns": {
+      "TX_TAXES_AREAS.TAX_CODE": {
+        "label_a": "رقم الضريبة",
+        "label_e": "Tax no."
+      },
+      "TX_TAXES_AREAS.MAINAREA_ID": {
+        "label_a": "رقم المنطقة",
+        "label_e": "Area"
+      },
+      "TX_TAXES_AREAS.TAX_PER": {
+        "label_a": "النسبة",
+        "label_e": "Percentage"
+      }
+    },
+    "columns": {
+      "TX_TAXES_AREAS.MAINAREA_ID": {
+        "lov": "select id || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, id r from ar_mainarea order by 1",
+        "widget": "SELECT"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "APPLY",
+      "label_a": "تطبيق",
+      "label_e": "Apply",
+      "confirm_a": "هل تريد تطبيق النسبة على المناطق المحددة؟",
+      "confirm_e": "Apply the percentage to the area range?",
+      "condition": "app_sec.can_page(:APP_PAGE_ID, 'I')",
+      "params": [
+        {
+          "name": "TAX",
+          "label_a": "رقم الضريبة",
+          "label_e": "Tax no.",
+          "type": "number",
+          "required": true,
+          "default": "select min(tax_code) from tx_taxes_types",
+          "default_type": "SQL_QUERY",
+          "lov_sql": "select tax_code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, tax_code r from tx_taxes_types order by tax_code"
+        },
+        {
+          "name": "FROM_AREA",
+          "label_a": "من منطقة",
+          "label_e": "From area",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select id || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, id r from ar_mainarea order by id"
+        },
+        {
+          "name": "TO_AREA",
+          "label_a": "إلى منطقة",
+          "label_e": "To area",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select id || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, id r from ar_mainarea order by id"
+        },
+        {
+          "name": "PER",
+          "label_a": "النسبة",
+          "label_e": "Percentage",
+          "type": "number",
+          "required": true
+        }
+      ],
+      "call": "app_rules3_tx.apply_areas(:TAX, :FROM_AREA, :TO_AREA, :PER)",
+      "message": "app_rules3_tx.last_message",
+      "success_a": "تم التطبيق",
+      "success_e": "Applied",
+      "icon": "fa-check"
+    }
+  ]
+}

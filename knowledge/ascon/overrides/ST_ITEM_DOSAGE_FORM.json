@@ -1,0 +1,9 @@
+{
+ "pattern": "AUTO",
+ "notes": "dosage forms: code > 0, Arabic or English name, duplicate code message (.fmx)",
+ "rules": {
+  "row_rules": {
+   "ST_ITEM_DOSAGE_FORM": "app_rules3_st.class_row('ST_ITEM_DOSAGE_FORM', inserting, :new.dosage_form_code, :new.desc_a, :new.desc_e);"
+  }
+ }
+}

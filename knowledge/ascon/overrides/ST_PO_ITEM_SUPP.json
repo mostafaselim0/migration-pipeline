@@ -1,0 +1,392 @@
+{
+ "pattern": "MASTER_DETAIL",
+ "notes": "Preparing purchase orders (ST_PO_ITEM_SUPP + ST_PO_ITEM_SUPP_DET): same tables as generated, legacy column order and display items; line rules (item, price and MOH discount, bonus / discount pairs, chosen lines need quantity and price), buttons load items / choose all / exclude all / delete zero lines / load Excel / make purchase order (APP_RULES3_PR). Wave 3b: CHK check box, legacy header LOVs, line statistics as computed columns (net sales / purchases of the period, store balances, last purchase date, open / closed orders).",
+ "master": {
+  "table": "ST_PO_ITEM_SUPP",
+  "columns": [
+   "SERIAL",
+   "SUPP_CODE",
+   "FROM_KIND",
+   "FROM_CLASS",
+   "CNTRCT_SERIAL",
+   "FROM_DATE",
+   "TO_DATE",
+   "AVG_FACTOR",
+   "ORDER_FACTOR",
+   "PO_SUPP",
+   "PO_STORE",
+   "PR_ORDER_TYPE",
+   "NOTES",
+   "PR_ORDER_TRNS_TYPE_CODE",
+   "PR_ORDER_TRNS_SERIAL"
+  ]
+ },
+ "details": [
+  {
+   "table": "ST_PO_ITEM_SUPP_DET",
+   "join": [
+    [
+     "SERIAL",
+     "SERIAL"
+    ]
+   ],
+   "title_a": "أصناف أمر الشراء",
+   "title_e": "Order items",
+   "columns": [
+    "ITEM_CODE",
+    "ITEM_GROUP_CODE",
+    "KIND_CODE",
+    "SUPP_CODE",
+    "CHK",
+    "QUANTITY",
+    "PERCENTAGE",
+    "BONUS",
+    "EXTRA_PERCENTAGE",
+    "EXTRA_BONUS",
+    "UNIT_PRICE",
+    "DISC1_RATIO",
+    "DISC1_VALUE",
+    "DISC2_RATIO",
+    "DISC2_VALUE",
+    "PO_M_DISC_RATIO",
+    "PO_M_DISC_VALUE",
+    "M_DISC_RATIO",
+    "M_DISC_VALUE",
+    "M_EXTRA_BONUS_RATIO",
+    "M_EXTRA_BONUS_VALUE",
+    "ON_SPOT",
+    "NET_COST"
+   ]
+  }
+ ],
+ "insert": true,
+ "update": true,
+ "delete": true,
+ "rules": {
+  "add_columns": {
+   "ST_PO_ITEM_SUPP.SERIAL": {
+    "label_a": "مسلسل",
+    "label_e": "Serial"
+   },
+   "ST_PO_ITEM_SUPP.SUPP_CODE": {
+    "label_a": "المورد",
+    "label_e": "Supplier"
+   },
+   "ST_PO_ITEM_SUPP.FROM_KIND": {
+    "label_a": "المصنع",
+    "label_e": "Manufacturer"
+   },
+   "ST_PO_ITEM_SUPP.FROM_CLASS": {
+    "label_a": "الفئة",
+    "label_e": "Class"
+   },
+   "ST_PO_ITEM_SUPP.CNTRCT_SERIAL": {
+    "label_a": "رقم الاتفاقية",
+    "label_e": "Agreement No"
+   },
+   "ST_PO_ITEM_SUPP.PO_SUPP": {
+    "label_a": "مورد أمر الشراء",
+    "label_e": "Order supplier"
+   },
+   "ST_PO_ITEM_SUPP.PO_STORE": {
+    "label_a": "مستودع أمر الشراء",
+    "label_e": "Order store"
+   },
+   "ST_PO_ITEM_SUPP.PR_ORDER_TYPE": {
+    "label_a": "نوع أمر الشراء",
+    "label_e": "Order type"
+   },
+   "ST_PO_ITEM_SUPP.PR_ORDER_TRNS_TYPE_CODE": {
+    "label_a": "حركة أمر الشراء",
+    "label_e": "Purchase order type"
+   },
+   "ST_PO_ITEM_SUPP.PR_ORDER_TRNS_SERIAL": {
+    "label_a": "رقم أمر الشراء",
+    "label_e": "Purchase order No"
+   },
+   "ST_PO_ITEM_SUPP_DET.ITEM_CODE": {
+    "label_a": "الصنف",
+    "label_e": "Item"
+   },
+   "ST_PO_ITEM_SUPP_DET.ITEM_GROUP_CODE": {
+    "label_a": "مجموعة الأصناف",
+    "label_e": "Item group"
+   },
+   "ST_PO_ITEM_SUPP_DET.KIND_CODE": {
+    "label_a": "المصنع",
+    "label_e": "Manufacturer"
+   },
+   "ST_PO_ITEM_SUPP_DET.SUPP_CODE": {
+    "label_a": "مورد رئيسي",
+    "label_e": "Main supplier"
+   },
+   "ST_PO_ITEM_SUPP_DET.CHK": {
+    "label_a": "اختيار",
+    "label_e": "Choose"
+   },
+   "ST_PO_ITEM_SUPP_DET.UNIT_PRICE": {
+    "label_a": "سعر الوحدة عملة",
+    "label_e": "Unit price"
+   },
+   "ST_PO_ITEM_SUPP_DET.PERCENTAGE": {
+    "label_a": "البونص %",
+    "label_e": "Bonus %"
+   },
+   "ST_PO_ITEM_SUPP_DET.EXTRA_PERCENTAGE": {
+    "label_a": "البونص الأضافي %",
+    "label_e": "Extra bonus %"
+   },
+   "ST_PO_ITEM_SUPP_DET.DISC1_RATIO": {
+    "label_a": "خصم 1 %",
+    "label_e": "Discount 1 %"
+   },
+   "ST_PO_ITEM_SUPP_DET.DISC2_RATIO": {
+    "label_a": "خصم 2 %",
+    "label_e": "Discount 2 %"
+   },
+   "ST_PO_ITEM_SUPP_DET.PO_M_DISC_RATIO": {
+    "label_a": "خصم 2 خارجي %",
+    "label_e": "External discount 2 %"
+   },
+   "ST_PO_ITEM_SUPP_DET.M_DISC_RATIO": {
+    "label_a": "خصم الإتفاقية %",
+    "label_e": "Agreement discount %"
+   },
+   "ST_PO_ITEM_SUPP_DET.M_DISC_VALUE": {
+    "label_a": "خصم الإتفاقية",
+    "label_e": "Agreement discount"
+   },
+   "ST_PO_ITEM_SUPP_DET.M_EXTRA_BONUS_RATIO": {
+    "label_a": "البونص الأضافي للإتفاقية %",
+    "label_e": "Agreement extra bonus %"
+   }
+  },
+  "readonly": [
+   "ST_PO_ITEM_SUPP.SERIAL",
+   "ST_PO_ITEM_SUPP.PR_ORDER_TRNS_TYPE_CODE",
+   "ST_PO_ITEM_SUPP.PR_ORDER_TRNS_SERIAL",
+   "ST_PO_ITEM_SUPP_DET.KIND_CODE",
+   "ST_PO_ITEM_SUPP_DET.SUPP_CODE",
+   "ST_PO_ITEM_SUPP_DET.M_DISC_RATIO",
+   "ST_PO_ITEM_SUPP_DET.M_DISC_VALUE",
+   "ST_PO_ITEM_SUPP_DET.M_EXTRA_BONUS_RATIO",
+   "ST_PO_ITEM_SUPP_DET.M_EXTRA_BONUS_VALUE",
+   "ST_PO_ITEM_SUPP_DET.ON_SPOT",
+   "ST_PO_ITEM_SUPP_DET.NET_COST"
+  ],
+  "optional": [
+   "ST_PO_ITEM_SUPP_DET.ITEM_GROUP_CODE"
+  ],
+  "defaults": {
+   "ST_PO_ITEM_SUPP_DET.CHK": {
+    "type": "STATIC",
+    "value": "0"
+   },
+   "ST_PO_ITEM_SUPP.AVG_FACTOR": {
+    "type": "STATIC",
+    "value": "1"
+   }
+  },
+  "row_rules": {
+   "ST_PO_ITEM_SUPP_DET": "-- legacy line WHEN-VALIDATE-ITEM / PRE-INSERT: item, group, supplier and manufacturer of the item, retail price and MOH discount,\n-- ratios 0..100, values >= 0, bonus / extra bonus / discounts, chosen lines need quantity + bonus > 0 and a price\napp_rules3_pr.prep_det_row(inserting, :new.serial, :new.item_group_code, :new.item_code, :new.supp_code, :new.kind_code,\n  :new.quantity, :old.quantity, :new.chk, :new.unit_price, :old.unit_price,\n  :new.percentage, :old.percentage, :new.bonus, :old.bonus, :new.extra_percentage, :old.extra_percentage, :new.extra_bonus, :old.extra_bonus,\n  :new.disc1_ratio, :old.disc1_ratio, :new.disc1_value, :old.disc1_value, :new.disc2_ratio, :old.disc2_ratio, :new.disc2_value, :old.disc2_value,\n  :new.m_disc_ratio, :new.m_disc_value, :new.po_m_disc_ratio, :new.po_m_disc_value);"
+  },
+  "validations": [
+   {
+    "name": "تحضير أمر الشراء: التواريخ والمورد والمستودع ونوع الأمر",
+    "when": "CREATE,SAVE",
+    "plsql": "return app_rules3_pr.prep_validate(:REQUEST, :PAGE_ROWID, :PAGE_FROM_DATE, :PAGE_TO_DATE, :PAGE_PO_SUPP, :PAGE_PO_STORE, :PAGE_PR_ORDER_TYPE);"
+   }
+  ],
+  "columns": {
+   "ST_PO_ITEM_SUPP_DET.CHK": {
+    "widget": "CHECK",
+    "values": [
+     "1",
+     "0"
+    ]
+   },
+   "ST_PO_ITEM_SUPP.SUPP_CODE": {
+    "lov": "select code || ' - ' || name_a d, code r from supplier where supplier_status = 1 order by code",
+    "widget": "POPUP"
+   },
+   "ST_PO_ITEM_SUPP.PO_SUPP": {
+    "lov": "select code || ' - ' || name_a d, code r from supplier where supplier_status = 1 order by code",
+    "widget": "POPUP"
+   },
+   "ST_PO_ITEM_SUPP.PO_STORE": {
+    "lov": "select store_code || ' - ' || name_a d, store_code r from st_store where store_status = 1 and nvl(stop_flag, 0) = 0 order by store_code",
+    "widget": "SELECT"
+   },
+   "ST_PO_ITEM_SUPP.PR_ORDER_TYPE": {
+    "lov": "select serial || ' - ' || nvl(name_a, name_e) d, serial r from st_pr_order_types order by 2",
+    "widget": "SELECT"
+   },
+   "ST_PO_ITEM_SUPP.FROM_KIND": {
+    "lov": "select kind_code || ' - ' || nvl(name_a, name_e) d, kind_code r from st_good_kind where kind_code in (select kind_code from vn_supp_kind where supp_code = :PAGE_SUPP_CODE) or :PAGE_SUPP_CODE is null order by 2",
+    "widget": "POPUP",
+    "cascade": "SUPP_CODE"
+   },
+   "ST_PO_ITEM_SUPP.FROM_CLASS": {
+    "lov": "select class_code || ' - ' || nvl(desc_a, desc_e) d, class_code r from st_item_classes order by 2",
+    "widget": "SELECT"
+   },
+   "ST_PO_ITEM_SUPP.CNTRCT_SERIAL": {
+    "widget": "POPUP",
+    "lov": "select a.serial || ' - ' || k.name_a || ' / ' || c.name_a || ' - ' || to_char(a.end_date, 'DD/MM/YYYY') d, a.serial r from st_supp_agrmnt a, supplier s, st_supp_agrmnt_supp p, st_good_kind k, st_cntrct_types c where p.supplier_code = s.code and a.serial = p.serial and a.kind_code = k.kind_code and c.cntrct_code = a.cntrct_code and s.code = :PAGE_PO_SUPP and nvl(s.stopflag, 0) = 0 order by 2",
+    "cascade": "PO_SUPP"
+   }
+  },
+  "computed": {
+   "ST_PO_ITEM_SUPP_DET.NET_SALES": {
+    "sql": "(select nvl(sum(case when c.trns_date between h.from_date and h.to_date then 1 else 0 end * decode(nvl(y.opening_balance, 0), 1, 0, 1) * decode(y.effect || y.trns_type, '22', 1, '44', -1, 0) * c.basic_qty), 0) from st_trns_det_cost c, st_trns_type y, st_po_item_supp h where y.trns_type_code = c.trns_type_code and nvl(c.delete_flag, 0) = 0 and c.group_code = t.item_group_code and c.item_code = t.item_code and h.serial = t.serial)",
+    "label_a": "صافى بيع",
+    "label_e": "Net sales",
+    "type": "NUMBER"
+   },
+   "ST_PO_ITEM_SUPP_DET.NET_PURCH": {
+    "sql": "(select nvl(sum(case when c.trns_date between h.from_date and h.to_date then 1 else 0 end * decode(nvl(y.opening_balance, 0), 1, 0, 1) * decode(y.effect || y.trns_type, '11', 1, '33', -1, 0) * c.basic_qty), 0) from st_trns_det_cost c, st_trns_type y, st_po_item_supp h where y.trns_type_code = c.trns_type_code and nvl(c.delete_flag, 0) = 0 and c.group_code = t.item_group_code and c.item_code = t.item_code and h.serial = t.serial)",
+    "label_a": "صافى شراء",
+    "label_e": "Net purchases",
+    "type": "NUMBER"
+   },
+   "ST_PO_ITEM_SUPP_DET.GNRL_BAL": {
+    "sql": "(select nvl(sum(decode(c.store_code, (select max(gnrlz_store) from st_basic), 1, 0) * decode(y.effect, 1, 1, 2, -1, 3, -1, 4, 1, 5, -1, 6, 1) * nvl(c.basic_qty, 0)), 0) from st_trns_det_cost c, st_trns_type y where y.trns_type_code = c.trns_type_code and nvl(c.delete_flag, 0) = 0 and c.group_code = t.item_group_code and c.item_code = t.item_code)",
+    "label_a": "رصيد المستودع العام",
+    "label_e": "General store balance",
+    "type": "NUMBER"
+   },
+   "ST_PO_ITEM_SUPP_DET.DMG_BAL": {
+    "sql": "(select nvl(sum(decode(c.store_code, (select max(dmg_store) from st_basic), 1, 0) * decode(y.effect, 1, 1, 2, -1, 3, -1, 4, 1, 5, -1, 6, 1) * nvl(c.basic_qty, 0)), 0) from st_trns_det_cost c, st_trns_type y where y.trns_type_code = c.trns_type_code and nvl(c.delete_flag, 0) = 0 and c.group_code = t.item_group_code and c.item_code = t.item_code)",
+    "label_a": "رصيد مستودع توالف",
+    "label_e": "Damaged store balance",
+    "type": "NUMBER"
+   },
+   "ST_PO_ITEM_SUPP_DET.DISTRB_BAL": {
+    "sql": "(select nvl(sum(decode(c.store_code, (select max(distrb_store) from st_basic), 1, 0) * decode(y.effect, 1, 1, 2, -1, 3, -1, 4, 1, 5, -1, 6, 1) * nvl(c.basic_qty, 0)), 0) from st_trns_det_cost c, st_trns_type y where y.trns_type_code = c.trns_type_code and nvl(c.delete_flag, 0) = 0 and c.group_code = t.item_group_code and c.item_code = t.item_code)",
+    "label_a": "رصيد مستودع توزيعات",
+    "label_e": "Distribution store balance",
+    "type": "NUMBER"
+   },
+   "ST_PO_ITEM_SUPP_DET.TOT_BAL": {
+    "sql": "(select nvl(sum(decode(y.effect, 1, 1, 2, -1, 3, -1, 4, 1, 5, -1, 6, 1) * nvl(c.basic_qty, 0)), 0) from st_trns_det_cost c, st_trns_type y where y.trns_type_code = c.trns_type_code and nvl(c.delete_flag, 0) = 0 and c.group_code = t.item_group_code and c.item_code = t.item_code)",
+    "label_a": "الرصيد التعميمات",
+    "label_e": "Total balance",
+    "type": "NUMBER"
+   },
+   "ST_PO_ITEM_SUPP_DET.LAST_PURCH_DATE": {
+    "sql": "(select max(decode(y.effect || y.trns_type || nvl(y.opening_balance, 0), '110', c.trns_date)) from st_trns_det_cost c, st_trns_type y where y.trns_type_code = c.trns_type_code and nvl(c.delete_flag, 0) = 0 and c.group_code = t.item_group_code and c.item_code = t.item_code)",
+    "label_a": "آخر تاريخ شراء",
+    "label_e": "Last purchase date",
+    "type": "DATE"
+   },
+   "ST_PO_ITEM_SUPP_DET.SUM_PR_OPEN": {
+    "sql": "(select nvl(sum(decode(nvl(m.order_status, 0), 0, 1, 0)), 0) from pr_order m, pr_order_det o where nvl(m.confirm_flag, 0) = 1 and m.trns_type_code = o.trns_type_code and m.trns_serial = o.trns_serial and o.item_code = t.item_code and o.group_code = t.item_group_code and nvl(m.close_flag, 0) = 0)",
+    "label_a": "عدد اوامر الشراء المفتوحة",
+    "label_e": "Open purchase orders",
+    "type": "NUMBER"
+   },
+   "ST_PO_ITEM_SUPP_DET.SUM_PR_CLOSE": {
+    "sql": "(select nvl(sum(decode(nvl(m.order_status, 0), 0, 0, 1)), 0) from pr_order m, pr_order_det o where nvl(m.confirm_flag, 0) = 1 and m.trns_type_code = o.trns_type_code and m.trns_serial = o.trns_serial and o.item_code = t.item_code and o.group_code = t.item_group_code and nvl(m.close_flag, 0) = 0)",
+    "label_a": "عدد اوامر الشراء المغلقة",
+    "label_e": "Closed purchase orders",
+    "type": "NUMBER"
+   }
+  }
+ },
+ "actions": [
+  {
+   "name": "GET_ITEMS",
+   "label_a": "انزال الاصناف",
+   "label_e": "Load items",
+   "confirm_a": "هل تريد إنزال أصناف المورد / المصنع / الفئة / الإتفاقية؟",
+   "confirm_e": "Load the items of the supplier / manufacturer / class / agreement?",
+   "call": "app_rules3_pr.prep_get_items(:PAGE_ROWID)",
+   "message": "app_rules3_pr.last_message",
+   "success_a": "تم إنزال الأصناف",
+   "success_e": "The items were loaded"
+  },
+  {
+   "name": "SELECT_ALL",
+   "label_a": "اختيار الكل",
+   "label_e": "Choose all",
+   "call": "app_rules3_pr.prep_mark(:PAGE_ROWID, 'ALL')",
+   "message": "app_rules3_pr.last_message",
+   "success_a": "تم",
+   "success_e": "Done"
+  },
+  {
+   "name": "DESELECT_ALL",
+   "label_a": "استبعاد الكل",
+   "label_e": "Exclude all",
+   "call": "app_rules3_pr.prep_mark(:PAGE_ROWID, 'NONE')",
+   "message": "app_rules3_pr.last_message",
+   "success_a": "تم",
+   "success_e": "Done"
+  },
+  {
+   "name": "DELETE_ZERO",
+   "label_a": "حذف الصفر",
+   "label_e": "Delete zero lines",
+   "confirm_a": "هل تريد حذف الأصناف بدون كمية وبونص؟",
+   "confirm_e": "Delete the lines without quantity and bonus?",
+   "call": "app_rules3_pr.prep_mark(:PAGE_ROWID, 'ZERO')",
+   "message": "app_rules3_pr.last_message",
+   "success_a": "تم",
+   "success_e": "Done"
+  },
+  {
+   "name": "LOAD_EXCEL",
+   "label_a": "تحميل EXCEL",
+   "label_e": "Load Excel",
+   "confirm_a": "هل تريد تحميل الأصناف من الملف (رقم الصنف، الكمية، البونص)؟",
+   "confirm_e": "Load the items from the file (item code, quantity, bonus)?",
+   "params": [
+    {
+     "name": "XLS_FILE",
+     "label_a": "ملف الأصناف (رقم الصنف، الكمية، البونص)",
+     "label_e": "Items file (item code, quantity, bonus)",
+     "type": "file",
+     "required": true
+    }
+   ],
+   "call": "app_rules3_pr.prep_load_excel(:PAGE_ROWID, :XLS_FILE)",
+   "message": "app_rules3_pr.last_message",
+   "success_a": "تم تحميل الملف",
+   "success_e": "The file was loaded"
+  },
+  {
+   "name": "MAKE_ORDER",
+   "label_a": "عمل أمر شراء",
+   "label_e": "Make purchase order",
+   "confirm_a": "هل تريد عمل أمر شراء معتمد بالأصناف المختارة؟",
+   "confirm_e": "Create a confirmed purchase order with the chosen lines?",
+   "condition": "app_rules3_pr.prep_can_order(:PAGE_ROWID) = 'Y'",
+   "params": [
+    {
+     "name": "ORDER_TYPE",
+     "label_a": "حركة أمر الشراء",
+     "label_e": "Purchase order type",
+     "type": "number",
+     "required": true,
+     "default": "app_rules_pr.default_type('ORDER')",
+     "default_type": "EXPRESSION",
+     "lov_sql": "select t.trns_type_code || ' - ' || decode(:G_LANG, 'en', nvl(t.desc_e, t.desc_a), t.desc_a) d, t.trns_type_code r from st_trns_type t where t.effect = 7 and t.trns_type = 14 and (nvl(:G_PASSWORD_NUMBER, 0) = 0 or t.trns_type_code in (select tp.trns_type_code from st_trnstype_password tp where tp.flag = 1 and tp.password_number = :G_PASSWORD_NUMBER)) order by 2"
+    },
+    {
+     "name": "ORDER_DATE",
+     "label_a": "تاريخ أمر الشراء",
+     "label_e": "Order date",
+     "type": "date",
+     "required": true,
+     "default": "to_char(sysdate, 'DD/MM/YYYY')",
+     "default_type": "EXPRESSION"
+    }
+   ],
+   "call": "app_rules3_pr.prep_make_order(:PAGE_ROWID, :ORDER_TYPE, :ORDER_DATE)",
+   "message": "app_rules3_pr.last_message",
+   "target_form": "PR_ORDER",
+   "success_a": "تم عمل أمر الشراء",
+   "success_e": "The purchase order was created"
+  }
+ ]
+}

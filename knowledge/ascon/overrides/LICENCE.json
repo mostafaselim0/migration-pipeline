@@ -1,0 +1,9 @@
+{
+  "pattern": "AUTO",
+  "notes": "Licence types code table; legacy duplicate-code message (APP_RULES3_SE, see processes/LICENCE.md)",
+  "rules": {
+    "row_rules": {
+      "LICENCE": "app_rules3_se.code_row('LICENCE', inserting, :new.licence_code);"
+    }
+  }
+}

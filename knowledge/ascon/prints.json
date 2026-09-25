@@ -1,0 +1,1738 @@
+{
+  "_doc": "Exact document prints: the legacy Oracle Reports layout printed by each document screen (the RDF its print button ran), how the report parameters are filled from the document header (column name, or a SQL expression over the header row aliased t), the legacy print right (SQL returning 1/0; reference :G_USER_CODE only once, it is bound once) and the first-print flag. Further print buttons of the same screen go into \"more\": [{\"key\": \"DLVR\", \"label_a\": \"...\", \"label_e\": \"...\", \"rdf\": \"...\", \"params\": {...}, \"right\": \"...\"}]. \"rdf_module\" (ST / AC / AR / VN) names the module folder of the legacy report path where the same RDF name exists in several folders with different content (ACJRNL1, ACJRNL2, AR_STTM_HMC2, G_RECEIVE_ORDER, SUPPLIER_REP, st_customer_INVOICE ...). \"not_mapped\" (per screen) and \"_not_mapped\" (screens without a mappable print) record legacy print buttons that are deliberately not reproduced, with the reason; \"evidence\" says where each mapping comes from. The installation code (:GLOBAL.CUSTOMER_CODE, read by the login form Sysmenu from CUSTOMER_PAR, which is empty) is NULL here, so every installation-specific branch takes its ELSE path. Compiled by app/gen/rdfprint.py, drawn by app/static/rdfprint.js, checked with app/tools/rdftest.py. LANG, company, user, group and system parameters are passed automatically.",
+  "ST_ISSUE_IO": {
+    "rdf": "st_customer_INVOICE",
+    "rdf_module": "ST",
+    "params": {
+      "P_TRNS_TYPE_CODE": "TRNS_TYPE_CODE",
+      "P_TRNS_SERIAL": "TRNS_SERIAL"
+    },
+    "right": "select nvl(max(print_inv_flag), 0) from users where users_code = :G_USER_CODE",
+    "first_print": {
+      "flag": "PRINT_FLAG",
+      "param": "P_FIRST"
+    },
+    "more": [
+      {
+        "key": "DLVR",
+        "label_a": "إذن تسليم",
+        "label_e": "Delivery note",
+        "rdf": "st_customer_DLVR",
+        "params": {
+          "P_TRNS_TYPE_CODE": "TRNS_TYPE_CODE",
+          "P_TRNS_SERIAL": "TRNS_SERIAL",
+          "P_CUSTOMER_CODE": "(select max(c.old_code) from customer c where c.code = t.customer_code)",
+          "P_SALESMAN_CODE": "SALESMAN_CODE",
+          "P_INVOICE_NO": "DOC_NO",
+          "P_DESC_A": "DESC_A",
+          "P_TRNS_DATE": "TRNS_DATE",
+          "P_CUSTOMER_NAME": "(select max(c.name_a) from customer c where c.code = t.customer_code)",
+          "P_CUSTOMER_ADD": "(select max(c.address_a) from customer c where c.code = t.customer_code)",
+          "P_GLN_CUST": "GLN",
+          "P_SALESMAN_NAME": "(select max(s.name_a) from salesman s where s.code = t.salesman_code)"
+        },
+        "right": "select nvl(max(print_inv_flag), 0) from users where users_code = :G_USER_CODE"
+      },
+      {
+        "key": "STMT",
+        "label_a": "كشف حساب العميل",
+        "label_e": "Customer statement",
+        "rdf": "AR_Sttm_HMC2",
+        "rdf_module": "AR",
+        "params": {
+          "C1": "CUSTOMER_CODE",
+          "C2": "CUSTOMER_CODE",
+          "P_FROM_CAT": "(select case when count(*) = 1 then max(cs.ctgry_code) end from ar_cust_salesman cs where cs.customer_code = t.customer_code and cs.salesman_code = t.salesman_code)",
+          "P_TO_CAT": "(select case when count(*) = 1 then max(cs.ctgry_code) end from ar_cust_salesman cs where cs.customer_code = t.customer_code and cs.salesman_code = t.salesman_code)",
+          "DUE": "'1'",
+          "D1": "to_char(sysdate - 365, 'DD-MM-YYYY')",
+          "D2": "to_char(sysdate, 'DD-MM-YYYY')",
+          "P_REPORT": "'1'",
+          "FROM_SALES": "SALESMAN_CODE",
+          "TO_SALES": "SALESMAN_CODE",
+          "SHOW_DEL": "'1'"
+        }
+      },
+      {
+        "key": "CARD",
+        "label_a": "كارت العميل",
+        "label_e": "Customer card",
+        "rdf": "ST_CUST_CARD",
+        "params": {
+          "C1": "CUSTOMER_CODE",
+          "C2": "CUSTOMER_CODE",
+          "FROM_CLASS": "(select min(c.serial) from ar_cust_class c)",
+          "TO_CLASS": "(select max(c.serial) from ar_cust_class c)",
+          "FROM_SALES": "SALESMAN_CODE",
+          "TO_SALES": "SALESMAN_CODE",
+          "D1": "'01-01-2019'",
+          "D2": "to_char(sysdate, 'DD-MM-YYYY')",
+          "P_REPORT": "'1'",
+          "LEX_CUST2": "'0'",
+          "LEX_CUST": "'0'"
+        }
+      },
+      {
+        "key": "ENTRY",
+        "label_a": "طباعة القيد",
+        "label_e": "Print Entry",
+        "rdf": "ACJRNL1",
+        "rdf_module": "ST",
+        "params": {
+          "FROM_ENTRY_YEAR": "AC_ENTRY_YEAR",
+          "TO_ENTRY_YEAR": "AC_ENTRY_YEAR",
+          "FROM_ENTRY_TYPE": "AC_ENTRY_TYPE",
+          "TO_ENTRY_TYPE": "AC_ENTRY_TYPE",
+          "FROM_ENTRY_NO": "AC_ENTRY_NO",
+          "TO_ENTRY_NO": "AC_ENTRY_NO"
+        }
+      }
+    ],
+    "not_mapped": [
+      {
+        "label_a": "فاتورة الشحنة (PRINT_BTN3)",
+        "label_e": "Shipment invoice (PRINT_BTN3)",
+        "rdf": "SHIPMENT_SMC_INVOICE",
+        "reason": "data export, not a print: the button sets VAR.XLS := 1, so PRINT_PREVIEW_REPORT runs it with DESFORMAT=XML; the RDF has no paper layout at all (only an XML tag / web source)"
+      },
+      {
+        "label_a": "خانة Excel (CTRL.XLS) مع زر الطباعة",
+        "label_e": "Excel tick box (CTRL.XLS) with the print buttons",
+        "rdf": "ST_ISSUE_IO_XLS",
+        "reason": "with CTRL.XLS ticked PRINT_BTN / PRINT_BTN_SMC run ST_ISSUE_IO_XLS with DESFORMAT=XML (data export for Excel), not a paper document"
+      },
+      {
+        "label_a": "طباعة (ITEM151)",
+        "label_e": "Print (ITEM151)",
+        "rdf": "ST_Invoice / st_issue_doc",
+        "reason": "button hidden (Visible = false in the .fmb) and it prints only for installations ZED (ST_Invoice) or SAN / SDI (st_issue_doc); installation code is NULL here, so it printed nothing"
+      },
+      {
+        "label_a": "المستندات",
+        "label_e": "Documents",
+        "rdf": "-",
+        "reason": "CTRL.DOCS opens the attachments form SYS_DOCS, not a print"
+      },
+      {
+        "label_a": "ZATCA",
+        "label_e": "ZATCA",
+        "rdf": "-",
+        "reason": "e-invoicing submission, out of scope"
+      }
+    ],
+    "evidence": "ST_ISSUE_IO.fmb: CTRL.PRINT_BTN (XLS unticked) st_customer_INVOICE, PRINT_INV_FLAG right, PRINT_FLAG := 1 + P_FIRST = 1 on the first print; CTRL.PRINT_BTN_SMC st_customer_DLVR (same right, customer OLD_CODE / NAME_A / ADDRESS_A, salesman NAME_A, GLN, DOC_NO, DESC_A, TRNS_DATE; no print flag); CTRL.PRINT_BTN1 AR_Sttm_HMC2 (last 365 days, category of AR_CUST_SALESMAN, NULL when not exactly one row as the legacy WHEN OTHERS); CTRL.PRINT_BTN2 ST_CUST_CARD (all customer classes, from 01-01-2019); CTRL.PRINT_BTN3 SHIPMENT_SMC_INVOICE and the CTRL.XLS variants are XML exports (not mapped); ST_TRNS_MAST.ENTRY_PRINT ACJRNL1 (:GLOBAL.ST_PATH) only when POST_FLAG = 1 (AC_ENTRY_* are empty otherwise; the legacy showed 'no journal to print'). Statement from :GLOBAL.AR_PATH (AR variant). All buttons visible (no Visible=false, no SET_ITEM_PROPERTY VISIBLE) except ITEM151."
+  },
+  "ST_ISSUE_RETURN": {
+    "rdf": "RETURN_INVOICE",
+    "params": {
+      "P_TRNS_TYPE_CODE": "TRNS_TYPE_CODE",
+      "P_TRNS_SERIAL": "TRNS_SERIAL"
+    },
+    "right": "select nvl(max(print_inv_flag), 0) from users where users_code = :G_USER_CODE",
+    "first_print": {
+      "flag": "PRINT_FLAG",
+      "param": "P_FIRST"
+    },
+    "more": [
+      {
+        "key": "ENTRY",
+        "label_a": "طباعة القيد",
+        "label_e": "Print Entry",
+        "rdf": "ACJRNL1",
+        "rdf_module": "ST",
+        "params": {
+          "FROM_ENTRY_YEAR": "AC_ENTRY_YEAR",
+          "TO_ENTRY_YEAR": "AC_ENTRY_YEAR",
+          "FROM_ENTRY_TYPE": "AC_ENTRY_TYPE",
+          "TO_ENTRY_TYPE": "AC_ENTRY_TYPE",
+          "FROM_ENTRY_NO": "AC_ENTRY_NO",
+          "TO_ENTRY_NO": "AC_ENTRY_NO"
+        }
+      }
+    ],
+    "not_mapped": [
+      {
+        "label_a": "طباعة (PRINT_BTN2)",
+        "label_e": "Print (PRINT_BTN2)",
+        "rdf": "ST_Invoice (ELSE branch; ST_Invoice_SDI for SDI)",
+        "reason": "button hidden (Visible = false in the .fmb, never made visible)"
+      },
+      {
+        "label_a": "طباعة (ITEM151)",
+        "label_e": "Print (ITEM151)",
+        "rdf": "ST_Invoice / st_issue_RE_doc",
+        "reason": "hidden (SET_ITEM_PROPERTY ITEM151 VISIBLE false) and prints only for installations ZED / SAN; nothing here"
+      },
+      {
+        "label_a": "المستندات",
+        "label_e": "Documents",
+        "rdf": "-",
+        "reason": "attachments form, not a print"
+      },
+      {
+        "label_a": "ZATCA",
+        "label_e": "ZATCA",
+        "rdf": "-",
+        "reason": "e-invoicing, out of scope"
+      }
+    ],
+    "evidence": "ST_ISSUE_return.fmb: CTRL.PRINT_BTN (tooltip 'Invoice Print') RETURN_INVOICE, PRINT_INV_FLAG right, PRINT_FLAG := 1 + P_FIRST = 1 on the first print; ST_TRNS_MAST.ENTRY_PRINT ACJRNL1 (ST path) when POST_FLAG = 1."
+  },
+  "ST_RECEIVE_COST": {
+    "rdf": "ST_SUPPLIER_INVOICE",
+    "params": {
+      "P_TRNS_TYPE_CODE": "TRNS_TYPE_CODE",
+      "P_TRNS_SERIAL": "TRNS_SERIAL",
+      "P_CUSTOMER_CODE": "SUPPLIER_CODE",
+      "P_CUSTOMER_NAME": "(select s.name_a from supplier s where s.code = t.supplier_code)",
+      "P_GLN_NO": "GLN",
+      "P_SUPPLIER_REF": "SUPPLIER_REF",
+      "P_DESC_A": "DESC_A",
+      "P_INVOICE_NO": "INVOICE_NO",
+      "P_TRNS_DATE": "TRNS_DATE",
+      "P_ADDRESS": "(select max(s.address_a) from supplier s where s.code = t.supplier_code)",
+      "P_TAX_NO": "(select max(ts.tax_no) from tx_taxes_suppliers ts where ts.supplier_code = t.supplier_code)"
+    },
+    "right": "select nvl(max(allow_view_cost), 0) from users where users_code = :G_USER_CODE",
+    "more": [
+      {
+        "key": "ENTRY",
+        "label_a": "طباعة القيد",
+        "label_e": "Print Entry",
+        "rdf": "ACJRNL1",
+        "rdf_module": "ST",
+        "params": {
+          "FROM_ENTRY_YEAR": "AC_ENTRY_YEAR",
+          "TO_ENTRY_YEAR": "AC_ENTRY_YEAR",
+          "FROM_ENTRY_TYPE": "AC_ENTRY_TYPE",
+          "TO_ENTRY_TYPE": "AC_ENTRY_TYPE",
+          "FROM_ENTRY_NO": "AC_ENTRY_NO",
+          "TO_ENTRY_NO": "AC_ENTRY_NO"
+        },
+        "right": "select case when u.c = '0' or exists (select 1 from file_password m where m.system_number = 30 and m.file_serial = 26 and m.users_code = u.c) then 1 else 0 end from (select :G_USER_CODE c from dual) u"
+      }
+    ],
+    "not_mapped": [
+      {
+        "label_a": "طباعة (وارد)",
+        "label_e": "Store-in voucher",
+        "rdf": "ST_RECEIVE_COST2",
+        "reason": "CTRL.PRINT_BTN2 is Visible=false in the form and never shown (both installation branches ran the same report)"
+      },
+      {
+        "label_a": "طباعة تفاصيل الأذون المجمعة",
+        "label_e": "Collected receipts detail",
+        "rdf": "ST_RECEIVE_COST_DET",
+        "reason": "CTRL.PRINT_DET is shown only when COLCT_FLAG = 1 (collected receipts); no purchase invoice of this installation has COLCT_FLAG = 1"
+      },
+      {
+        "label_a": "طباعة",
+        "label_e": "Print",
+        "rdf": "ST_RECEIVE_COST_PR",
+        "reason": "CTRL.ITEM352 is Visible=false and never shown"
+      },
+      {
+        "label_a": "",
+        "label_e": "",
+        "rdf": "PU_INVOICE_SDI / PU_INVOICE_SDI_E",
+        "reason": "automatic print on save only when :GLOBAL.CUSTOMER_CODE = 'SDI' (not this installation; PU_INVOICE_SDI_E has no converted XML)"
+      }
+    ],
+    "evidence": "ST_RECEIVE_COST (fmb) CTRL.PRINT_BTN: ALLOW_VIEW_COST right, supplier name / address / max tax no computed before printing, ST_SUPPLIER_INVOICE.rdf. ST_TRNS_MAST.ENTRY_PRINT: ACJRNL1 with FROM/TO_ENTRY_YEAR/TYPE/NO when POST_FLAG = 1; WHEN-NEW-FORM-INSTANCE hides it for users (other than 0) without FILE_PASSWORD system 30 file 26."
+  },
+  "ST_RETURN_COST": {
+    "rdf": "ST_SUPPLIER_INVOICE_RET",
+    "params": {
+      "P_TRNS_TYPE_CODE": "TRNS_TYPE_CODE",
+      "P_TRNS_SERIAL": "TRNS_SERIAL"
+    },
+    "right": "select nvl(max(allow_view_cost), 0) from users where users_code = :G_USER_CODE",
+    "more": [
+      {
+        "key": "ENTRY",
+        "label_a": "طباعة القيد",
+        "label_e": "Printing Entry",
+        "rdf": "ACJRNL1",
+        "rdf_module": "ST",
+        "params": {
+          "FROM_ENTRY_YEAR": "AC_ENTRY_YEAR",
+          "TO_ENTRY_YEAR": "AC_ENTRY_YEAR",
+          "FROM_ENTRY_TYPE": "AC_ENTRY_TYPE",
+          "TO_ENTRY_TYPE": "AC_ENTRY_TYPE",
+          "FROM_ENTRY_NO": "AC_ENTRY_NO",
+          "TO_ENTRY_NO": "AC_ENTRY_NO"
+        },
+        "right": "select case when u.c = '0' or exists (select 1 from file_password m where m.system_number = 30 and m.file_serial = 26 and m.users_code = u.c) then 1 else 0 end from (select :G_USER_CODE c from dual) u"
+      }
+    ],
+    "not_mapped": [
+      {
+        "label_a": "",
+        "label_e": "",
+        "rdf": "PU_INVOICE_RET_SDI / PU_INVOICE_SDI_RET_E",
+        "reason": "print unit guarded by :GLOBAL.CUSTOMER_CODE = 'SDI' with a print-count limit (ST_TRNS_MAST_PRINT); not this installation; PU_INVOICE_SDI_RET_E has no converted XML"
+      }
+    ],
+    "evidence": "ST_RETURN_COST.fmx (no source): print unit reads NVL(ALLOW_VIEW_COST,0) from USERS ('ليس لك صلاحية الطباعة'), passes P_TRNS_TYPE_CODE / P_TRNS_SERIAL to ST_SUPPLIER_INVOICE_RET.rdf; ENTRY_PRINT unit: ACJRNL1 FROM/TO_ENTRY_* from AC_ENTRY_* when POST_FLAG = 1, hidden (with POST_BUT) for users without FILE_PASSWORD 30/26."
+  },
+  "ST_RETURN_COST2": {
+    "rdf": "ST_SUPPLIER_INVOICE_RET",
+    "params": {
+      "P_TRNS_TYPE_CODE": "TRNS_TYPE_CODE",
+      "P_TRNS_SERIAL": "TRNS_SERIAL"
+    },
+    "right": "select nvl(max(allow_view_cost), 0) from users where users_code = :G_USER_CODE",
+    "more": [
+      {
+        "key": "ENTRY",
+        "label_a": "طباعة القيد",
+        "label_e": "Printing Entry",
+        "rdf": "ACJRNL1",
+        "rdf_module": "ST",
+        "params": {
+          "FROM_ENTRY_YEAR": "AC_ENTRY_YEAR",
+          "TO_ENTRY_YEAR": "AC_ENTRY_YEAR",
+          "FROM_ENTRY_TYPE": "AC_ENTRY_TYPE",
+          "TO_ENTRY_TYPE": "AC_ENTRY_TYPE",
+          "FROM_ENTRY_NO": "AC_ENTRY_NO",
+          "TO_ENTRY_NO": "AC_ENTRY_NO"
+        },
+        "right": "select case when u.c = '0' or exists (select 1 from file_password m where m.system_number = 30 and m.file_serial = 26 and m.users_code = u.c) then 1 else 0 end from (select :G_USER_CODE c from dual) u"
+      }
+    ],
+    "not_mapped": [
+      {
+        "label_a": "",
+        "label_e": "",
+        "rdf": "st_return_cost_RSD",
+        "reason": "only when :GLOBAL.CUSTOMER_CODE = 'RSD' (no ELSE); the RDF is not in the installation folders"
+      }
+    ],
+    "evidence": "ST_RETURN_COST2.fmx (no source): same print unit as ST_RETURN_COST (ALLOW_VIEW_COST right, ST_SUPPLIER_INVOICE_RET.rdf) and ENTRY_PRINT -> ACJRNL1 (hidden without FILE_PASSWORD 30/26)."
+  },
+  "ST_SALES_ORDER": {
+    "rdf": "st_customer_ORDER",
+    "params": {
+      "P_TRNS_TYPE_CODE": "TRNS_TYPE_CODE",
+      "P_TRNS_SERIAL": "TRNS_SERIAL"
+    },
+    "more": [
+      {
+        "key": "CARD",
+        "label_a": "كارت العميل",
+        "label_e": "Customer card",
+        "rdf": "ST_CUST_CARD",
+        "params": {
+          "C1": "CUSTOMER_CODE",
+          "C2": "CUSTOMER_CODE",
+          "FROM_CLASS": "(select min(c.serial) from ar_cust_class c)",
+          "TO_CLASS": "(select max(c.serial) from ar_cust_class c)",
+          "FROM_SALES": "SALESMAN_CODE",
+          "TO_SALES": "SALESMAN_CODE",
+          "D1": "'01-01-2019'",
+          "D2": "to_char(sysdate, 'DD-MM-YYYY')",
+          "P_REPORT": "'1'",
+          "LEX_CUST2": "'0'",
+          "LEX_CUST": "'0'"
+        }
+      },
+      {
+        "key": "STMT",
+        "label_a": "كشف حساب العميل",
+        "label_e": "Customer statement",
+        "rdf": "AR_Sttm_HMC2",
+        "rdf_module": "AR",
+        "params": {
+          "C1": "CUSTOMER_CODE",
+          "C2": "CUSTOMER_CODE",
+          "P_FROM_CAT": "(select case when count(*) = 1 then max(cs.ctgry_code) end from ar_cust_salesman cs where cs.customer_code = t.customer_code and cs.salesman_code = t.salesman_code)",
+          "P_TO_CAT": "(select case when count(*) = 1 then max(cs.ctgry_code) end from ar_cust_salesman cs where cs.customer_code = t.customer_code and cs.salesman_code = t.salesman_code)",
+          "DUE": "'1'",
+          "D1": "to_char(sysdate - 365, 'DD-MM-YYYY')",
+          "D2": "to_char(sysdate, 'DD-MM-YYYY')",
+          "P_REPORT": "'1'",
+          "FROM_SALES": "SALESMAN_CODE",
+          "TO_SALES": "SALESMAN_CODE",
+          "SHOW_DEL": "'1'"
+        }
+      }
+    ],
+    "not_mapped": [
+      {
+        "label_a": "المستندات",
+        "label_e": "Documents",
+        "rdf": "-",
+        "reason": "attachments form, not a print"
+      }
+    ],
+    "evidence": "ST_SALES_ORDER.FMB: CTRL.PRINT_BTN1 st_customer_ORDER (no right, no print flag); CTRL.PRINT_BTN2 ST_CUST_CARD; CTRL.PRINT_BTN3 AR_Sttm_HMC2 (same parameters as ST_ISSUE_IO). All three visible."
+  },
+  "ST_PRICE_PROPOSAL": {
+    "rdf": "st_customer_requisition",
+    "params": {
+      "P_TRNS_TYPE_CODE": "TRNS_TYPE_CODE",
+      "P_TRNS_SERIAL": "TRNS_SERIAL"
+    },
+    "more": [
+      {
+        "key": "STMT",
+        "label_a": "كشف حساب العميل",
+        "label_e": "Customer statement",
+        "rdf": "AR_Sttm_HMC2",
+        "rdf_module": "AR",
+        "params": {
+          "C1": "CUSTOMER_CODE",
+          "C2": "CUSTOMER_CODE",
+          "P_FROM_CAT": "(select case when count(*) = 1 then max(cs.ctgry_code) end from ar_cust_salesman cs where cs.customer_code = t.customer_code and cs.salesman_code = t.salesman_code)",
+          "P_TO_CAT": "(select case when count(*) = 1 then max(cs.ctgry_code) end from ar_cust_salesman cs where cs.customer_code = t.customer_code and cs.salesman_code = t.salesman_code)",
+          "DUE": "'1'",
+          "D1": "to_char(sysdate - 365, 'DD-MM-YYYY')",
+          "D2": "to_char(sysdate, 'DD-MM-YYYY')",
+          "P_REPORT": "'1'",
+          "FROM_SALES": "SALESMAN_CODE",
+          "TO_SALES": "SALESMAN_CODE",
+          "SHOW_DEL": "'1'"
+        }
+      },
+      {
+        "key": "CARD",
+        "label_a": "كارت العميل",
+        "label_e": "Customer card",
+        "rdf": "ST_CUST_CARD",
+        "params": {
+          "C1": "CUSTOMER_CODE",
+          "C2": "CUSTOMER_CODE",
+          "FROM_CLASS": "(select min(c.serial) from ar_cust_class c)",
+          "TO_CLASS": "(select max(c.serial) from ar_cust_class c)",
+          "FROM_SALES": "SALESMAN_CODE",
+          "TO_SALES": "SALESMAN_CODE",
+          "D1": "'01-01-2019'",
+          "D2": "to_char(sysdate, 'DD-MM-YYYY')",
+          "P_REPORT": "'1'",
+          "LEX_CUST2": "'0'",
+          "LEX_CUST": "'0'"
+        }
+      }
+    ],
+    "not_mapped": [
+      {
+        "label_a": "خانة Excel (CTRL.XLS) مع زر الطباعة",
+        "label_e": "Excel tick box (CTRL.XLS) with the print button",
+        "rdf": "ST_PROPSAL_IO_XLS",
+        "reason": "with CTRL.XLS ticked PRINT_BTN runs ST_PROPSAL_IO_XLS with DESFORMAT=XML (data export for Excel), not a paper document"
+      },
+      {
+        "label_a": "المستندات",
+        "label_e": "Documents",
+        "rdf": "-",
+        "reason": "attachments form, not a print"
+      }
+    ],
+    "evidence": "ST_PRICE_PROPOSAL.fmb (same in ST_PRICE_PROPOSAL06092026.fmb): CTRL.PRINT_BTN st_customer_requisition when CTRL.XLS is unticked, ST_PROPSAL_IO_XLS when ticked (mapped as its own button XLS); CTRL.PRINT_BTN1 AR_Sttm_HMC2; CTRL.PRINT_BTN2 ST_CUST_CARD. No right, no print flag."
+  },
+  "ST_DELIVERY": {
+    "rdf": "Delivery_Notes",
+    "params": {
+      "FROM_TRNS_TYPE_CODE": "TRNS_TYPE_CODE",
+      "TO_TRNS_TYPE_CODE": "TRNS_TYPE_CODE",
+      "FROM_TRNS_SERIAL": "TRNS_SERIAL",
+      "TO_TRNS_SERIAL": "TRNS_SERIAL",
+      "P_FROM_CUSTOMER_CODE": "CUSTOMER_CODE",
+      "P_TO_CUSTOMER_CODE": "CUSTOMER_CODE"
+    },
+    "more": [
+      {
+        "key": "GOODS",
+        "label_a": "طلب صرف بضاعة",
+        "label_e": "Goods Request / Goods Issue Voucher",
+        "rdf": "Goods_Request",
+        "params": {
+          "P_FROM_TRNS": "TRNS_TYPE_CODE",
+          "P_TO_TRNS": "TRNS_TYPE_CODE",
+          "P_FROM_SERIAL": "TRNS_SERIAL",
+          "P_TO_SERIAL": "TRNS_SERIAL"
+        }
+      }
+    ],
+    "not_mapped": [
+      {
+        "label_a": "مذكرة التحميل",
+        "label_e": "Loading Note Report",
+        "rdf": "Loading_Notes",
+        "reason": "RDF has no converted XML (no Loading_Notes.rdf in ASCON\\ST\\FMB; the legacy ran it from :GLOBAL.PATH)"
+      }
+    ],
+    "evidence": "ST_DELIVERY.fmx (no source): toolbar PRINT_BTN (tooltip 'Delivery Note Report') -> Delivery_Notes.RDF with FROM/TO_TRNS_TYPE_CODE, FROM/TO_TRNS_SERIAL, P_FROM/P_TO_CUSTOMER_CODE = :CUSTOMER_CODE, LANG (must save first; the 'SDI' test comes after the print call in the bind order, i.e. only the follow-up CREATE_RECORD); the button with tooltip 'Goods Request/Goods Issue Voucher' -> Goods_Request.RDF with P_FROM/P_TO_TRNS, P_FROM/P_TO_SERIAL; the legacy refused it with 'تم تحويل المذكرة الى فاتورة ...لايمكن طباعة طلب الصرف' when the note was already converted to a sales invoice (:SALES_TRNS_TYPE_CODE set) - not reproducible with a user right (document condition); LOADING_NOTE (tooltip 'Loading Note Report') -> Loading_Notes.RDF, no XML. ST_DELIVERY_MAST is empty in this installation: no document to test; RDFs checked with hand-typed parameters."
+  },
+  "ST_RESERVATION": {
+    "rdf": "ST_Invoice2",
+    "params": {
+      "FROM_STORE": "(select d.store_code from st_trns_det d where d.trns_type_code = t.trns_type_code and d.trns_serial = t.trns_serial order by d.item_serial fetch first 1 rows only)",
+      "TO_STORE": "(select d.store_code from st_trns_det d where d.trns_type_code = t.trns_type_code and d.trns_serial = t.trns_serial order by d.item_serial fetch first 1 rows only)",
+      "FROM_DATE": "TRNS_DATE",
+      "FROM_TRNS_CODE": "TRNS_TYPE_CODE",
+      "TO_TRNS_CODE": "TRNS_TYPE_CODE",
+      "FROM_TRNS_SERIAL": "TRNS_SERIAL",
+      "TO_TRNS_SERIAL": "TRNS_SERIAL"
+    },
+    "more": [
+      {
+        "key": "INV",
+        "label_a": "طباعة الفاتورة",
+        "label_e": "Invoice print",
+        "rdf": "ST_Invoice",
+        "params": {
+          "FROM_STORE": "STORE_CODE",
+          "TO_STORE": "STORE_CODE",
+          "FROM_DATE": "TRNS_DATE",
+          "TO_DATE": "TRNS_DATE",
+          "FROM_TRNS_CODE": "TRNS_TYPE_CODE",
+          "TO_TRNS_CODE": "TRNS_TYPE_CODE",
+          "FROM_TRNS_SERIAL": "TRNS_SERIAL",
+          "TO_TRNS_SERIAL": "TRNS_SERIAL"
+        }
+      },
+      {
+        "key": "RECEIPT",
+        "label_a": "سند قبض",
+        "label_e": "Official receipt",
+        "rdf": "SA_OFFICIAL_RECEIPT",
+        "params": {
+          "FROM_TRNS_CODE": "TRNS_TYPE_CODE",
+          "TO_TRNS_CODE": "TRNS_TYPE_CODE",
+          "FROM_TRNS_SERIAL": "TRNS_SERIAL",
+          "TO_TRNS_SERIAL": "TRNS_SERIAL"
+        }
+      }
+    ],
+    "evidence": "ST_RESERVATION.fmx (no source), CTRL block item order CLEAR_BTN, PRINT_BTN, LIST_VALUE, EXIT_BTN, ITEM151, OFFICIAL_RECEIPT: PRINT_BTN (tooltip 'طباعة فاتورة الخزانات') -> ST_Invoice2.RDF with FROM/TO_STORE = :ST_TRNS_DET.STORE_CODE (current line: the first line after the query), FROM_DATE = TRNS_DATE (no TO_DATE), FROM/TO_TRNS_CODE, FROM/TO_TRNS_SERIAL; ITEM151 (icon print1) -> ST_Invoice.RDF with the header store and FROM/TO_DATE; OFFICIAL_RECEIPT (icon print1) -> SA_OFFICIAL_RECEIPT.RDF. No customer-code test, no right, no print flag. ITEM151 visibility cannot be read from the .fmx (hidden in ST_ISSUE_IO). No reservation document exists in this installation (transaction type 17 unused): RDFs checked with sales invoice 10301/619."
+  },
+  "ST_TRNS_TYPE_SL": {
+    "rdf": "st_trns_code_rep",
+    "params": {},
+    "evidence": "ST_TRNS_TYPE_SL.fmx: the only print unit runs st_trns_code_rep.RDF (list of transaction types) with comp_code, LANG, P_PASSWORD_NUMBER only (all passed automatically). Prints the whole list, not the current record."
+  },
+  "AR_ST_ITEM_CLASSES": {
+    "rdf": "AR_ST_ITEMS_DISC",
+    "params": {
+      "P_CLASS_CODE": "CLASS_CODE"
+    },
+    "evidence": "AR_ST_ITEM_CLASSES.fmx: print unit -> AR_ST_ITEMS_DISC.RDF with P_CLASS_CODE = :AR_ST_ITEM_CLASSES.CLASS_CODE ('Class No Must Be Entered To Run Report' when empty), comp_code, LANG."
+  },
+  "ST_CUST_GROUP_PRICE": {
+    "rdf": "ST_CUST_GROUP_PRICE",
+    "params": {
+      "P_CODE": "CUST_CODE"
+    },
+    "evidence": "ST_CUST_GROUP_PRICE.fmx: print unit -> ST_CUST_GROUP_PRICE.RDF with P_CODE = :CODE (the customer of the record; the RDF filters CUSTOMER.CODE = :P_CODE), LANG, comp_code; must save first. Table empty in this installation: RDF checked with hand-typed parameters."
+  },
+  "PR_ORDER": {
+    "rdf": "Purchase_Order_NEW_E",
+    "params": {
+      "P_FROM_TRNS_TYPE_CODE": "TRNS_TYPE_CODE",
+      "P_TO_TRNS_TYPE_CODE": "TRNS_TYPE_CODE",
+      "P_FROM_TRNS_SERIAL": "TRNS_SERIAL",
+      "P_TO_TRNS_SERIAL": "TRNS_SERIAL"
+    },
+    "not_mapped": [
+      {
+        "label_a": "طباعة",
+        "label_e": "Print",
+        "rdf": "PR_ORDER_STORE",
+        "reason": "CTRL.PRINT_BTN is Visible=false in the form and never shown"
+      },
+      {
+        "label_a": "طباعة",
+        "label_e": "Print",
+        "rdf": "pr_order_preparation",
+        "reason": "CTRL.PRINT_BTN2 is Visible=false in the form and never shown"
+      }
+    ],
+    "evidence": "PR_ORDER (fmb) CTRL.PRINT_BTN1 (the only visible print button): Purchase_Order_NEW_E with P_FROM/TO_TRNS_TYPE_CODE and P_FROM/TO_TRNS_SERIAL; the TAF_A / TAF_E (amount in words) and P_REQUISITION_TYPE it also passed are not parameters of that report (it spells the amount itself)."
+  },
+  "PR_INCOME_LOT": {
+    "rdf": "PR_INCOME_LOT",
+    "params": {
+      "P_FROM_TRNS_TYPE_CODE": "TRNS_TYPE_CODE",
+      "P_TO_TRNS_TYPE_CODE": "TRNS_TYPE_CODE",
+      "P_FROM_TRNS_SERIAL": "TRNS_SERIAL",
+      "P_TO_TRNS_SERIAL": "TRNS_SERIAL",
+      "P_FORM_FLAG": "'0'"
+    },
+    "more": [
+      {
+        "key": "INVOICE",
+        "label_a": "طباعة فاتورة المشتريات",
+        "label_e": "Print purchase invoice",
+        "rdf": "ST_SUPPLIER_INVOICE",
+        "params": {
+          "P_TRNS_TYPE_CODE": "PU_TRNS_TYPE_CODE",
+          "P_TRNS_SERIAL": "PU_TRNS_SERIAL",
+          "P_CUSTOMER_CODE": "(select max(s.vendor_code) from supplier s where s.code = t.supplier_code)",
+          "P_CUSTOMER_NAME": "(select max(s.name_a) from supplier s where s.code = t.supplier_code)",
+          "P_ADDRESS": "(select max(s.address_a) from supplier s where s.code = t.supplier_code)",
+          "P_GLN_NO": "(select max(s.reg_no) from supplier s where s.code = t.supplier_code)",
+          "P_INVOICE_NO": "(select max(m.doc_no) from st_trns_mast m where m.trns_type_code = t.pu_trns_type_code and m.trns_serial = t.pu_trns_serial)",
+          "P_DESC_A": "(select max(m.desc_a) from st_trns_mast m where m.trns_type_code = t.pu_trns_type_code and m.trns_serial = t.pu_trns_serial)",
+          "P_TRNS_DATE": "(select to_char(max(m.trns_date), 'DD-MM-RRRR') from st_trns_mast m where m.trns_type_code = t.pu_trns_type_code and m.trns_serial = t.pu_trns_serial)",
+          "P_SUPPLIER_REF": "SUPPLIER_REF"
+        },
+        "right": "select nvl(max(allow_view_cost), 0) from users where users_code = :G_USER_CODE"
+      }
+    ],
+    "not_mapped": [
+      {
+        "label_a": "طباعة القيد",
+        "label_e": "Print entry",
+        "rdf": "ACJRNL1",
+        "reason": "PR_INCOME_LOT.PRINT_BUT prints ENTRY_YEAR/TYPE/NO of the lot only when POST_FLAG = 1; those columns are empty on all 348 lots of this installation (the entry is on the purchase invoice), so the legacy button always stopped with 'لايوجد قيد للطباعه'"
+      },
+      {
+        "label_a": "طباعة",
+        "label_e": "Print",
+        "rdf": "Receipt_REP / PU_REC_ITEM",
+        "reason": "CTRL.PRINT_BTN is Visible=false and prints only for :GLOBAL.CUSTOMER_CODE 'SAN' / 'SDI' / 'ZED' (no ELSE); PU_REC_ITEM has no converted XML"
+      }
+    ],
+    "evidence": "PR_INCOME_LOT (fmb) CTRL.ITEM352 (toolbar print): PR_INCOME_LOT.RDF with P_FROM/TO_TRNS_TYPE_CODE, P_FROM/TO_TRNS_SERIAL, P_FORM_FLAG = :PARAMETER.FORM_FLAG (0 for the lots menu entry; the 'Incoming Lots Costs' entry opened the form with 1 - both share one APEX page). PR_INCOME_LOT.INV_PRINT_BTN: ST_SUPPLIER_INVOICE of the linked purchase invoice (PU_TRNS_*), ALLOW_VIEW_COST right, supplier VENDOR_CODE / ADDRESS_A / REG_NO and invoice DOC_NO / DESC_A / TRNS_DATE computed before printing."
+  },
+  "ST_RETURN_AUTH_COST2": {
+    "rdf": "ST_SUPPLIER_AUTH_INVOICE_RET",
+    "params": {
+      "P_TRNS_TYPE_CODE": "TRNS_TYPE_CODE",
+      "P_TRNS_SERIAL": "TRNS_SERIAL"
+    },
+    "right": "select nvl(max(allow_view_cost), 0) from users where users_code = :G_USER_CODE",
+    "not_mapped": [
+      {
+        "label_a": "",
+        "label_e": "",
+        "rdf": "st_return_cost_RSD",
+        "reason": "only when :GLOBAL.CUSTOMER_CODE = 'RSD' (no ELSE); the RDF is not in the installation folders"
+      },
+      {
+        "label_a": "طباعة القيد",
+        "label_e": "Printing Entry",
+        "rdf": "",
+        "reason": "ST_TRNS_AUTH_MAST.ENTRY_PRINT has a label but no print unit in the compiled form (nothing to reproduce)"
+      }
+    ],
+    "evidence": "ST_RETURN_AUTH_COST2.fmx (no source): print unit reads NVL(ALLOW_VIEW_COST,0) ('ليس لك صلاحية الطباعة'), passes :ST_TRNS_AUTH_MAST.TRNS_TYPE_CODE / TRNS_SERIAL as P_TRNS_TYPE_CODE / P_TRNS_SERIAL to ST_SUPPLIER_AUTH_INVOICE_RET.rdf. ST_TRNS_AUTH_MAST has 0 rows here: compile + empty run only."
+  },
+  "ST_ITEM_REQ": {
+    "rdf": "ST_ITEM_REQ",
+    "params": {
+      "FROM_TRNS_CODE": "TRNS_TYPE_CODE",
+      "TO_TRNS_CODE": "TRNS_TYPE_CODE",
+      "FROM_TRNS_SERIAL": "TRNS_SERIAL",
+      "TO_TRNS_SERIAL": "TRNS_SERIAL"
+    },
+    "more": [
+      {
+        "key": "SPARE",
+        "label_a": "طباعة طلبات شراء قطع غيار",
+        "label_e": "Print spare-parts requests",
+        "rdf": "ST_ITEM_REQ_N",
+        "params": {
+          "FROM_TRNS_CODE": "TRNS_TYPE_CODE",
+          "TO_TRNS_CODE": "TRNS_TYPE_CODE",
+          "FROM_TRNS_SERIAL": "TRNS_SERIAL",
+          "TO_TRNS_SERIAL": "TRNS_SERIAL"
+        }
+      }
+    ],
+    "evidence": "ST_ITEM_REQ.fmx (no source): toolbar print (tooltip 'طباعة طلبيات النواقص') -> ST_ITEM_REQ with FROM/TO_TRNS_CODE = :ST_ITEM_REQ.TRNS_TYPE_CODE and FROM/TO_TRNS_SERIAL = :ST_ITEM_REQ.TRNS_SERIAL; second print button (tooltip 'طباعة طلبات شراء قطع غيار', CTRL.RUN) -> ST_ITEM_REQ_N with the same parameters. ST_ITEM_REQ has 0 rows here. Both RDFs fail on the current schema: Q_1 selects STORE_CODE unqualified and ST_ITEM_REQ_DET now also has STORE_CODE (ORA-00918) - a legacy report defect, not an engine one."
+  },
+  "ST_ITEM_REQ_HANDLE": {
+    "rdf": "ST_ITEM_REQ",
+    "params": {
+      "FROM_TRNS_CODE": "TRNS_TYPE_CODE",
+      "TO_TRNS_CODE": "TRNS_TYPE_CODE",
+      "FROM_TRNS_SERIAL": "TRNS_SERIAL",
+      "TO_TRNS_SERIAL": "TRNS_SERIAL"
+    },
+    "more": [
+      {
+        "key": "APPROVAL",
+        "label_a": "طباعة",
+        "label_e": "Print (approval)",
+        "rdf": "ST_ITEM_REQ_AP",
+        "params": {
+          "FROM_TRNS_CODE": "TRNS_TYPE_CODE",
+          "TO_TRNS_CODE": "TRNS_TYPE_CODE",
+          "FROM_TRNS_SERIAL": "TRNS_SERIAL",
+          "TO_TRNS_SERIAL": "TRNS_SERIAL"
+        }
+      }
+    ],
+    "evidence": "ST_ITEM_REQ_HANDLE.fmx (no source): first print unit -> ST_ITEM_REQ (FROM/TO_TRNS_CODE, FROM/TO_TRNS_SERIAL from :ST_ITEM_REQ); second -> ST_ITEM_REQ_AP, whose parameter names were written with trailing spaces ('FROM_TRNS_CODE  ', 'TO_TRNS_CODE  ') in the legacy - mapped to the report's real names. 0 rows here; same ORA-00918 legacy defect as ST_ITEM_REQ."
+  },
+  "ST_PRUCHASE_REQUEST": {
+    "rdf": "Requisition_rep",
+    "params": {
+      "P_FROM_TRNS_REQ": "TRNS_TYPE_CODE",
+      "P_TO_TRNS_REQ": "TRNS_TYPE_CODE",
+      "P_FROM_TRNS_REQ_SER": "TRNS_SERIAL",
+      "P_TO_TRNS_REQ_SER": "TRNS_SERIAL"
+    },
+    "evidence": "ST_PRUCHASE_REQUEST.fmx (no source): print button (tooltip 'طباعة الفاتورة') -> Requisition_rep with P_FROM/TO_TRNS_REQ = :PR_ORDER_REQUEST.TRNS_TYPE_CODE and P_FROM/TO_TRNS_REQ_SER = :PR_ORDER_REQUEST.TRNS_SERIAL. PR_ORDER_REQUEST has 0 rows here: compile + empty run only."
+  },
+  "PR_MR": {
+    "rdf": "PR_PRE_PRINT1",
+    "params": {
+      "P_TRNS_TYPE_CODE": "TRNS_TYPE_CODE",
+      "SER": "TRNS_SERIAL"
+    },
+    "evidence": "PR_MR.fmx (no source): PR_QUOT_MAST.PRINT_BUTTON 'طباعة / Print' (on each supplier row of the request) -> PR_PRE_PRINT1 with SER = :PR_REQ_MAST.TRNS_SERIAL, 'P_TRNS_TYPE_CODE ' (sic, trailing space) = TRNS_TYPE_CODE and SUPP = :SUPPLIER_ID of the current supplier row. The print page knows only the header, so SUPP is left empty: the report's own condition (:SUPP IS NULL OR C.SUPPLIER_ID = :SUPP) then prints the RFQ of every supplier of the request. PR_REQ_MAST has 0 rows here."
+  },
+  "ST_PO_ITEM_SUPP": {
+    "rdf": "Purchase_Order_NEW_E",
+    "params": {
+      "P_FROM_TRNS_TYPE_CODE": "nvl(to_char(t.pr_order_trns_type_code), '-1')",
+      "P_TO_TRNS_TYPE_CODE": "nvl(to_char(t.pr_order_trns_type_code), '-1')",
+      "P_FROM_TRNS_SERIAL": "nvl(to_char(t.pr_order_trns_serial), '-1')",
+      "P_TO_TRNS_SERIAL": "nvl(to_char(t.pr_order_trns_serial), '-1')"
+    },
+    "not_mapped": [
+      {
+        "label_a": "طباعة التقرير",
+        "label_e": "Print report",
+        "rdf": "ST_ITEM_SEARCH",
+        "reason": "toolbar print: the form first copies its checked detail rows into work table ST_ITEM_SEARCH (DELETE + INSERT per row) and passes the screen's from_date / to_date; the report reads that work table, so it cannot run from the saved document alone"
+      },
+      {
+        "label_a": "",
+        "label_e": "",
+        "rdf": "ST_SUPP_AGRMNT_ITEM",
+        "reason": "two detail-row buttons print the supplier agreement of the current line's item (P_GROUP_CODE / P_ITEM_CODE / P_SERIAL = MAX(ST_SUPP_AGRMNT_DET_BONUS.SERIAL)); a line-level print, not reachable from the header print page"
+      }
+    ],
+    "evidence": "ST_PO_ITEM_SUPP.fmx (no source): print unit with :ST_PO_ITEM_SUPP.PR_ORDER_TRNS_TYPE_CODE / PR_ORDER_TRNS_SERIAL -> Purchase_Order_NEW_E (the purchase order created from this suggestion; TAF_A / TAF_E / P_REQUISITION_TYPE are not report parameters). Deviation: before a purchase order exists the legacy passed empty parameters and the report's (:P IS NULL OR ...) conditions then printed every purchase order (370 here, 2000+ pages); the parameters are wrapped in nvl(..., '-1') so such a suggestion prints an empty order. The only row here has no purchase order yet."
+  },
+  "ST_TRNS_TYPE": {
+    "rdf": "st_trns_code_rep_pu",
+    "params": {},
+    "evidence": "ST_TRNS_TYPE.fmx (no source): CTRL.PRINT_BTN (tooltip 'طباعة التقرير') -> st_trns_code_rep_pu.RDF with only P_PASSWORD_NUMBER / LANG / comp_code: the list of all purchasing transaction types (not the current record)."
+  },
+  "ACDLYTR": {
+    "rdf": "ACJRNL1",
+    "rdf_module": "AC",
+    "params": {
+      "FROM_ENTRY_YEAR": "ENTRY_YEAR",
+      "TO_ENTRY_YEAR": "ENTRY_YEAR",
+      "FROM_ENTRY_TYPE": "ENTRY_TYPE",
+      "TO_ENTRY_TYPE": "ENTRY_TYPE",
+      "FROM_ENTRY_NO": "ENTRY_NO",
+      "TO_ENTRY_NO": "ENTRY_NO",
+      "START_DATE": "ENTRY_DATE",
+      "END_DATE": "ENTRY_DATE",
+      "MEMO_FLAG": "'نعم'",
+      "COMPANY_CODE": "v('G_COMPANY_CODE')"
+    },
+    "evidence": "ACDLYTR CTRL.PRINT_BTN (Acdlytr.fmb): :global.ac_path || 'ACJRNL1' = AC\\FMB\\ACJRNL1 (daily entries, reads AC_DAILY_TRN); from/to entry year/type/no + START/END_DATE = ENTRY_DATE, memo_flag 'نعم', PASSWORD_NUMBER / COMPANY_CODE / COMP_CODE from the session; no right, no print flag. Needs the AC copy of ACJRNL1: the ST / VN copies read AC_YEARLY_TRN (posted entries).",
+    "not_mapped": [
+      {
+        "label_a": "طباعة إجمالي القيد",
+        "label_e": "Print entry totals",
+        "rdf": "ACJRNL1_TOT",
+        "reason": "CTRL.ITEM206 is hidden (Visible=false in Acdlytr.fmb) and ACJRNL1_tot has no converted XML"
+      },
+      {
+        "label_a": "سند قبض",
+        "label_e": "Receipt document",
+        "rdf": "AC_RECEIVE_DOC",
+        "reason": "AC_DAILY_TRN.ITEM208 runs :global.ac_path || 'AC_RECEIVE_DOC' (P_ENTRY_YEAR/TYPE/NO, memo_flag); the RDF is not in ASCON\\AC\\FMB and has no converted XML"
+      },
+      {
+        "label_a": "كشف حساب",
+        "label_e": "Account statement",
+        "rdf": "ACSTTM1",
+        "reason": "AC_DAILY_TRN_DET.PRINT_STM (REPORT_PASSWORD serial 35) prints the statement of the account of the current detail line (FROM/TO_ACCOUNT_NUMBER = line account, 01-01-2000 .. entry date): row-level print of a detail line, the print page works on the header"
+      },
+      {
+        "label_a": "ترحيل وطباعة",
+        "label_e": "Post and print",
+        "rdf": "ACJRNL2",
+        "reason": "POST_VOUCHER alert button 2 posts the entry then prints it with ACJRNL2 (DO_PRINT_REP); after posting the entry lives in AC_YEARLY_TRN, so this print is the ACYRTR print"
+      },
+      {
+        "label_a": "أخطاء الترحيل",
+        "label_e": "Posting errors",
+        "rdf": "ACPSTERR",
+        "reason": "run_error_report after a failed posting: error list, not a document print"
+      }
+    ]
+  },
+  "ACYRTR": {
+    "rdf": "ACJRNL2",
+    "rdf_module": "AC",
+    "params": {
+      "FROM_ENTRY_YEAR": "ENTRY_YEAR",
+      "TO_ENTRY_YEAR": "ENTRY_YEAR",
+      "FROM_ENTRY_TYPE": "ENTRY_TYPE",
+      "TO_ENTRY_TYPE": "ENTRY_TYPE",
+      "FROM_ENTRY_NO": "ENTRY_NO",
+      "TO_ENTRY_NO": "ENTRY_NO",
+      "MEMO_FLAG": "'نعم'",
+      "COMPANY_CODE": "v('G_COMPANY_CODE')"
+    },
+    "evidence": "ACYRTR CTRL.PRINT_BTN (Acyrtr.fmb): :global.ac_path || 'ACJRNL2' (posted entries, AC_YEARLY_TRN); from/to entry year/type/no, memo_flag 'نعم' (START/END_DATE commented out), LANG / PASSWORD_NUMBER / COMPANY_CODE / COMP_CODE from the session; no right, no print flag."
+  },
+  "AC_DISTP": {
+    "rdf": "ACJRNL2",
+    "rdf_module": "AC",
+    "params": {
+      "FROM_ENTRY_YEAR": "ENTRY_YEAR",
+      "TO_ENTRY_YEAR": "ENTRY_YEAR",
+      "FROM_ENTRY_TYPE": "ENTRY_TYPE",
+      "TO_ENTRY_TYPE": "ENTRY_TYPE",
+      "FROM_ENTRY_NO": "ENTRY_NO",
+      "TO_ENTRY_NO": "ENTRY_NO",
+      "START_DATE": "DIS_DATE",
+      "END_DATE": "DIS_DATE",
+      "MEMO_FLAG": "'نعم'"
+    },
+    "evidence": "AC_DISTP.ENTRY_PRINT 'طباعة القيد / Entry Print' (AC_DISTP.fmb): only when POST_FLAG = 1, :global.AC_path || 'ACJRNL2' with the distribution's voucher (ENTRY_YEAR/TYPE/NO) and START/END_DATE = DIS_DATE, MEMO_FLAG 'نعم'. The toolbar PRINT_BTN is hidden and does NULL, so the entry print is the screen's only print. An unposted distribution has no voucher: the print comes out empty (legacy printed nothing)."
+  },
+  "ACCRNCY": {
+    "rdf": "AC_CURRANCY",
+    "params": {
+      "COMPANY_CODE": "v('G_COMPANY_CODE')"
+    },
+    "evidence": "ACCRNCY CTRL.PRINT_BTN (Acmnucd-style template, fmx): :global.AC_path || 'ac_currancy.rdf' with COMP_CODE, COMPANY_CODE, PASSWORD_NUMBER, user_code, LANG only (P_CURRENCY_CODE not passed): prints the list of all currencies. No right, no print flag."
+  },
+  "AC_MASTER_STRUCT": {
+    "rdf": "AC_CHART_STRUCTURES",
+    "params": {
+      "COMPANY_CODE": "v('G_COMPANY_CODE')"
+    },
+    "evidence": "REPORT_FORM screen (the generator attaches prints only to MASTER_DETAIL). AC_MASTER_STRUCT CTRL.PRINT_BTN (fmx): :global.ac_path || 'ac_CHART_STRUCTURES.rdf' with COMP_CODE, COMPANY_CODE, PASSWORD_NUMBER, user_code, LANG: list of the chart-of-accounts levels."
+  },
+  "ACBASIC": {
+    "rdf": "AC_BASIC",
+    "params": {
+      "P_COMPANY_CODE": "COMPANY_CODE"
+    },
+    "evidence": "REPORT_FORM screen (the generator attaches prints only to MASTER_DETAIL). ACBASIC CTRL.PRINT_BTN (fmx): :global.AC_path || 'ac_basic.rdf' with p_COMPANY_CODE = :GLOBAL.COMPANY_CODE (the row's COMPANY_CODE is used: the screen shows the parameters of the user's company), COMP_CODE, PASSWORD_NUMBER, user_code, LANG."
+  },
+  "TX_STAT": {
+    "rdf": "TX_PRINT_TOT",
+    "params": {
+      "P_FROM_COMPANY": "COMPANY_CODE",
+      "P_TO_COMPANY": "COMPANY_CODE",
+      "P_FROM_CODE": "TAX_CODE",
+      "P_TO_CODE": "TAX_CODE",
+      "P_FROM_SERIAL": "TAX_SERIAL",
+      "P_TO_SERIAL": "TAX_SERIAL"
+    },
+    "more": [
+      {
+        "key": "DET",
+        "label_a": "طباعة تفاصيل الإقرار",
+        "label_e": "Print return details",
+        "rdf": "TX_PRINT_DET",
+        "params": {
+          "P_FROM_COMPANY": "COMPANY_CODE",
+          "P_TO_COMPANY": "COMPANY_CODE",
+          "P_FROM_CODE": "TAX_CODE",
+          "P_TO_CODE": "TAX_CODE",
+          "P_FROM_SERIAL": "TAX_SERIAL",
+          "P_TO_SERIAL": "TAX_SERIAL"
+        }
+      }
+    ],
+    "evidence": "TX_STAT.fmb TX_TRNS_MAST.PRN_TOT: :global.TX_path || 'TX_PRINT_TOT' (DESFORMAT PDF) and PRN_DET: 'TX_PRINT_DET' (DESFORMAT XML), both with P_FROM/TO_COMPANY = COMPANY_CODE, P_FROM/TO_CODE = TAX_CODE, P_FROM/TO_SERIAL = TAX_SERIAL, PASSWORD_NUMBER, COMPANY_CODE. No right, no print flag. The buttons carry no label in the .fmb (labels here are descriptive)."
+  },
+  "COMPANY": {
+    "rdf": "COMPANY",
+    "params": {
+      "FROM_COMPANY": "COMPANY_CODE",
+      "TO_COMPANY": "COMPANY_CODE"
+    },
+    "evidence": "COMPANY CTRL.PRINT_BTN (COMPANY.fmx): :GLOBAL.SE_PATH || 'company' with FROM_COMPANY = TO_COMPANY = :COMPANY.COMPANY_CODE, LANG, DESTYPE preview."
+  },
+  "ACGROUP_USERS": {
+    "rdf": "USERS",
+    "params": {},
+    "evidence": "ACGROUP_USERS CTRL.PRINT_BTN (AcGroup_Users.fmx): :GLOBAL.SE_PATH || 'USERS.rdf' (Arabic) or 'USERS_E.rdf' (English) with LANG, PASSWORD_NUMBER, COMPANY_CODE, user_code: list of all users and their groups. USERS_E has no converted XML, so English sessions also get the Arabic layout.",
+    "not_mapped": [
+      {
+        "label_a": "صلاحيات المستخدم",
+        "label_e": "User privileges",
+        "rdf": "ALL_USERS_PRV",
+        "reason": "PRINT_ALL_USER_SEC runs :GLOBAL.ES_PATH || 'ALL_USERS_PRV.rdf' (CURR_USER = USERS.USERS_CODE); GLOBAL.ES_PATH is set nowhere (the menu sets GLOBAL.SE_PATH), so the legacy button failed with FRM-40815 and never printed. The RDF exists (SE\\FMB\\ALL_USERS_PRV_RDF.xml) if the business wants it enabled."
+      },
+      {
+        "label_a": "",
+        "label_e": "",
+        "rdf": "USERS_E",
+        "reason": "English branch of PRINT_BTN: USERS_E.rdf has no converted XML"
+      }
+    ]
+  },
+  "ST_TRANSFER_FROM": {
+    "rdf": "st_transfer_from_NEW",
+    "params": {
+      "TRANS_SERIAL": "TRNS_SERIAL",
+      "TRANS_TYPE_CODE": "TRNS_TYPE_CODE",
+      "P_TRANSFER_SERIAL": "TRNSFER_SERIAL"
+    },
+    "more": [
+      {
+        "key": "ENTRY",
+        "label_a": "طباعة القيد",
+        "label_e": "Print Entry",
+        "rdf": "ACJRNL2",
+        "rdf_module": "ST",
+        "params": {
+          "FROM_ENTRY_YEAR": "AC_ENTRY_YEAR",
+          "TO_ENTRY_YEAR": "AC_ENTRY_YEAR",
+          "FROM_ENTRY_TYPE": "AC_ENTRY_TYPE",
+          "TO_ENTRY_TYPE": "AC_ENTRY_TYPE",
+          "FROM_ENTRY_NO": "AC_ENTRY_NO",
+          "TO_ENTRY_NO": "AC_ENTRY_NO"
+        },
+        "right": "select nvl(max(1), 0) from (select to_number(:G_USER_CODE) u from dual) x where x.u = 0 or exists (select 1 from file_password m where m.system_number = 3 and m.file_serial = 508 and m.users_code = x.u)",
+        "evidence": "ST_TRANSFER_FROM ST_TRNS_MAST.ENTRY_PRINT (only when POST_FLAG = 1): ACJRNL2 with FROM/TO_ENTRY_YEAR/TYPE/NO = AC_ENTRY_*; the button is hidden (WHEN-NEW-FORM-INSTANCE) for users other than 0 without FILE_PASSWORD system 3 serial 508 (posting right)"
+      },
+      {
+        "key": "ISSUE",
+        "label_a": "نموذج صرف مخزني",
+        "label_e": "Stock issuance form",
+        "rdf": "ST_STOCK_ISSUANCE_FORM",
+        "params": {
+          "TRANS_SERIAL": "TRNS_SERIAL",
+          "TRANS_TYPE_CODE": "TRNS_TYPE_CODE"
+        },
+        "evidence": "ST_TRANSFER_FROM CTRL.STOCK_ISSUANCE_FORM: ST_STOCK_ISSUANCE_FORM.rdf (TRANS_SERIAL, TRANS_TYPE_CODE). fmx only: WHEN-NEW-FORM-INSTANCE references this button together with the codes 'ZED'/'TOK' (visibility test, direction not readable); RDF last changed 2012 - confidence low that it is shown here"
+      }
+    ],
+    "not_mapped": [
+      {
+        "label_a": "طباعة (RSD)",
+        "label_e": "Print (RSD)",
+        "rdf": "st_transfer_from_RSD",
+        "reason": "branch of installation RSD (:GLOBAL.CUSTOMER_CODE); the RDF does not exist in ASCON\\ST\\FMB"
+      }
+    ],
+    "evidence": "ST_TRANSFER_FROM.fmx (no source) CTRL.PRINT_BTN unit: refuses unsaved record ('MUST SAVE RECORD'), constants RSD/SDI with st_transfer_from_NEW.rdf / st_transfer_from_RSD.rdf; installation code NULL and the RSD report is not deployed -> st_transfer_from_NEW.rdf (TRANS_SERIAL, TRANS_TYPE_CODE, P_TRANSFER_SERIAL = :TRNSFER_SERIAL, COMP_CODE, LANG). No print right."
+  },
+  "ST_TRANSFER_TO": {
+    "rdf": "st_transfer_to",
+    "params": {
+      "TRANS_SERIAL": "TRNS_SERIAL",
+      "TRANS_TYPE_CODE": "TRNS_TYPE_CODE"
+    },
+    "more": [
+      {
+        "key": "ENTRY",
+        "label_a": "طباعة القيد",
+        "label_e": "Print Entry",
+        "rdf": "ACJRNL2",
+        "rdf_module": "ST",
+        "params": {
+          "FROM_ENTRY_YEAR": "AC_ENTRY_YEAR",
+          "TO_ENTRY_YEAR": "AC_ENTRY_YEAR",
+          "FROM_ENTRY_TYPE": "AC_ENTRY_TYPE",
+          "TO_ENTRY_TYPE": "AC_ENTRY_TYPE",
+          "FROM_ENTRY_NO": "AC_ENTRY_NO",
+          "TO_ENTRY_NO": "AC_ENTRY_NO"
+        },
+        "right": "select nvl(max(1), 0) from (select to_number(:G_USER_CODE) u from dual) x where x.u = 0 or exists (select 1 from file_password m where m.system_number = 3 and m.file_serial = 508 and m.users_code = x.u)",
+        "evidence": "ST_TRANSFER_TO ST_TRNS_MAST.ENTRY_PRINT (only when POST_FLAG = 1): ACJRNL2 with FROM/TO_ENTRY_YEAR/TYPE/NO = AC_ENTRY_*; the button is hidden (WHEN-NEW-FORM-INSTANCE) for users other than 0 without FILE_PASSWORD system 3 serial 508 (posting right)"
+      }
+    ],
+    "not_mapped": [
+      {
+        "label_a": "طباعة (RSD)",
+        "label_e": "Print (RSD)",
+        "rdf": "st_transfer_from_RSD",
+        "reason": "branch of installation RSD; RDF not deployed"
+      },
+      {
+        "label_a": "طباعة حركة المخزن",
+        "label_e": "Store transaction print",
+        "rdf": "ST_trns_STORE",
+        "reason": "third print unit of ST_TRANSFER_TO.fmx (TRANS_TYPE_CODE, TRANS_SERIAL); ST_trns_STORE.rdf does not exist in ASCON\\ST\\FMB (no converted XML)"
+      }
+    ],
+    "evidence": "ST_TRANSFER_TO.fmx (no source) CTRL.PRINT_BTN unit: constants RSD/SDI, st_transfer_from_RSD.rdf / st_transfer_to.rdf; installation code NULL, RSD report not deployed -> st_transfer_to.rdf (TRANS_SERIAL, TRANS_TYPE_CODE, COMP_CODE, LANG)."
+  },
+  "ST_STORE_ITEM": {
+    "rdf": "ST_STORE_ITEM",
+    "params": {
+      "FROM_STORE_CODE": "@STORE_CODE",
+      "TO_STORE_CODE": "@STORE_CODE"
+    },
+    "more": [
+      {
+        "key": "REORDER",
+        "label_a": "إشعار حد الطلب",
+        "label_e": "Reorder level notice",
+        "rdf": "ST_ITEM_REORDER_LIMIT",
+        "params": {
+          "FROM_STORE_CODE": "@STORE_CODE",
+          "TO_STORE_CODE": "@STORE_CODE"
+        },
+        "evidence": "ST_STORE_ITEM.fmx print button (tooltip 'طباعة التقرير', trigger P30): ST_ITEM_REORDER_LIMIT.RDF, FROM/TO_STORE_CODE = :ST_STORE.STORE_CODE"
+      },
+      {
+        "key": "COUNT",
+        "label_a": "كشف جرد المخزن",
+        "label_e": "Stock count sheet",
+        "rdf": "ST_ITEM_UNIT_NEW",
+        "params": {
+          "FROM_STORE_CODE": "@STORE_CODE",
+          "TO_STORE_CODE": "@STORE_CODE"
+        },
+        "evidence": "ST_STORE_ITEM.fmx print button (tooltip 'طباعة التقرير', trigger P8): refuses without a store ('يجب تحديد المخزن المراد الجرد له'), ST_ITEM_UNIT_NEW.RDF (book / actual balance sheet), FROM/TO_STORE_CODE = :ST_STORE.STORE_CODE"
+      }
+    ],
+    "evidence": "ST_STORE_ITEM.fmx (no source): three print buttons with tooltip 'طباعة التقرير' (print1 icon), each passing FROM_STORE_CODE = TO_STORE_CODE = :ST_STORE.STORE_CODE, COMP_CODE, LANG; main = ST_STORE_ITEM.RDF (store items: limits, balance)."
+  },
+  "ST_STORE_GRP": {
+    "rdf": "ST_Store_GROUP_COST",
+    "params": {
+      "FROM_STORE_CODE": "@STORE_CODE",
+      "TO_STORE_CODE": "@STORE_CODE"
+    },
+    "evidence": "ST_STORE_GRP.fmx (no source) CTRL.PRINT_BTN unit: ST_Store_GROUP_COST, FROM_STORE_CODE = TO_STORE_CODE = :ST_STORE.STORE_CODE, COMP_CODE, LANG, PARAMFORM."
+  },
+  "ST_OPEN_BALANCE": {
+    "rdf": "ST_OPEN_BALANCE",
+    "params": {
+      "FROM_TRNS_TYPE": "TRNS_TYPE_CODE",
+      "TO_TRNS_TYPE": "TRNS_TYPE_CODE",
+      "FROM_TRNS_SERIAL": "TRNS_SERIAL",
+      "TO_TRNS_SERIAL": "TRNS_SERIAL",
+      "FROM_STORE": "STORE_CODE",
+      "TO_STORE": "STORE_CODE",
+      "FROM_DATE": "TRNS_DATE",
+      "TO_DATE": "TRNS_DATE"
+    },
+    "evidence": "ST_OPEN_BALANCE.fmb CTRL.PRINT_BTN: ST_OPEN_BALANCE.RDF with FROM/TO_TRNS_TYPE, FROM/TO_TRNS_SERIAL, FROM/TO_STORE, FROM/TO_DATE of the document. No right, no print flag."
+  },
+  "ST_TAKING": {
+    "rdf": "st_taking_diff",
+    "params": {
+      "stock_w": "STORE_CODE",
+      "P_UNIT_CODE": "'1'",
+      "DATE_W": "ST_TAKING_DATE"
+    },
+    "evidence": "ST_TAKING_fmb.xml CTRL.PRINT_BTN (tooltip 'طباعة'): st_taking_diff.RDF with stock_w = :STORE_CODE, P_UNIT_CODE = 1, DATE_W = TO_CHAR(:ST_TAKING_DATE,'DD-MM-YYYY'), P_PASSWORD_NUMBER, COMP_CODE, LANG."
+  },
+  "ST_ADJUST_IN": {
+    "rdf": "ST_adjust_in",
+    "params": {
+      "TRANS_SERIAL": "TRNS_SERIAL",
+      "TRANS_TYPE_CODE": "TRNS_TYPE_CODE"
+    },
+    "more": [
+      {
+        "key": "ENTRY",
+        "label_a": "طباعة القيد",
+        "label_e": "Print Entry",
+        "rdf": "ACJRNL2",
+        "rdf_module": "ST",
+        "params": {
+          "FROM_ENTRY_YEAR": "AC_ENTRY_YEAR",
+          "TO_ENTRY_YEAR": "AC_ENTRY_YEAR",
+          "FROM_ENTRY_TYPE": "AC_ENTRY_TYPE",
+          "TO_ENTRY_TYPE": "AC_ENTRY_TYPE",
+          "FROM_ENTRY_NO": "AC_ENTRY_NO",
+          "TO_ENTRY_NO": "AC_ENTRY_NO"
+        },
+        "right": "select nvl(max(1), 0) from (select to_number(:G_USER_CODE) u from dual) x where x.u = 0 or exists (select 1 from file_password m where m.system_number = 3 and m.file_serial = 508 and m.users_code = x.u)",
+        "evidence": "ST_ADJUST_IN ST_TRNS_MAST.ENTRY_PRINT (only when POST_FLAG = 1): ACJRNL2 with FROM/TO_ENTRY_YEAR/TYPE/NO = AC_ENTRY_*; the button is hidden (WHEN-NEW-FORM-INSTANCE) for users other than 0 without FILE_PASSWORD system 3 serial 508 (posting right)"
+      }
+    ],
+    "not_mapped": [
+      {
+        "label_a": "طباعة (RSD)",
+        "label_e": "Print (RSD)",
+        "rdf": "ST_adjust_in_RSD",
+        "reason": "IF :GLOBAL.CUSTOMER_CODE = 'RSD' branch; RDF not deployed"
+      }
+    ],
+    "evidence": "ST_ADJUST_IN.fmb CTRL.ITEM197 (print1 icon): commits, then IF :GLOBAL.CUSTOMER_CODE = 'RSD' ST_adjust_in_RSD ELSE ST_adjust_in (NULL code -> ELSE); TRANS_SERIAL, TRANS_TYPE_CODE, TITLE_A 'وارد' / TITLE_E 'Store In' (not parameters of the RDF), COMP_CODE, LANG, DESTYPE PRINTER."
+  },
+  "ST_ADJUST_OUT": {
+    "rdf": "ST_adjust_out",
+    "params": {
+      "TRANS_SERIAL": "TRNS_SERIAL",
+      "TRANS_TYPE_CODE": "TRNS_TYPE_CODE"
+    },
+    "more": [
+      {
+        "key": "ENTRY",
+        "label_a": "طباعة القيد",
+        "label_e": "Print Entry",
+        "rdf": "ACJRNL2",
+        "rdf_module": "ST",
+        "params": {
+          "FROM_ENTRY_YEAR": "AC_ENTRY_YEAR",
+          "TO_ENTRY_YEAR": "AC_ENTRY_YEAR",
+          "FROM_ENTRY_TYPE": "AC_ENTRY_TYPE",
+          "TO_ENTRY_TYPE": "AC_ENTRY_TYPE",
+          "FROM_ENTRY_NO": "AC_ENTRY_NO",
+          "TO_ENTRY_NO": "AC_ENTRY_NO"
+        },
+        "right": "select nvl(max(1), 0) from (select to_number(:G_USER_CODE) u from dual) x where x.u = 0 or exists (select 1 from file_password m where m.system_number = 3 and m.file_serial = 508 and m.users_code = x.u)",
+        "evidence": "ST_ADJUST_OUT ST_TRNS_MAST.ENTRY_PRINT (only when POST_FLAG = 1): ACJRNL2 with FROM/TO_ENTRY_YEAR/TYPE/NO = AC_ENTRY_*; the button is hidden (WHEN-NEW-FORM-INSTANCE) for users other than 0 without FILE_PASSWORD system 3 serial 508 (posting right)"
+      }
+    ],
+    "not_mapped": [
+      {
+        "label_a": "طباعة (RSD)",
+        "label_e": "Print (RSD)",
+        "rdf": "ST_adjust_out_RSD",
+        "reason": "RSD installation branch; RDF not deployed"
+      },
+      {
+        "label_a": "طباعة",
+        "label_e": "Print",
+        "rdf": "ST_adjust_out22",
+        "reason": "second print unit of ST_ADJUST_OUT.fmx (same parameters); ST_adjust_out22.rdf does not exist in ASCON\\ST\\FMB"
+      }
+    ],
+    "evidence": "ST_ADJUST_OUT.fmx (no source) CTRL.PRINT_BTN unit: commits, constants ST_adjust_out / ST_adjust_out_RSD (same pattern as ST_ADJUST_IN: RSD test, NULL code -> ST_adjust_out); TRANS_SERIAL, TRANS_TYPE_CODE, TITLE_A 'صادر' / TITLE_E 'Store Out', COMP_CODE, LANG, DESTYPE PRINTER."
+  },
+  "ST_STORE": {
+    "rdf": "ST_STORE",
+    "params": {
+      "FROM_STORE_CODE": "STORE_CODE",
+      "TO_STORE_CODE": "STORE_CODE"
+    },
+    "evidence": "ST_STORE.fmb CTRL.PRINT_BTN: ST_STORE.RDF with FROM_STORE_CODE = TO_STORE_CODE = :ST_STORE.STORE_CODE, COMP_CODE, LANG. REPORT_FORM screen."
+  },
+  "ST_GROUP": {
+    "rdf": "ST_GROUP_ITEM",
+    "params": {
+      "FROM_GROUP": "ITEM_GROUP_CODE",
+      "TO_GROUP": "ITEM_GROUP_CODE"
+    },
+    "evidence": "ST_GROUP.fmx (no source) CTRL.PRINT_BTN unit: ST_GROUP_ITEM.RDF, FROM_GROUP = TO_GROUP = :ITEM_GROUP_CODE, COMP_CODE, LANG (the RDF's group filter is commented out: it lists all groups). REPORT_FORM screen."
+  },
+  "ST_ITEM": {
+    "rdf": "st_item_card_basic_qty_mod",
+    "params": {
+      "FROM_ITEM_GROUP_CODE": "ITEM_GROUP_CODE",
+      "TO_ITEM_GROUP_CODE": "ITEM_GROUP_CODE",
+      "FROM_ITEM_CODE": "ITEM_CODE",
+      "TO_ITEM_CODE": "ITEM_CODE"
+    },
+    "not_mapped": [
+      {
+        "label_a": "طباعة",
+        "label_e": "Print",
+        "rdf": "ST_STOCK_CONTROL_COMP",
+        "reason": "CTRL.PRINT_BTN is Visible = false in ST_ITEM.fmb and never shown (its enable/disable calls are commented out)"
+      }
+    ],
+    "evidence": "ST_ITEM.fmb CTRL.PRINT_BTN2 (visible): st_item_card_basic_qty_mod.RDF (item card) with FROM/TO_ITEM_GROUP_CODE = :ITEM_GROUP_CODE, FROM/TO_ITEM_CODE = :ITEM_CODE, LANG. No barcode label print in this screen."
+  },
+  "ST_TRNS_TYPE_ST": {
+    "rdf": "st_trns_code_rep_ST",
+    "params": {},
+    "evidence": "ST_TRNS_TYPE_ST.fmx (no source) CTRL.PRINT_BTN unit: st_trns_code_rep_ST.RDF (list of transaction codes) with P_PASSWORD_NUMBER, COMP_CODE, LANG only."
+  },
+  "ST_BASIC": {
+    "rdf": "ST_BASIC",
+    "params": {},
+    "evidence": "ST_BASIC.fmx (no source) CTRL.PRINT_BTN unit: ST_BASIC.rdf (system parameters) with LANG, PASSWORD_NUMBER, COMPANY_CODE, COMP_CODE, user_code, DESTYPE PREVIEW. REPORT_FORM screen."
+  },
+  "ST_ISSUE_IO_PRINT": {
+    "rdf": "st_customer_INVOICE",
+    "rdf_module": "ST",
+    "params": {
+      "P_TRNS_TYPE_CODE": "TRNS_TYPE_CODE",
+      "P_TRNS_SERIAL": "TRNS_SERIAL"
+    },
+    "right": "select nvl(max(print_inv_flag), 0) from users where users_code = :G_USER_CODE",
+    "first_print": {
+      "flag": "PRINT_FLAG",
+      "param": "P_FIRST"
+    },
+    "evidence": "ST_ISSUE_IO_PRINT.fmx (no source), two print units: USERS.PRINT_INV_FLAG right ('ليس لك صلاحية الطباعة'), on first print PRINT_FLAG := 1 and PRINT_DATE := sysdate ('DD/MM/RRRR HH24:MI'), P_FIRST; st_customer_INVOICE.rdf with P_TRNS_TYPE_CODE, P_TRNS_SERIAL, P_USERS_CODE, P_COMPANY, P_PASSWORD_NUMBER, COMP_CODE, LANG (same as ST_ISSUE_IO). PRINT_DATE is not set by the engine's first-print mechanism."
+  },
+  "ST_TRANSFER_REQUEST": {
+    "rdf": "TRANSFARE_MEMO",
+    "params": {
+      "FROM_TRNS_CODE": "TRNS_TYPE_CODE",
+      "TO_TRNS_CODE": "TRNS_TYPE_CODE",
+      "FROM_TRNS_SERIAL": "TRNS_SERIAL",
+      "TO_TRNS_SERIAL": "TRNS_SERIAL"
+    },
+    "evidence": "ST_TRANSFER_REQUEST.fmx (no source) CTRL.PRINT_BTN unit: TRANSFARE_MEMO with FROM/TO_TRNS_CODE, FROM/TO_TRNS_SERIAL of the request, plus FROM_STORE / TO_STORE (:STORE_CODE) and FROM_DATE (:TRNS_DATE 'DD-MM-YYYY') which are not parameters of the RDF (it has FROM/TO_STORE_CODE, START/END_DATE) - not passed."
+  },
+  "ST_STANDS": {
+    "rdf": "ST_STANDS",
+    "params": {},
+    "evidence": "ST_STANDS.fmx (no source) CTRL.PRINT_BTN unit: ST_STANDS.rdf (list of stand / assembled items) with LANG, PASSWORD_NUMBER, COMPANY_CODE, COMP_CODE, user_code only."
+  },
+  "ST_TAKING2": {
+    "rdf": "st_taking_diff_adj",
+    "params": {
+      "stock_w": "STORE_CODE",
+      "P_STORE_CODE": "STORE_CODE",
+      "P_SERIAL": "SERIAL",
+      "DATE_W": "ST_TAKING_DATE",
+      "P_UNIT_CODE": "'1'"
+    },
+    "evidence": "ST_TAKING2.fmx (no source) CTRL.PRINT_BTN unit: st_taking_diff_adj.RDF with stock_w / p_store_code = :STORE_CODE, p_serial = :SERIAL, DATE_W = TO_CHAR(:ST_TAKING_DATE,'DD-MM-YYYY'), P_UNIT_CODE (value not readable in the fmx; 1 as in ST_TAKING), P_PASSWORD_NUMBER, COMP_CODE, LANG."
+  },
+  "ARDBTRN": {
+    "rdf": "ARDBTRN_REP",
+    "params": {
+      "P_TRNS_ID": "TRNS_ID",
+      "P_TRNS_SERIAL": "TRNS_SERIAL",
+      "P_MAINAREA_ID": "MAINAREA_ID",
+      "P_SUBAREA_ID": "SUBAREA_ID"
+    },
+    "more": [
+      {
+        "key": "ENTRY",
+        "label_a": "طباعة القيد المحاسبى",
+        "label_e": "Print Entry",
+        "rdf": "ACJRNL2",
+        "params": {
+          "FROM_ENTRY_YEAR": "ACC_YEAR",
+          "TO_ENTRY_YEAR": "ACC_YEAR",
+          "FROM_ENTRY_TYPE": "ACC_TYPE",
+          "TO_ENTRY_TYPE": "ACC_TYPE",
+          "FROM_ENTRY_NO": "ACC_NO",
+          "TO_ENTRY_NO": "ACC_NO",
+          "MEMO_FLAG": "'نعم'",
+          "COMPANY_CODE": "v('G_COMPANY_CODE')"
+        },
+        "rdf_module": "AR"
+      },
+      {
+        "key": "PAYORDER",
+        "label_a": "طباعة أمر الصرف",
+        "label_e": "Pay Order",
+        "rdf": "G_RECEIVE_ORDER",
+        "params": {
+          "COMPANY_NAME": "(select max(c.company_desc) from company c where c.company_code = coalesce(to_number(v('G_COMPANY_CODE')), t.company_code, 1))",
+          "COMPANY_NAME_E": "(select max(c.company_desc_e) from company c where c.company_code = coalesce(to_number(v('G_COMPANY_CODE')), t.company_code, 1))",
+          "REC_DATE": "TRNS_DATE",
+          "SERIAL": "BAND_NO",
+          "REC_DESC": "DESCRIPTION_A",
+          "REC_DESC_E": "DESCRIPTION_E",
+          "REC_AMOUNT": "TOTAL_VALUE",
+          "CURR_DESC": "(select max(cu.currency_desc) from ac_currency cu where cu.currency_code = t.currency_code)",
+          "CURR_DESC_E": "(select max(cu.currency_desc_e) from ac_currency cu where cu.currency_code = t.currency_code)",
+          "REC_TO_CODE": "CUSTOMER_ID",
+          "REC_TO_NAME": "(select max(c.name_a) from customer c where c.code = t.customer_id)",
+          "REC_TO_NAME_E": "(select max(c.name_e) from customer c where c.code = t.customer_id)",
+          "SYSTEM_NAME": "(select max(s.system_desc_a) from sys_systems s where s.system_number = 4)",
+          "SYSTEM_NAME_E": "(select max(s.system_desc_e) from sys_systems s where s.system_number = 4)"
+        },
+        "rdf_module": "AR"
+      }
+    ],
+    "not_mapped": [
+      {
+        "label_a": "طباعة الفاتورة الضريبية / Print VAT Invoice",
+        "label_e": "Print VAT Invoice (AR_SUBSUBTRNS.AR_PRINT / EN_PRINT, LANG A / E)",
+        "rdf": "ARDBTRN_INV_REP",
+        "reason": "neither the .rdf nor a converted XML exists in ASCON\\AR\\FMB / AR\\FMB"
+      },
+      {
+        "label_a": "(posting errors, RUN_ERR_REPORT)",
+        "label_e": "Posting errors list",
+        "rdf": "arpsterr",
+        "reason": "not a document print: posting error list of the user after posting"
+      }
+    ],
+    "evidence": "ARDBTRN.fmb: CTRL.PRINT_BTN 'طباعة السند' -> ARDBTRN_REP.RDF (P_TRNS_ID/P_TRNS_SERIAL/P_MAINAREA_ID/P_SUBAREA_ID, both languages); AR_MAINTRNS.PRINT_V -> ACJRNL2 (entry ACC_YEAR/ACC_TYPE/ACC_NO, memo_flag 'نعم', rdf_module AR = :global.AR_path copy; START/END_DATE = TRNS_DATE left out: that copy does not use them, the ST copy (engine default for the name) filters entry_date on them); AR_MAINTRNS.ITEM196 -> G_RECEIVE_ORDER.rdf with values computed by the form (company, currency, customer names, system 4 name); legacy printed it only when PAY_FLAG = 0 and CASH_FLAG in (0,1) (cheque/cash) - condition not expressible in prints.json; no print right, no print flag; no :GLOBAL.CUSTOMER_CODE test in the print triggers"
+  },
+  "ARCRTRN": {
+    "rdf": "ARCRTRN_REP",
+    "params": {
+      "P_TRNS_ID": "TRNS_ID",
+      "P_TRNS_SERIAL": "TRNS_SERIAL",
+      "P_MAINAREA_ID": "MAINAREA_ID",
+      "P_SUBAREA_ID": "SUBAREA_ID"
+    },
+    "more": [
+      {
+        "key": "RECEIPT",
+        "label_a": "طباعة سند القبض",
+        "label_e": "Print Receipt Doc",
+        "rdf": "AR_RECEIVE_DOC",
+        "params": {
+          "FROM_TRNS_TYPE_CODE": "TRNS_ID",
+          "TO_TRNS_TYPE_CODE": "TRNS_ID",
+          "FROM_TRNS_SERIAL": "TRNS_SERIAL",
+          "TO_TRNS_SERIAL": "TRNS_SERIAL",
+          "FROM_MAINAREA_ID": "MAINAREA_ID",
+          "TO_MAINAREA_ID": "MAINAREA_ID",
+          "FROM_SUBAREA_ID": "SUBAREA_ID",
+          "TO_SUBAREA_ID": "SUBAREA_ID"
+        }
+      },
+      {
+        "key": "ENTRY",
+        "label_a": "طباعة القيد",
+        "label_e": "Print Entry",
+        "rdf": "ACJRNL2",
+        "params": {
+          "FROM_ENTRY_YEAR": "ACC_YEAR",
+          "TO_ENTRY_YEAR": "ACC_YEAR",
+          "FROM_ENTRY_TYPE": "ACC_TYPE",
+          "TO_ENTRY_TYPE": "ACC_TYPE",
+          "FROM_ENTRY_NO": "ACC_NO",
+          "TO_ENTRY_NO": "ACC_NO",
+          "MEMO_FLAG": "'نعم'",
+          "COMPANY_CODE": "v('G_COMPANY_CODE')"
+        },
+        "rdf_module": "AR"
+      }
+    ],
+    "not_mapped": [
+      {
+        "label_a": "طباعة سند الصرف",
+        "label_e": "Print Pay Note (AR_MAINTRNS.PRINT_PAY_DOC)",
+        "rdf": "VN_RECEIVE_DOC / VN_RECEIVE_DOC_E",
+        "reason": "button Visible=false and Enabled=false in the form, never switched on (the AP receipt under :global.path)"
+      },
+      {
+        "label_a": "طباعة أمر الصرف",
+        "label_e": "Print Pay Order (AR_MAINTRNS.ITEM196)",
+        "rdf": "VN_RECEIVE_DOC",
+        "reason": "hidden: the form sets ITEM196 VISIBLE = false for every cash type"
+      },
+      {
+        "label_a": "(posting errors, RUN_ERR_REPORT)",
+        "label_e": "Posting errors list",
+        "rdf": "arpsterr",
+        "reason": "not a document print"
+      }
+    ],
+    "evidence": "arcrtrn.fmb: CTRL.PRINT_BTN 'طباعة السند' -> ARCRTRN_REP.RDF (P_TRNS_ID/P_TRNS_SERIAL/P_MAINAREA_ID/P_SUBAREA_ID); AR_MAINTRNS.PUSH_BUTTON195 'طباعة سند القبض' -> AR_RECEIVE_DOC.rdf (FROM/TO trns id, serial, main area, sub area); AR_MAINTRNS.PRINT_V -> ACJRNL2 (ACC_YEAR/ACC_TYPE/ACC_NO, START/END_DATE = nvl(ACC_POST_DATE, TRNS_DATE) left out, see ARDBTRN); no print right, no print flag, no installation-code test; ACJRNL2 rdf_module AR (legacy :global.AR_path)"
+  },
+  "ARCRTRN_ST": {
+    "rdf": "ARCRTRN_REP",
+    "params": {
+      "P_TRNS_ID": "TRNS_ID",
+      "P_TRNS_SERIAL": "TRNS_SERIAL",
+      "P_MAINAREA_ID": "MAINAREA_ID",
+      "P_SUBAREA_ID": "SUBAREA_ID"
+    },
+    "more": [
+      {
+        "key": "RECEIPT",
+        "label_a": "طباعة سند القبض",
+        "label_e": "Print Receipt Doc",
+        "rdf": "AR_RECEIVE_DOC",
+        "params": {
+          "FROM_TRNS_TYPE_CODE": "TRNS_ID",
+          "TO_TRNS_TYPE_CODE": "TRNS_ID",
+          "FROM_TRNS_SERIAL": "TRNS_SERIAL",
+          "TO_TRNS_SERIAL": "TRNS_SERIAL",
+          "FROM_MAINAREA_ID": "MAINAREA_ID",
+          "TO_MAINAREA_ID": "MAINAREA_ID",
+          "FROM_SUBAREA_ID": "SUBAREA_ID",
+          "TO_SUBAREA_ID": "SUBAREA_ID"
+        }
+      }
+    ],
+    "not_mapped": [
+      {
+        "label_a": "(posting errors, RUN_ERR_REPORT)",
+        "label_e": "Posting errors list",
+        "rdf": "arpsterr",
+        "reason": "not a document print"
+      }
+    ],
+    "evidence": "ARCRTRN_ST.fmx print units: CTRL.PRINT_BTN -> ARCRTRN_REP.RDF (P_TRNS_ID, P_TRNS_SERIAL, P_MAINAREA_ID, P_SUBAREA_ID from AR_MAINTRNS, comp_code, LANG); AR_MAINTRNS.PUSH_BUTTON195 'طباعة سند القبض / Print Receipt Doc' -> AR_RECEIVE_DOC.rdf (FROM/TO_TRNS_TYPE_CODE, _TRNS_SERIAL, _MAINAREA_ID, _SUBAREA_ID); no installation code, right or flag referenced by these units"
+  },
+  "ARDBTRN_ST": {
+    "rdf": "ARDBTRN_ST_REP",
+    "params": {
+      "P_TRNS_ID": "TRNS_ID",
+      "P_TRNS_SERIAL": "TRNS_SERIAL",
+      "P_MAINAREA_ID": "MAINAREA_ID",
+      "P_SUBAREA_ID": "SUBAREA_ID"
+    },
+    "evidence": "ARDBTRN_ST.fmx: the only print unit (CTRL.PRINT_BTN) -> ARDBTRN_ST_REP.RDF with P_TRNS_ID, P_TRNS_SERIAL, P_MAINAREA_ID, P_SUBAREA_ID of AR_MAINTRNS, comp_code, LANG"
+  },
+  "CUSTOMER": {
+    "rdf": "AR_CODE8",
+    "params": {
+      "C": "CODE"
+    },
+    "evidence": "Customer.fmb TOOLBAR.PRINT_BTN -> AR_CODE8.RDF (C = :CUSTOMER.CODE, LANG, COMP_CODE): customer card of the current customer"
+  },
+  "COMPLAINT_CUSTOMER": {
+    "rdf": "COMPLAINT_CUSTOMER",
+    "params": {
+      "COMP_CUSTOMER_M_CODE": "COMPLAINT_CUSTOMER_M_CODE",
+      "COMP_CUSTOMER_M_DATE": "COMPLAINT_CUSTOMER_M_DATE",
+      "COMP_CUSTOMER_M_SER": "COMPLAINT_CUSTOMER_M_SER"
+    },
+    "evidence": "COMPLAINT_CUSTOMER.fmx print unit: COMPLAINT_CUSTOMER.RDF with COMP_CUSTOMER_M_CODE/_DATE/_SER = :COMPLAINT_CUSTOMER_M_CODE/_DATE/_SER, comp_code, LANG"
+  },
+  "ARCUST_CLASS": {
+    "rdf": "AR_CODE3",
+    "params": {
+      "SER": "SERIAL"
+    },
+    "evidence": "ARCUST_CLASS.fmx print unit: AR_CODE3.RDF with SER = :AR_CUST_CLASS.SERIAL (refuses without a class), comp_code, LANG"
+  },
+  "ARTARGETRANGESCAT": {
+    "rdf": "AR_CODE_SAL",
+    "params": {
+      "CAT": "CATEGORY_TYPE_CODE"
+    },
+    "evidence": "ARTARGETRANGESCAT.fmx print unit: AR_CODE_SAL.RDF with CAT = :ST_CATEGORY_TYPE.CATEGORY_TYPE_CODE, LANG"
+  },
+  "AR_SALESMAN": {
+    "rdf": "AR_CODE7",
+    "params": {
+      "SEL": "CODE"
+    },
+    "evidence": "AR_SALESMAN.fmx print unit: AR_CODE7.RDF with SEL = :SALESMAN.CODE (refuses without a salesman), comp_code, LANG"
+  },
+  "ARTRNSTYPE": {
+    "rdf": "AR_CODE9",
+    "params": {
+      "ID_IN": "ID"
+    },
+    "evidence": "ARTRNSTYPE.fmx print unit: AR_CODE9.RDF with ID_IN = :ARTRNSTYPE.ID (refuses without a code), comp_code, LANG"
+  },
+  "ARTRN_OP": {
+    "rdf": "ARTRN_OP_REP",
+    "params": {
+      "P_TRANS_ID": "TRNS_ID",
+      "P_TRANS_SERIAL": "TRNS_SERIAL"
+    },
+    "evidence": "ARTRN_OP.fmx print unit (CTRL.PRINT_BTN, record must be saved): ARTRN_OP_rep.RDF with P_TRANS_ID / P_TRANS_SERIAL = :AR_MAINTRNS_OP.TRNS_ID / TRNS_SERIAL, comp_code, LANG"
+  },
+  "ARSLSMANCUSTTRNSFR": {
+    "rdf": "AR_CODE13",
+    "params": {
+      "SEL": "FROM_SLSMAN"
+    },
+    "evidence": "ARSLSMANCUSTTRNSFR.fmx print unit: AR_CODE13.RDF with SEL = :AR_SLSMAN_TRNSFR.FROM_SLSMAN (refuses without it), comp_code, LANG"
+  },
+  "AR_CUSTOMER_DUES": {
+    "rdf": "ACJRNL2",
+    "params": {
+      "FROM_ENTRY_YEAR": "ENTRY_YEAR",
+      "TO_ENTRY_YEAR": "ENTRY_YEAR",
+      "FROM_ENTRY_TYPE": "ENTRY_TYPE",
+      "TO_ENTRY_TYPE": "ENTRY_TYPE",
+      "FROM_ENTRY_NO": "ENTRY_NO",
+      "TO_ENTRY_NO": "ENTRY_NO"
+    },
+    "not_mapped": [
+      {
+        "label_a": "طباعة القيد",
+        "label_e": "Print Entry (English session)",
+        "rdf": "ACJRNL2_E",
+        "reason": "the legacy picked ACJRNL2_E when :GLOBAL.LANG = 'E'; prints.json cannot choose the report by language"
+      }
+    ],
+    "evidence": "AR_CUSTOMER_DUES.fmx (REPORT_FORM) print unit 'طباعة القيد': refuses unless POST_FLAG = 1; ACJRNL2 (AC path) / ACJRNL2_E by language with FROM/TO_ENTRY_YEAR/TYPE/NO = :ENTRY_YEAR/:ENTRY_TYPE/:ENTRY_NO, LANG. Table has 0 rows (checked with --rdf only); rdf_module AC (legacy :global.AC_path)",
+    "rdf_module": "AC"
+  },
+  "AR_CUSTOMER_DUES_PAY": {
+    "rdf": "ACJRNL2",
+    "params": {
+      "FROM_ENTRY_YEAR": "ENTRY_YEAR",
+      "TO_ENTRY_YEAR": "ENTRY_YEAR",
+      "FROM_ENTRY_TYPE": "ENTRY_TYPE",
+      "TO_ENTRY_TYPE": "ENTRY_TYPE",
+      "FROM_ENTRY_NO": "ENTRY_NO",
+      "TO_ENTRY_NO": "ENTRY_NO"
+    },
+    "not_mapped": [
+      {
+        "label_a": "طباعة القيد",
+        "label_e": "Print Entry (English session)",
+        "rdf": "ACJRNL2_E",
+        "reason": "the legacy picked ACJRNL2_E when :GLOBAL.LANG = 'E'; prints.json cannot choose the report by language"
+      }
+    ],
+    "evidence": "AR_CUSTOMER_DUES_PAY.fmx (REPORT_FORM) print unit 'طباعة القيد': refuses unless POST_FLAG = 1; ACJRNL2 / ACJRNL2_E by language with the ENTRY_YEAR/TYPE/NO of the record. Table has 0 rows (checked with --rdf only); rdf_module AC (legacy :global.AC_path)",
+    "rdf_module": "AC"
+  },
+  "ARCRTRN_DAILY": {
+    "rdf": "ACJRNL2",
+    "params": {
+      "FROM_ENTRY_YEAR": "ENTRY_YEAR",
+      "TO_ENTRY_YEAR": "ENTRY_YEAR",
+      "FROM_ENTRY_TYPE": "ENTRY_TYPE",
+      "TO_ENTRY_TYPE": "ENTRY_TYPE",
+      "FROM_ENTRY_NO": "ENTRY_NO",
+      "TO_ENTRY_NO": "ENTRY_NO",
+      "MEMO_FLAG": "'نعم'",
+      "COMPANY_CODE": "v('G_COMPANY_CODE')"
+    },
+    "not_mapped": [
+      {
+        "label_a": "طباعة القيد (الاعتماد)",
+        "label_e": "Print approval entry",
+        "rdf": "ACJRNL2",
+        "reason": "second entry print over AUTH_ENTRY_YEAR/AUTH_ENTRY_TYPE/AUTH_ENTRY_NO of the legacy block AR_MAINTRNS_DAILY; the generated spec uses AC_DAILY_TRN as master table (no AUTH_ENTRY_* columns)"
+      },
+      {
+        "label_a": "(posting errors, RUN_ERR_REPORT)",
+        "label_e": "Posting errors list",
+        "rdf": "arpsterr",
+        "reason": "not a document print"
+      }
+    ],
+    "evidence": "arcrtrn_daily.fmx (REPORT_FORM; legacy block AR_MAINTRNS_DAILY, spec master AC_DAILY_TRN) print unit 'طباعة القيد': refuses unless POST_FLAG = 1; ACJRNL2 (AR path) with FROM/TO_ENTRY_* = :ENTRY_*, memo_flag 'نعم', START/END_DATE = TRNS_DATE (left out, AR copy has no date filter), COMPANY_CODE, PASSWORD_NUMBER, user_code. Both tables have 0 rows (checked with --rdf only); rdf_module AR (legacy :global.AR_path)",
+    "rdf_module": "AR"
+  },
+  "AR_MOB_DEPOSITE_TRNS": {
+    "rdf": "ACJRNL2",
+    "params": {
+      "FROM_ENTRY_YEAR": "ENTRY_YEAR",
+      "TO_ENTRY_YEAR": "ENTRY_YEAR",
+      "FROM_ENTRY_TYPE": "ENTRY_TYPE",
+      "TO_ENTRY_TYPE": "ENTRY_TYPE",
+      "FROM_ENTRY_NO": "ENTRY_NO",
+      "TO_ENTRY_NO": "ENTRY_NO",
+      "MEMO_FLAG": "'نعم'",
+      "COMPANY_CODE": "v('G_COMPANY_CODE')"
+    },
+    "not_mapped": [
+      {
+        "label_a": "(posting errors, RUN_ERR_REPORT)",
+        "label_e": "Posting errors list",
+        "rdf": "arpsterr",
+        "reason": "not a document print"
+      }
+    ],
+    "evidence": "AR_MOB_DEPOSITE_TRNS.fmx (REPORT_FORM, MOB_DEPOSITE_TRNS) print unit ENTRY_PRINT 'طباعة القيد': refuses unless POST_FLAG = 1; ACJRNL2 (AR path) with FROM/TO_ENTRY_* = :ENTRY_*, memo_flag 'نعم', START/END_DATE = TRNS_DATE (left out), COMPANY_CODE, PASSWORD_NUMBER, user_code. Table has 0 rows (checked with --rdf only); rdf_module AR (legacy :global.AR_path)",
+    "rdf_module": "AR"
+  },
+  "VNCRTRN_ST": {
+    "rdf": "VNCRTRN_ST_rep",
+    "params": {
+      "P_TRNS_ID": "TRNS_ID",
+      "P_TRNS_SERIAL": "TRNS_SERIAL"
+    },
+    "evidence": "VnCrTrn_St.fmx CTRL.PRINT_BTN (only print unit): 'You must save record first' check, P_TRNS_ID = :VN_MAINTRNS.TRNS_ID, P_TRNS_SERIAL = :VN_MAINTRNS.TRNS_SERIAL, COMP_CODE, LANG -> :global.VN_path||'VNCRTRN_ST_rep.RDF'; no installation branch, no right"
+  },
+  "VNDBTRN_ST": {
+    "rdf": "VNCRTRN_ST_rep",
+    "params": {
+      "P_TRNS_ID": "TRNS_ID",
+      "P_TRNS_SERIAL": "TRNS_SERIAL"
+    },
+    "evidence": "vndbtrn_ST.fmx CTRL.PRINT_BTN (only print unit; the GN_FORM_ITEM labels PRINT_PAY_DOC / PRINT_V are not in this .fmx): P_TRNS_ID / P_TRNS_SERIAL, LANG -> :global.path||'VNCRTRN_ST_rep.RDF' (same report as VNCRTRN_ST; the legacy passed no COMP_CODE, the engine passes it automatically)"
+  },
+  "VNCRTRN": {
+    "rdf": "VNCRTRN_rep",
+    "params": {
+      "P_TRNS_ID": "TRNS_ID",
+      "P_TRNS_SERIAL": "TRNS_SERIAL"
+    },
+    "more": [
+      {
+        "key": "PAYDOC",
+        "label_a": "طباعة سند الصرف",
+        "label_e": "Print Payment Doc.",
+        "rdf": "VN_RECEIVE_DOC",
+        "params": {
+          "FROM_TRNS_TYPE_CODE": "TRNS_ID",
+          "TO_TRNS_TYPE_CODE": "TRNS_ID",
+          "FROM_TRNS_SERIAL": "TRNS_SERIAL",
+          "TO_TRNS_SERIAL": "TRNS_SERIAL"
+        }
+      },
+      {
+        "key": "ENTRY",
+        "label_a": "طباعة القيد المحاسبي",
+        "label_e": "Print Entry",
+        "rdf": "ACJRNL2",
+        "params": {
+          "memo_flag": "'نعم'",
+          "FROM_ENTRY_YEAR": "ACC_YEAR",
+          "TO_ENTRY_YEAR": "ACC_YEAR",
+          "FROM_ENTRY_TYPE": "ACC_TYPE",
+          "TO_ENTRY_TYPE": "ACC_TYPE",
+          "FROM_ENTRY_NO": "ACC_NO",
+          "TO_ENTRY_NO": "ACC_NO",
+          "START_DATE": "TRNS_DATE",
+          "END_DATE": "TRNS_DATE"
+        },
+        "rdf_module": "AC"
+      }
+    ],
+    "evidence": "vncrtrn.fmx: CTRL.PRINT_BTN -> VNCRTRN_rep.RDF (P_TRNS_ID / P_TRNS_SERIAL); VN_MAINTRNS.PRINT_PAY_DOC 'طباعة سند الصرف' -> VN_RECEIVE_DOC.rdf (FROM/TO_TRNS_TYPE_CODE = TRNS_ID, FROM/TO_TRNS_SERIAL); SET_RP_CK_SYS hides PRINT_PAY_DOC only when systems 13/15 exist (SYS_SYSTEMS has neither) -> visible; VN_MAINTRNS.PRINT_V 'طباعة القيد المحاسبي' -> :global.VN_path||'ACJRNL2' with memo_flag='نعم', ACC_YEAR/ACC_TYPE/ACC_NO, START_DATE = END_DATE = TRNS_DATE (the legacy refused when POST_FLAG = 0 or no ACC_NO). No installation branch, no right; ENTRY: the legacy path is VN\\FMB\\ACJRNL2 (:GLOBAL.VN_PATH = WORKING_PATH||'\\VN\\FMB\\' in Sysmenu2), but the ASCON copy has no ACJRNL2.rdf in VN\\FMB (only ACJRNL1); the AC variant (GL posted-voucher print, reads AC_YEARLY_TRN like the ST/AR ones) is used via rdf_module AC."
+  },
+  "VNDBTRN": {
+    "rdf": "VnDbTrn_REP",
+    "params": {
+      "P_TRNS_ID": "TRNS_ID",
+      "P_TRNS_SERIAL": "TRNS_SERIAL"
+    },
+    "more": [
+      {
+        "key": "PAYDOC",
+        "label_a": "طباعة سند الصرف",
+        "label_e": "Print Payment Doc.",
+        "rdf": "VN_RECEIVE_DOC",
+        "params": {
+          "FROM_TRNS_TYPE_CODE": "TRNS_ID",
+          "TO_TRNS_TYPE_CODE": "TRNS_ID",
+          "FROM_TRNS_SERIAL": "TRNS_SERIAL",
+          "TO_TRNS_SERIAL": "TRNS_SERIAL"
+        }
+      },
+      {
+        "key": "ENTRY",
+        "label_a": "طباعة القيد",
+        "label_e": "Print Entry",
+        "rdf": "ACJRNL2",
+        "params": {
+          "memo_flag": "'نعم'",
+          "FROM_ENTRY_YEAR": "ACC_YEAR",
+          "TO_ENTRY_YEAR": "ACC_YEAR",
+          "FROM_ENTRY_TYPE": "ACC_TYPE",
+          "TO_ENTRY_TYPE": "ACC_TYPE",
+          "FROM_ENTRY_NO": "ACC_NO",
+          "TO_ENTRY_NO": "ACC_NO",
+          "START_DATE": "ACC_DATE",
+          "END_DATE": "ACC_DATE"
+        },
+        "rdf_module": "AC"
+      }
+    ],
+    "not_mapped": [
+      {
+        "label_a": "طباعة أمر الصرف",
+        "label_e": "Print Pay Order",
+        "rdf": "G_RECEIVE_ORDER",
+        "reason": "VN_MAINTRNS.ITEM196: SET_RP_CK_SYS hides it (systems 13/15 not installed) and SET_PAY_METHOD shows it only for PAY_METHOD 2/4/6 (no such document: PAY_METHOD is null or 5); besides, the engine would pick AR\\FMB\\G_RECEIVE_ORDER (a receipt voucher) instead of the VN payment order (engine problem: module variants)",
+        "rdf_module": "VN"
+      }
+    ],
+    "evidence": "VnDbTrn.fmb: CTRL.PRINT_BTN -> VnDbTrn_REP.rdf (P_TRNS_ID / P_TRNS_SERIAL / COMP_CODE / LANG); VN_MAINTRNS.PRINT_PAY_DOC -> VN_RECEIVE_DOC.rdf (FROM/TO_TRNS_TYPE_CODE = TRNS_ID, FROM/TO_TRNS_SERIAL), visible because SYS_SYSTEMS has no 13/15 (SET_RP_CK_SYS); VN_MAINTRNS.PRINT_V -> :global.vn_path||'ACJRNL2' (memo_flag='نعم', ACC_NO/ACC_TYPE/ACC_YEAR, START_DATE = END_DATE = ACC_DATE; refused when POST_FLAG = 0 or no voucher). No right, no print flag; CUSTOMER_PAR (NULL) only drives BEN account logic, not the prints; ENTRY: the legacy path is VN\\FMB\\ACJRNL2 (:GLOBAL.VN_PATH = WORKING_PATH||'\\VN\\FMB\\' in Sysmenu2), but the ASCON copy has no ACJRNL2.rdf in VN\\FMB (only ACJRNL1); the AC variant (GL posted-voucher print, reads AC_YEARLY_TRN like the ST/AR ones) is used via rdf_module AC."
+  },
+  "VNAREA": {
+    "rdf": "Vnarea_REP",
+    "params": {
+      "P_ID": "ID"
+    },
+    "evidence": "vnarea.fmx TOOLBAR.PRINT_BTN: P_ID = :VN_MAINAREA.ID, comp_code, LANG -> :global.vn_path||'Vnarea_REP.RDF' (the main area with its sub areas)"
+  },
+  "SUPPLIER": {
+    "rdf": "SUPPLIER_REP",
+    "params": {
+      "P_CODE": "CODE"
+    },
+    "evidence": "SUPPLIER.fmx TOOLBAR.PRINT_BTN: P_CODE = :SUPPLIER.CODE, COMP_CODE, LANG -> :global.VN_path||'SUPPLIER_REP.rdf' (supplier card). REPORT_FORM screen: the generator attaches prints only to MASTER_DETAIL pages; SUPPLIER_REP exists in ST\\FMB and VN\\FMB with different content: the legacy path is VN (rdf_module VN)",
+    "rdf_module": "VN"
+  },
+  "VNTRNSTYPE": {
+    "rdf": "vntrnstype_REP",
+    "params": {
+      "P_ID": "ID"
+    },
+    "evidence": "vntrnstype.fmx TOOLBAR.PRINT_BTN: P_ID = :VN_TRNSTYPE.ID, COMP_CODE, LANG -> :global.VN_path||'vntrnstype_REP.rdf'. REPORT_FORM screen: the generator attaches prints only to MASTER_DETAIL pages"
+  },
+  "VNTRN_OP": {
+    "rdf": "VnTrn_op_REP",
+    "params": {
+      "P_TRNS_ID": "TRNS_ID",
+      "P_TRNS_SERIAL": "TRNS_SERIAL"
+    },
+    "evidence": "VnTrn_op.fmx CTRL.PRINT_BTN: P_TRNS_ID = :VN_MAINTRNS_OP.TRNS_ID, P_TRNS_SERIAL, COMP_CODE, LANG -> :global.VN_path||'VnTrn_op_REP.RDF'"
+  },
+  "VNCHECKPAY": {
+    "rdf": "VN_CHECK_PAY",
+    "params": {
+      "P_SERIAL": "SERIAL"
+    },
+    "evidence": "VnCheckPay.fmx CTRL.PRINT_BTN: P_SERIAL = :VN_MAINTRNS_CHECK.SERIAL, P_PASSWORD_NUMBER, COMP_CODE, LANG -> :GLOBAL.VN_PATH||'VN_CHECK_PAY.RDF'"
+  },
+  "ST_SUPPLIER_AGREEMENT": {
+    "rdf": "ST_SUPP_AGRMNT",
+    "params": {
+      "FROM_SERIAL": "SERIAL",
+      "TO_SERIAL": "SERIAL"
+    },
+    "evidence": "ST_SUPPLIER_AGREEMENT.fmx (no source): print unit -> ST_SUPP_AGRMNT with from_serial / to_serial = :ST_SUPP_AGRMNT.serial (USER / group / company it also passed are not parameters of the report, which filters M.SERIAL = :from_serial). ST_SUPP_AGRMNT has 0 rows here: compile + empty run only."
+  },
+  "_not_mapped": {
+    "ARAREA": [
+      {
+        "label_a": "طباعة",
+        "label_e": "Print",
+        "rdf": "AR_CODE4",
+        "reason": "PRINT_BTN passes M_ID (main area), SUB = the sub-area of the current detail row and STO; a detail-row value the header print page does not have"
+      }
+    ],
+    "ARCUSTGROUPS": [
+      {
+        "label_a": "طباعة",
+        "label_e": "Print",
+        "rdf": "AR_CODE6",
+        "reason": "the button runs AR_CODE6, which lists AR_TARGET_PERIODS (sales-target periods), unrelated to customer routes: a copy-paste defect of the legacy form; decision needed"
+      }
+    ],
+    "ARPASS": [
+      {
+        "label_a": "طباعة",
+        "label_e": "Print",
+        "rdf": "ACJRNL1",
+        "reason": "TOOLBAR.PRINT_BTN (Arpass.fmx) runs :global.path || 'acjrnl1' / 'acjrnl1_e' with only pass_no and LANG: a template leftover that prints the whole daily journal (ACJRNL1 has no pass_no parameter), not a document of the group-privilege screen"
+      }
+    ],
+    "AR_AGES": [
+      {
+        "label_a": "طباعة",
+        "label_e": "Print",
+        "rdf": "ST_UNIT",
+        "reason": "the button runs ST_UNIT.rdf (the units list), unrelated to customer ages: legacy copy-paste defect; decision needed"
+      }
+    ],
+    "SE_USERS_AUTH": [
+      {
+        "label_a": "",
+        "label_e": "",
+        "rdf": "pyreqloans / PY_ORDER_VCNC / pyrep14_SS / PY_ORDER_PRM / py_endsrv_order / py_rep_order / PY_VCNC_RET / py_ticket_order / py_rep_EXP_order",
+        "reason": "payroll request prints (:global.PY_path / :global.SS_path by SYSTEM_NUMBER / FILE_SERIAL of the authorisation): none of these RDFs exists in ASCON or as converted XML (payroll system not delivered)"
+      }
+    ],
+    "SUB_LG_COMPARE": [
+      {
+        "label_a": "تقرير المقارنة",
+        "label_e": "Comparison report",
+        "rdf": "ACSTTM1",
+        "reason": "account statement for the screen's FROM_DATE / TO_DATE (non-database items): an analysis report with screen parameters, not a document print"
+      },
+      {
+        "label_a": "",
+        "label_e": "",
+        "rdf": "VN_ACC_COMM / ST_ACC_COMM / AR_ACC_COMM / AS_ACC_COMM(_TOT) / PC_ACC_COMM / RP_ACC_COMM / PY_ACC_COMM",
+        "reason": "sub-ledger comparison per POST_SYSTEM with the screen dates: analysis reports, not document prints (PC / RP / PY versions have no converted XML)"
+      },
+      {
+        "label_a": "",
+        "label_e": "",
+        "rdf": "ACJRNL2",
+        "reason": "prints the voucher of the selected line of the comparison detail block (ENTRY_YEAR/TYPE/NO of a non-base-table row), not of the SUB_LG_COMPARE record; SUB_LG_COMPARE has 0 rows"
+      }
+    ]
+  },
+  "BARCODE_LABELS": {
+    "rdf": "ST_BARCODE_LABEL",
+    "rdf_module": "ST",
+    "params": {},
+    "evidence": "BARCODE_LABELS.fmx print button: DELETE / INSERT INTO PRINT_TRNS_BARCODE (one row per sticker) then ST_BARCODE_LABEL.RDF (no user parameters; label page 4 x 2 in, Code 39 font IDAutomationHC39M). The print button prepares the stickers first (proc.print_runs). The Eltron EPL2 thermal stream variant is not reproduced."
+  },
+  "BARCODE_LABELS_TRNS": {
+    "rdf": "ST_BARCODE_TRNS",
+    "rdf_module": "ST",
+    "params": {},
+    "evidence": "BARCODE_LABELS_TRNS.fmx print button: PRINT_TRNS_BARCODE prepared from the document lines, then ST_BARCODE_TRNS.RDF (label 3.8 x 2.5 in: item name, Code 39 barcode, item code, price). The print button prepares the stickers first (proc.print_runs). The Eltron EPL2 thermal stream variant is not reproduced."
+  }
+}

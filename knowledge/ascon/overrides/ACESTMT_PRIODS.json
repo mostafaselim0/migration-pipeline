@@ -1,0 +1,21 @@
+{
+  "pattern": "AUTO",
+  "notes": "Budget periods: group filter (AC_PASSWORD_EST_PERIOD), period number max+1 when empty (the generated list of values on PERIOD_CODE points to the empty ST_PERIODS), date checks and no overlapping periods (APP_RULES3_GL, see processes/ACESTMT_PRIODS.md)",
+  "rules": {
+    "where": "(nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or PERIOD_CODE in (select period_code from ac_password_est_period where password_number = to_number(:G_PASSWORD_NUMBER) and company_code = to_number(:G_COMPANY_CODE)))",
+    "key_expr": {
+      "AC_ESTIMATE_PERIODS.PERIOD_CODE": "app_rules3_gl.next_est_period"
+    },
+    "row_rules": {
+      "AC_ESTIMATE_PERIODS": "app_rules3_gl.est_period_row(:new.period_code, :new.from_date, :new.till_date);"
+    },
+    "optional": [
+      "AC_ESTIMATE_PERIODS.PERIOD_CODE"
+    ],
+    "columns": {
+      "AC_ESTIMATE_PERIODS.PERIOD_CODE": {
+        "lov": null
+      }
+    }
+  }
+}

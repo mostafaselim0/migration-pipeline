@@ -1,0 +1,48 @@
+{
+  "pattern": "AUTO",
+  "notes": "Payment types (LC_SETTEL_TYPE): code max+1 and > 0, active accounts / cost centres, delete refused while letters of credit or supplier transactions use the type; labels of the legacy form (APP_RULES3_VN).",
+  "rules": {
+    "key_expr": {
+      "LC_SETTEL_TYPE.SETTEL_TYPE_CODE": "app_rules3_vn.next_settel_code"
+    },
+    "row_rules": {
+      "LC_SETTEL_TYPE": "app_rules3_vn.settel_row(:new.settel_type_code, :new.pay_account_number, :new.pay_disc_account, :new.pay_cost_code, :new.pay_cost_code2);"
+    },
+    "hidden": [
+      "LC_SETTEL_TYPE.NON_PAY_FLAG"
+    ],
+    "optional": [
+      "LC_SETTEL_TYPE.SETTEL_TYPE_CODE"
+    ],
+    "add_columns": {
+      "LC_SETTEL_TYPE.SETTEL_TYPE_CODE": {
+        "label_a": "مسلسل",
+        "label_e": "Serial"
+      },
+      "LC_SETTEL_TYPE.SETTEL_TYPE_DESC": {
+        "label_a": "البيـان عربى",
+        "label_e": "Arabic description"
+      },
+      "LC_SETTEL_TYPE.SETTEL_TYPE_DESC_E": {
+        "label_a": "البيـان لاتينى",
+        "label_e": "English description"
+      },
+      "LC_SETTEL_TYPE.PAY_ACCOUNT_NUMBER": {
+        "label_a": "رقم الحساب",
+        "label_e": "Account"
+      },
+      "LC_SETTEL_TYPE.PAY_DISC_ACCOUNT": {
+        "label_a": "حساب الخصم المسموح به",
+        "label_e": "Allowed discount account"
+      },
+      "LC_SETTEL_TYPE.PAY_COST_CODE": {
+        "label_a": "مركز تكلفة1",
+        "label_e": "Cost centre 1"
+      },
+      "LC_SETTEL_TYPE.PAY_COST_CODE2": {
+        "label_a": "مركز تكلفة2",
+        "label_e": "Cost centre 2"
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "pattern": "AUTO",
+  "notes": "AP areas and branches: numbers > 0, discount account differs from the area account, active accounts, branch accounts not repeated inside the area, an area with branches cannot be deleted (APP_RULES3_VN).",
+  "rules": {
+    "key_expr": {
+      "VN_MAINAREA.ID": "app_rules3_vn.need_num('يجب إدخال رقم المنطقة الرئيسية', 'Enter the main area number')",
+      "VN_SUBAREA.ID": "app_rules3_vn.need_num('يجب إدخال رقم المنطقة الفرعية', 'Enter the branch number')"
+    },
+    "row_rules": {
+      "VN_MAINAREA": "app_rules3_vn.mainarea_row(:new.id, :new.account_no, :new.disc_account);",
+      "VN_SUBAREA": "app_rules3_vn.subarea_row(:new.id, :new.account_no, :new.disc_account);"
+    }
+  }
+}

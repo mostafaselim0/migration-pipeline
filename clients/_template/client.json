@@ -1,0 +1,16 @@
+{
+ "_help": "Copy with  python pipeline.py --new <client>.  Only schema, workspace and app_id are required; see docs/ONBOARDING.md for every key.",
+ "knowledge": "ascon",
+ "schema": "CLIENT",
+ "workspace": "CLIENT",
+ "app_id": 200,
+ "app_name": "ASCON ERP",
+ "app_alias": "ascon-erp",
+ "customer_code": null,
+ "dsn": "localhost:1521/ORCLPDB",
+ "dump": null,
+ "source_schema": null,
+ "replace_schema": false,
+ "sources": {"xml": null, "binaries": null},
+ "test_user": null
+}

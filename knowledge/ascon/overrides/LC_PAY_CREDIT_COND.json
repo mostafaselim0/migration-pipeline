@@ -1,0 +1,16 @@
+{
+ "pattern": "GRID",
+ "notes": "Payment conditions (LC_PAY_CREDIT_COND): same table as generated, legacy column order; number > 0, no duplicate, delete refused while a letter of credit uses the condition (APP_RULES3_PR)",
+ "master": {
+  "table": "LC_PAY_CREDIT_COND",
+  "columns": ["COND_NO", "COND_DESCA", "COND_DESCE"]
+ },
+ "insert": true,
+ "update": true,
+ "delete": true,
+ "rules": {
+  "row_rules": {
+   "LC_PAY_CREDIT_COND": "-- legacy WHEN-VALIDATE-ITEM / PRE-INSERT: number > 0, no duplicate (delete check: trigger APP_R3_LC_PAY_CREDIT_COND_BD)\napp_rules3_pr.credit_cond_row(inserting, :new.cond_no);"
+  }
+ }
+}

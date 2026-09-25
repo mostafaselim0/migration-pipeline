@@ -1,0 +1,470 @@
+{
+ "pattern": "AUTO",
+ "notes": "Transaction types of purchasing (ST_TRNS_TYPE + posting lines STACLNK): legacy block WHERE (purchasing kinds, group rights), code range / duplicate, effect and kind of this screen, linked types / stores / accounting transactions from their lists, delete refused while transactions exist, copy button, last serial (APP_RULES3_PR). Wave 3b: radio groups EFFECT / JOIN_TYPE / POST_TYPE and the kind list as real lists, NO_COST check box, legacy LOVs (store, GL / AR / AP / cash / bank transactions, linked types, accounts, cost centres), STACLNK debit/credit and cost-centre-1 indicator lists.",
+ "rules": {
+  "where": "((TRNS_TYPE IN (1, 3, 12, 9, 13, 14, 15, 25, 5) AND EFFECT IN (3, 7)) OR (TRNS_TYPE = 1 AND EFFECT = 1)) AND (NVL(:G_PASSWORD_NUMBER, 0) = 0 OR TRNS_TYPE_CODE IN (SELECT TP.TRNS_TYPE_CODE FROM ST_TRNSTYPE_PASSWORD TP WHERE TP.FLAG = 1 AND TP.PASSWORD_NUMBER = :G_PASSWORD_NUMBER))",
+  "add_columns": {
+   "ST_TRNS_TYPE.EFFECT": {
+    "label_a": "التأثير على المخزون",
+    "label_e": "Effect on Storage"
+   },
+   "ST_TRNS_TYPE.TRNS_TYPE": {
+    "label_a": "نوع الحركة",
+    "label_e": "Transaction kind"
+   },
+   "ST_TRNS_TYPE.JOIN_TYPE": {
+    "label_a": "الربط بالأنظمة الأخرى",
+    "label_e": "Link to other systems"
+   },
+   "ST_TRNS_TYPE.POST_TYPE": {
+    "label_a": "نوع الترحيل",
+    "label_e": "Posting Type"
+   },
+   "ST_TRNS_TYPE.ENTRY_TYPE": {
+    "label_a": "رقم الحركة ببرنامج الحسابات",
+    "label_e": "GL transaction type"
+   },
+   "ST_TRNS_TYPE.CUSTOMER_TRNS_CODE": {
+    "label_a": "رقم الحركة ببرنامج العملاء",
+    "label_e": "AR transaction type"
+   },
+   "ST_TRNS_TYPE.SUPPLIER_TRNS_CODE": {
+    "label_a": "رقم الحركة ببرنامج الموردين",
+    "label_e": "AP transaction type"
+   },
+   "ST_TRNS_TYPE.SUPP_DISC_TRNS_TYPE": {
+    "label_a": "حركة الحسابات لخصم المورد",
+    "label_e": "Supplier discount transaction"
+   },
+   "ST_TRNS_TYPE.NO_COST": {
+    "label_a": "حركة مشتريات بدون تكاليف",
+    "label_e": "Purchase without costs"
+   },
+   "ST_TRNS_TYPE.CTGRY_CODE": {
+    "label_a": "القسم",
+    "label_e": "Department"
+   },
+   "STACLNK.ACCOUNT_NO_TYPE": {
+    "label_a": "مؤشر رقم الحساب",
+    "label_e": "Account No Indicator"
+   },
+   "STACLNK.COST_NO_TYPE": {
+    "label_a": "مؤشر مركز التكلفة 1",
+    "label_e": "Cost Center 1 Indicator"
+   },
+   "STACLNK.COST_NO2_TYPE": {
+    "label_a": "مؤشر مركز التكلفة 2",
+    "label_e": "Cost centre 2 indicator"
+   },
+   "STACLNK.ACCOUNT_IND": {
+    "label_a": "المديونية",
+    "label_e": "Debit / credit"
+   },
+   "STACLNK.VALUE_TYPE": {
+    "label_a": "مؤشر القيمة",
+    "label_e": "Value Indicator"
+   }
+  },
+  "hidden": [
+   "ST_TRNS_TYPE.LAST_SERIAL"
+  ],
+  "defaults": {
+   "ST_TRNS_TYPE.EFFECT": {
+    "type": "STATIC",
+    "value": "1"
+   },
+   "ST_TRNS_TYPE.TRNS_TYPE": {
+    "type": "STATIC",
+    "value": "1"
+   },
+   "ST_TRNS_TYPE.JOIN_TYPE": {
+    "type": "STATIC",
+    "value": "1"
+   },
+   "ST_TRNS_TYPE.POST_TYPE": {
+    "type": "STATIC",
+    "value": "1"
+   }
+  },
+  "validations": [
+   {
+    "name": "نوع الحركة: الرقم والتأثير والنوع والحركات المرتبطة",
+    "when": "CREATE,SAVE",
+    "plsql": "return app_rules3_pr.trns_type_check(p_form => 'ST_TRNS_TYPE', p_request => :REQUEST, p_rowid => :PAGE_ROWID, p_code => :PAGE_TRNS_TYPE_CODE, p_effect => :PAGE_EFFECT, p_trns_type => :PAGE_TRNS_TYPE, p_store => :PAGE_STORE_CODE, p_join => :PAGE_JOIN_TYPE, p_post => :PAGE_POST_TYPE, p_entry => :PAGE_ENTRY_TYPE, p_cust => :PAGE_CUSTOMER_TRNS_CODE, p_cust_pay => null, p_supp => :PAGE_SUPPLIER_TRNS_CODE, p_supp_pay => null, p_rp => :PAGE_RP_TRNS_TYPE_CODE, p_pc => :PAGE_PC_TRNS_TYPE_CODE, p_pr => :PAGE_PR_TRNS_TYPE, p_pu => :PAGE_PU_TRNS_TYPE, p_quot => :PAGE_QUOT_TRNS_TYPE, p_supp_disc => :PAGE_SUPP_DISC_TRNS_TYPE, p_ctgry => :PAGE_CTGRY_CODE);"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "قيود الحركة: الحسابات ومراكز التكلفة",
+    "when": "CREATE,SAVE",
+    "plsql": "app_rules3_pr.staclnk_after_save(:REQUEST, :PAGE_TRNS_TYPE_CODE);"
+   }
+  ],
+  "info": [
+   {
+    "name": "LAST",
+    "label_a": "آخر مسلسل للحركة",
+    "label_e": "Last serial",
+    "sql": "select nvl(max(trns_serial), 0) from st_trns_mast where trns_type_code = :PAGE_TRNS_TYPE_CODE and nvl(delete_flag, 0) = 0"
+   }
+  ],
+  "columns": {
+   "ST_TRNS_TYPE.EFFECT": {
+    "widget": "RADIO",
+    "static": [
+     [
+      "وارد",
+      "1",
+      "In"
+     ],
+     [
+      "مردود وارد",
+      "3",
+      "Purchase return"
+     ],
+     [
+      "بدون تأثير",
+      "7",
+      "No effect"
+     ]
+    ]
+   },
+   "ST_TRNS_TYPE.TRNS_TYPE": {
+    "static": [
+     [
+      "مشتريات",
+      "1",
+      "Purchase"
+     ],
+     [
+      "مرتجعات شراء",
+      "3",
+      "Purchase return"
+     ],
+     [
+      "طلب نواقص",
+      "12",
+      "Material request"
+     ],
+     [
+      "تحويل",
+      "9",
+      "Transfer"
+     ],
+     [
+      "طلب شراء",
+      "13",
+      "Purchase request"
+     ],
+     [
+      "امر شراء",
+      "14",
+      "Purchase order"
+     ],
+     [
+      "رسائل واردة",
+      "15",
+      "Incoming lot"
+     ],
+     [
+      "طلب عرض سعر",
+      "25",
+      "Request for quotation"
+     ],
+     [
+      "أخرى",
+      "5",
+      "Other"
+     ]
+    ]
+   },
+   "ST_TRNS_TYPE.JOIN_TYPE": {
+    "widget": "RADIO",
+    "static": [
+     [
+      "غير مرتبط",
+      "1",
+      "Not linked"
+     ],
+     [
+      "بالحسابات",
+      "2",
+      "GL"
+     ],
+     [
+      "بالعملاء+الحسابات",
+      "3",
+      "AR + GL"
+     ],
+     [
+      "بالموردين+الحسابات",
+      "4",
+      "AP + GL"
+     ]
+    ]
+   },
+   "ST_TRNS_TYPE.POST_TYPE": {
+    "widget": "RADIO",
+    "static": [
+     [
+      "قيد لكل حركة",
+      "1",
+      "Entry per transaction"
+     ],
+     [
+      "قيد لكل نوع حركة",
+      "2",
+      "Entry per transaction type"
+     ]
+    ]
+   },
+   "ST_TRNS_TYPE.NO_COST": {
+    "widget": "CHECK",
+    "values": [
+     "1",
+     "0"
+    ]
+   },
+   "ST_TRNS_TYPE.STORE_CODE": {
+    "lov": "select store_code || ' - ' || name_a d, store_code r from st_store where store_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or store_code in (select sp.store_code from st_store_password sp where sp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2",
+    "widget": "SELECT"
+   },
+   "ST_TRNS_TYPE.ENTRY_TYPE": {
+    "lov": "select entry_type || ' - ' || max(entry_desc) d, entry_type r from ac_trn_codes where nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or (entry_year, entry_type) in (select p1.entry_year, p1.entry_type from ac_password_entry p1 where p1.password_number = to_number(:G_PASSWORD_NUMBER) and p1.company_code = :G_COMPANY_CODE) group by entry_type order by 2",
+    "widget": "POPUP"
+   },
+   "ST_TRNS_TYPE.CUSTOMER_TRNS_CODE": {
+    "lov": "select id || ' - ' || description_a d, id r from ar_trnstype where effect = decode(:PAGE_EFFECT, 1, 1, 3, 0) and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or id in (select trns_id from ar_trnstype_password where flag = 1 and password_number = to_number(:G_PASSWORD_NUMBER))) order by 2",
+    "widget": "SELECT",
+    "cascade": "EFFECT"
+   },
+   "ST_TRNS_TYPE.SUPPLIER_TRNS_CODE": {
+    "lov": "select id || ' - ' || description_a d, id r from vn_trnstype where effect = decode(:PAGE_EFFECT, 1, 1, 3, 0) and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or id in (select trns_id from vn_trnstype_password where flag = 1 and password_number = to_number(:G_PASSWORD_NUMBER))) order by 2",
+    "widget": "SELECT",
+    "cascade": "EFFECT"
+   },
+   "ST_TRNS_TYPE.SUPP_DISC_TRNS_TYPE": {
+    "lov": "select id || ' - ' || description_a d, id r from vn_trnstype where effect = 0 and trns_type = 4 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or id in (select trns_id from vn_trnstype_password where flag = 1 and password_number = to_number(:G_PASSWORD_NUMBER))) order by 2",
+    "widget": "SELECT"
+   },
+   "ST_TRNS_TYPE.PR_TRNS_TYPE": {
+    "lov": "select trns_type_code || ' - ' || desc_a d, trns_type_code r from st_trns_type where effect = 7 and trns_type = 14 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or trns_type_code in (select tp.trns_type_code from st_trnstype_password tp where tp.flag = 1 and tp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2",
+    "widget": "SELECT"
+   },
+   "ST_TRNS_TYPE.PU_TRNS_TYPE": {
+    "lov": "select trns_type_code || ' - ' || desc_a d, trns_type_code r from st_trns_type where effect = 1 and trns_type = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or trns_type_code in (select tp.trns_type_code from st_trnstype_password tp where tp.flag = 1 and tp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2",
+    "widget": "SELECT"
+   },
+   "ST_TRNS_TYPE.QUOT_TRNS_TYPE": {
+    "lov": "select trns_type_code || ' - ' || desc_a d, trns_type_code r from st_trns_type where effect = 7 and trns_type = 25 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or trns_type_code in (select tp.trns_type_code from st_trnstype_password tp where tp.flag = 1 and tp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2",
+    "widget": "SELECT"
+   },
+   "ST_TRNS_TYPE.RP_TRNS_TYPE_CODE": {
+    "lov": "select trns_type_code || ' - ' || desc_a d, trns_type_code r from rp_trns_type where nvl(stop_flag, 0) = 0 and trns_type = decode(:PAGE_TRNS_TYPE, 1, 1, 3, 2) and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or trns_type_code in (select trns_type_code from rap_trns_password where password_number = to_number(:G_PASSWORD_NUMBER))) order by 2",
+    "widget": "SELECT",
+    "cascade": "TRNS_TYPE"
+   },
+   "ST_TRNS_TYPE.PC_TRNS_TYPE_CODE": {
+    "lov": "select trns_type_code || ' - ' || desc_a d, trns_type_code r from check_trns_type where nvl(stop_flag, 0) = 0 and trns_type = decode(:PAGE_TRNS_TYPE, 1, 1, 3, 2) and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or trns_type_code in (select trns_type_code from check_trns_password where password_number = to_number(:G_PASSWORD_NUMBER))) order by 2",
+    "widget": "SELECT",
+    "cascade": "TRNS_TYPE"
+   },
+   "STACLNK.ACCOUNT_IND": {
+    "static": [
+     [
+      "مدين",
+      "1",
+      "Debit"
+     ],
+     [
+      "دائن",
+      "2",
+      "Credit"
+     ]
+    ]
+   },
+   "STACLNK.COST_NO_TYPE": {
+    "static": [
+     [
+      "إدخال الرقم",
+      "1",
+      "Typed"
+     ],
+     [
+      "أرقام المخازن",
+      "2",
+      "Store"
+     ],
+     [
+      "ملف الحركات",
+      "3",
+      "Transaction"
+     ],
+     [
+      "ملف المجموعات",
+      "4",
+      "Item group"
+     ],
+     [
+      "المخزن المحول إليه",
+      "5",
+      "Receiving store"
+     ],
+     [
+      "بدون",
+      "6",
+      "None"
+     ]
+    ]
+   },
+   "STACLNK.ACCOUNT_NO": {
+    "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or account_number in (select p.account_number from ac_password_master p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by account_number",
+    "widget": "POPUP"
+   },
+   "STACLNK.COST_NO": {
+    "lov": "select cost_code || ' - ' || cost_desc d, cost_code r from ac_cost_centers where cost_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or cost_code in (select p.cost_code from ac_password_cost1 p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by 2",
+    "widget": "SELECT"
+   },
+   "STACLNK.COST_NO2": {
+    "lov": "select cost_code || ' - ' || cost_desc d, cost_code r from ac_cost_centers2 where cost_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or cost_code in (select p.cost_code from ac_password_cost2 p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by 2",
+    "widget": "SELECT"
+   },
+   "STACLNK.ACCOUNT_NO_TYPE": {
+    "static": [
+     [
+      "إدخال الرقم",
+      "1",
+      "Typed account"
+     ],
+     [
+      "ح/الصندوق بالمخازن",
+      "2",
+      "Store cash account"
+     ],
+     [
+      "ح/المخزون بأرقام المخازن",
+      "3",
+      "Store stock account"
+     ],
+     [
+      "ح/تكلفةالمبيعات بأرقام المخازن",
+      "4",
+      "Store cost of sales account"
+     ],
+     [
+      "ح/المبيعات أرقام المخازن",
+      "5",
+      "Store sales account"
+     ],
+     [
+      "التوجية المحاسبى",
+      "6",
+      "Document account 1"
+     ],
+     [
+      "التوجية المحاسبى-2",
+      "7",
+      "Document account 2"
+     ],
+     [
+      "التوجية المحاسبى-3",
+      "8",
+      "Document account 3"
+     ],
+     [
+      "التوجية المحاسبى-4",
+      "9",
+      "Document account 4"
+     ],
+     [
+      "ملف العملاء",
+      "10",
+      "Customer file"
+     ],
+     [
+      "ملف الموردين",
+      "11",
+      "Supplier file"
+     ],
+     [
+      "ح/المخزون المحول إليه بأرقام المخازن",
+      "12",
+      "Receiving store stock account"
+     ],
+     [
+      "ملف موردي الخدمات",
+      "14",
+      "Service supplier file"
+     ],
+     [
+      "ملف المجموعات",
+      "15",
+      "Item group file"
+     ],
+     [
+      "حساب الضرائب",
+      "66",
+      "Tax account"
+     ]
+    ]
+   },
+   "STACLNK.COST_NO2_TYPE": {
+    "static": [
+     [
+      "إدخال الرقم",
+      "1",
+      "Typed"
+     ],
+     [
+      "أرقام المخازن",
+      "2",
+      "Store"
+     ],
+     [
+      "ملف الحركات",
+      "3",
+      "Transaction"
+     ],
+     [
+      "ملف المجموعات",
+      "4",
+      "Item group"
+     ],
+     [
+      "المخزن المحول إليه",
+      "5",
+      "Receiving store"
+     ],
+     [
+      "بدون",
+      "6",
+      "None"
+     ]
+    ]
+   }
+  }
+ },
+ "actions": [
+  {
+   "name": "COPY_TYPE",
+   "label_a": "نسخ الحركة",
+   "label_e": "Copy transaction type",
+   "confirm_a": "هل تريد نسخ نوع الحركة وقيوده برقم جديد؟",
+   "confirm_e": "Copy this transaction type and its posting lines under a new number?",
+   "params": [
+    {
+     "name": "NEW_TRNS_TYPE_CODE",
+     "label_a": "رقم الحركة الجديد",
+     "label_e": "New transaction number",
+     "type": "number",
+     "required": true
+    }
+   ],
+   "call": "app_rules3_pr.copy_trns_type('ST_TRNS_TYPE', :PAGE_ROWID, :NEW_TRNS_TYPE_CODE)",
+   "message": "app_rules3_pr.last_message",
+   "target_form": "ST_TRNS_TYPE",
+   "success_a": "تم نقل الحركة",
+   "success_e": "The transaction type was copied"
+  }
+ ]
+}

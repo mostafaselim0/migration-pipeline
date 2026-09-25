@@ -1,0 +1,118 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "MOB_MSG_MAST"
+  },
+  "details": [
+    {
+      "table": "MOB_MSG_DET",
+      "join": [
+        [
+          "MAST_SER",
+          "MAST_SER"
+        ]
+      ],
+      "title_a": "المندوبين",
+      "title_e": "Recipients"
+    }
+  ],
+  "where": null,
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Messages to the salesmen's mobile application (MOB_MSG_MAST / MOB_MSG_DET); the generated form on SALESMAN was corrected; rules in APP_RULES3_AR.",
+  "rules": {
+    "key_expr": {
+      "MOB_MSG_DET.TO_CODE": "app_rules3_ar.need_num('يجب إدخال المندوب', 'Enter the salesman')"
+    },
+    "row_rules": {
+      "MOB_MSG_DET": "app_rules3_ar.msg_det_row(inserting, :new.to_code);"
+    },
+    "defaults": {
+      "MOB_MSG_MAST.FROM_CODE": {
+        "type": "ITEM",
+        "value": "G_USER_CODE"
+      },
+      "MOB_MSG_MAST.MSG_DATE": {
+        "type": "EXPRESSION",
+        "value": "to_char(sysdate, 'DD/MM/YYYY')"
+      },
+      "MOB_MSG_DET.READ_FLAG": {
+        "type": "STATIC",
+        "value": "0"
+      },
+      "MOB_MSG_DET.HIDE_FLAG": {
+        "type": "STATIC",
+        "value": "0"
+      }
+    },
+    "readonly": [
+      "MOB_MSG_MAST.MAST_SER",
+      "MOB_MSG_DET.READ_FLAG",
+      "MOB_MSG_DET.READ_DATE"
+    ],
+    "hidden": [
+      "MOB_MSG_DET.ALT_KEY"
+    ],
+    "add_columns": {
+      "MOB_MSG_MAST.MAST_SER": {
+        "label_a": "مسلسل",
+        "label_e": "Serial"
+      },
+      "MOB_MSG_MAST.FROM_CODE": {
+        "label_a": "المرسل (المستخدم)",
+        "label_e": "From (user)"
+      },
+      "MOB_MSG_MAST.MSG_DATE": {
+        "label_a": "تاريخ الرسالة",
+        "label_e": "Message date"
+      },
+      "MOB_MSG_MAST.SUB": {
+        "label_a": "عنوان",
+        "label_e": "Subject"
+      },
+      "MOB_MSG_MAST.MSG": {
+        "label_a": "الرسالة",
+        "label_e": "Message"
+      },
+      "MOB_MSG_DET.TO_CODE": {
+        "label_a": "المندوب",
+        "label_e": "Salesman"
+      },
+      "MOB_MSG_DET.READ_FLAG": {
+        "label_a": "تم الاطلاع",
+        "label_e": "Read"
+      },
+      "MOB_MSG_DET.READ_DATE": {
+        "label_a": "تاريخ الاطلاع",
+        "label_e": "Read date"
+      },
+      "MOB_MSG_DET.HIDE_FLAG": {
+        "label_a": "اخفاء",
+        "label_e": "Hidden"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "ADD_SALESMEN",
+      "label_a": "اختيار المندوبين",
+      "label_e": "Select salesmen",
+      "confirm_a": "هل تريد إرسال الرسالة لكل المندوبين (أو لمندوبي القسم المختار)؟",
+      "confirm_e": "Send the message to every salesman (or the department's)?",
+      "params": [
+        {
+          "name": "CTGRY_CODE",
+          "label_a": "القسم (فارغ = الكل)",
+          "label_e": "Department (empty = all)",
+          "type": "number",
+          "lov_sql": "select category_type_code || ' - ' || category_type_desca d, category_type_code r from st_category_type order by 2"
+        }
+      ],
+      "call": "app_rules3_ar.msg_add_salesmen(:PAGE_ROWID, :CTGRY_CODE)",
+      "success_a": "تم اختيار المندوبين",
+      "success_e": "Salesmen selected",
+      "icon": "fa-users"
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "pattern": "AUTO",
+  "notes": "Payable grants of a group (VN_TRNSTYPE_PASSWORD types, VN_SUPPLIER_PASSWORD supplier ranges; read by APP_RULES_VN / APP_PROC_VN); range checks, all types and select all / none buttons (APP_RULES3_SE, see processes/VNPASS.md)",
+  "rules": {
+    "readonly": [
+      "PASSWORD.GROUP_DESC",
+      "PASSWORD.GROUP_DESC_E"
+    ],
+    "add_columns": {
+      "PASSWORD.GROUP_DESC": {
+        "label_a": "إسم المجموعة",
+        "label_e": "Group name"
+      },
+      "PASSWORD.GROUP_DESC_E": {
+        "label_a": "إسم المجموعة (لاتينى)",
+        "label_e": "Group name (En)"
+      },
+      "VN_SUPPLIER_PASSWORD.TO_SUPPLIER_CODE": {
+        "label_a": "إلى كود مورد",
+        "label_e": "To supplier"
+      }
+    },
+    "key_expr": {
+      "VN_SUPPLIER_PASSWORD.TO_SUPPLIER_CODE": "app_rules3_se.required('إلى كود مورد', 'To supplier')"
+    },
+    "row_rules": {
+      "VN_SUPPLIER_PASSWORD": "app_rules3_se.vn_range_row(:new.from_supplier_code, :new.to_supplier_code);"
+    },
+    "after_save": [
+      {
+        "name": "مدى الموردين غير متداخل",
+        "plsql": "declare\n  l number;\nbegin\n  select password_number into l from password where rowid = chartorowid(:PAGE_ROWID);\n  app_rules3_se.vn_ranges_check(l);\nend;",
+        "when": "CREATE,SAVE"
+      }
+    ],
+    "columns": {
+      "VN_SUPPLIER_PASSWORD.FROM_SUPPLIER_CODE": {
+        "lov": "select code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, code r from supplier order by 1",
+        "widget": "POPUP"
+      },
+      "VN_SUPPLIER_PASSWORD.TO_SUPPLIER_CODE": {
+        "lov": "select code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, code r from supplier where :PAGE_FROM_SUPPLIER_CODE is null or code >= :PAGE_FROM_SUPPLIER_CODE order by 1 desc",
+        "widget": "POPUP",
+        "cascade": "FROM_SUPPLIER_CODE"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "ALL_TRNS",
+      "label_a": "كل الحركات",
+      "label_e": "All transaction types",
+      "call": "app_rules3_se.vn_all_trns(:PAGE_ROWID)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "تمت إضافة الحركات",
+      "success_e": "Types added",
+      "icon": "fa-list"
+    },
+    {
+      "name": "FLAGS",
+      "label_a": "إختيار الكل / استبعاد الكل",
+      "label_e": "Select all / deselect all",
+      "params": [
+        {
+          "name": "FLAG",
+          "label_a": "الصلاحية",
+          "label_e": "Privilege",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select case when app_sec.lang = 'en' then e else a end d, r from (select 'إختيار الكل' a, 'Select all' e, 1 r from dual union all select 'استبعاد الكل', 'Deselect all', 0 from dual) order by r desc"
+        }
+      ],
+      "call": "app_rules3_se.set_flags(:PAGE_ROWID, 'VN_TRNSTYPE_PASSWORD', :FLAG)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "تم التعديل",
+      "success_e": "Updated",
+      "icon": "fa-check-square-o"
+    }
+  ]
+}

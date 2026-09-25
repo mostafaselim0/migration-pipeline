@@ -1,0 +1,35 @@
+{
+  "pattern": "PROCESS",
+  "notes": "Legacy form logs credit-limit changes in CUSTOMER_CREDIT_LIMIT and applies them to CUSTOMER.CREDIT_LIMIT (button Apply); reproduced as one-step app_proc_ar_credit.apply_credit_limit with the change history as preview.",
+  "proc": {
+    "procedure": "app_proc_ar_credit.apply_credit_limit",
+    "description_a": "تعديل الحد الائتماني للعميل: اختر العميل وأدخل الحد الائتماني الجديد (قيمة أكبر من صفر، أو اتركه فارغاً لإلغاء الحد). عند الضغط على تطبيق يُسجَّل التعديل في سجل تعديلات الحد الائتماني (الحد السابق، الحد الجديد، المستخدم، التاريخ والوقت) ثم يُحدَّث الحد الائتماني في ملف العميل. الجدول أدناه يعرض سجل التعديلات.",
+    "description_e": "Update a customer's credit limit: choose the customer and enter the new limit (greater than zero, or empty to remove the limit). Apply records the change in the credit-limit log (previous limit, new limit, user, date, time) and updates the customer file. The table below lists the change history.",
+    "params": [
+      {"name": "CUSTOMER_CODE", "arg": "p_customer_code", "label_a": "العميل", "label_e": "Customer",
+       "type": "number", "required": true,
+       "lov_sql": "select decode(:G_LANG, 'en', nvl(c.name_e, c.name_a), c.name_a) || ' - ' || c.code || ' (' || nvl(to_char(c.credit_limit), '-') || ')' d, c.code r from customer c where nvl(c.customer_status, 0) = 1 and nvl(c.stopflag, 0) = 0 order by c.code"},
+      {"name": "NEW_CREDIT_LIMIT", "arg": "p_credit_limit", "label_a": "الحد الائتماني الجديد", "label_e": "New credit limit",
+       "type": "number", "required": false}
+    ],
+    "fixed_args": {"p_user_code": "to_number(:G_USER_CODE)"},
+    "button_a": "تطبيق",
+    "button_e": "Apply",
+    "confirm_a": "هل تريد تطبيق الحد الائتماني الجديد على العميل؟",
+    "success_a": "تم تطبيق الحد الائتماني الجديد وتسجيله في سجل التعديلات",
+    "preview_title_a": "سجل تعديلات الحد الائتماني",
+    "preview_sql": "select l.code customer_code, c.name_a customer_name, l.old_credit_limit, l.credit_limit, c.credit_limit current_limit, get_customer_bal_all(l.code) current_balance, case when nvl(l.update_flag, 0) = 1 then 'مطبق' else 'غير مطبق' end applied, l.update_date, l.update_time, u.users_name updated_by from customer_credit_limit l left join customer c on c.code = l.code left join users u on u.users_code = l.update_user where (v('P' || :APP_PAGE_ID || '_CUSTOMER_CODE') is null or l.code = to_number(v('P' || :APP_PAGE_ID || '_CUSTOMER_CODE'))) order by l.update_date desc nulls first, l.update_time desc nulls first",
+    "preview_columns": [
+      {"name": "CUSTOMER_CODE", "label_a": "رقم العميل", "type": "NUMBER"},
+      {"name": "CUSTOMER_NAME", "label_a": "اسم العميل", "type": "STRING"},
+      {"name": "OLD_CREDIT_LIMIT", "label_a": "الحد الائتماني السابق", "type": "NUMBER"},
+      {"name": "CREDIT_LIMIT", "label_a": "الحد الائتماني", "type": "NUMBER"},
+      {"name": "CURRENT_LIMIT", "label_a": "الحد الحالي في ملف العميل", "type": "NUMBER"},
+      {"name": "CURRENT_BALANCE", "label_a": "الرصيد الجاري", "type": "NUMBER"},
+      {"name": "APPLIED", "label_a": "التطبيق", "type": "STRING"},
+      {"name": "UPDATE_DATE", "label_a": "التاريخ", "type": "DATE"},
+      {"name": "UPDATE_TIME", "label_a": "الوقت", "type": "STRING"},
+      {"name": "UPDATED_BY", "label_a": "معدل بواسطة", "type": "STRING"}
+    ]
+  }
+}

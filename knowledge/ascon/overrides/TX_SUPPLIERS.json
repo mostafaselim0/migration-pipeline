@@ -1,0 +1,95 @@
+{
+  "pattern": "AUTO",
+  "notes": "Tax obligation per supplier (EXT_SUPP_FLAG = external supplier, used by the tax statement): percentage > 0, supplier code typed / chosen (no automatic number), range button (تطبيق) - APP_RULES3_TX, see processes/TX_SUPPLIERS.md",
+  "rules": {
+    "key_expr": {
+      "TX_TAXES_SUPPLIERS.SUPPLIER_CODE": "null"
+    },
+    "row_rules": {
+      "TX_TAXES_SUPPLIERS": "app_rules3_tx.oblig_row('SUPP', inserting, :new.supplier_code, null, :old.tax_per, :new.tax_per);"
+    },
+    "add_columns": {
+      "TX_TAXES_SUPPLIERS.TAX_CODE": {
+        "label_a": "رقم الضريبة",
+        "label_e": "Tax no."
+      },
+      "TX_TAXES_SUPPLIERS.SUPPLIER_CODE": {
+        "label_a": "رقم المورد",
+        "label_e": "Supplier"
+      },
+      "TX_TAXES_SUPPLIERS.TAX_PER": {
+        "label_a": "النسبة",
+        "label_e": "Percentage"
+      },
+      "TX_TAXES_SUPPLIERS.TAX_NO": {
+        "label_a": "الرقم الضريبي",
+        "label_e": "VAT number"
+      },
+      "TX_TAXES_SUPPLIERS.EXT_SUPP_FLAG": {
+        "label_a": "مورد خارجي (1 = نعم)",
+        "label_e": "External supplier (1 = yes)"
+      }
+    },
+    "columns": {
+      "TX_TAXES_SUPPLIERS.EXT_SUPP_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ],
+        "label_a": "مورد خارجي",
+        "label_e": "External supplier"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "APPLY",
+      "label_a": "تطبيق",
+      "label_e": "Apply",
+      "confirm_a": "هل تريد تطبيق النسبة على الموردين المحددين؟",
+      "confirm_e": "Apply the percentage to the supplier range?",
+      "condition": "app_sec.can_page(:APP_PAGE_ID, 'I')",
+      "params": [
+        {
+          "name": "TAX",
+          "label_a": "رقم الضريبة",
+          "label_e": "Tax no.",
+          "type": "number",
+          "required": true,
+          "default": "select min(tax_code) from tx_taxes_types",
+          "default_type": "SQL_QUERY",
+          "lov_sql": "select tax_code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, tax_code r from tx_taxes_types order by tax_code"
+        },
+        {
+          "name": "FROM_SUPP",
+          "label_a": "من مورد",
+          "label_e": "From supplier",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, code r from supplier order by code"
+        },
+        {
+          "name": "TO_SUPP",
+          "label_a": "إلى مورد",
+          "label_e": "To supplier",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, code r from supplier order by code"
+        },
+        {
+          "name": "PER",
+          "label_a": "النسبة",
+          "label_e": "Percentage",
+          "type": "number",
+          "required": true
+        }
+      ],
+      "call": "app_rules3_tx.apply_suppliers(:TAX, :FROM_SUPP, :TO_SUPP, :PER)",
+      "message": "app_rules3_tx.last_message",
+      "success_a": "تم التطبيق",
+      "success_e": "Applied",
+      "icon": "fa-check"
+    }
+  ]
+}

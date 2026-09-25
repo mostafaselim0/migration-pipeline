@@ -1,0 +1,85 @@
+{
+  "pattern": "PROCESS",
+  "notes": "barcode labels of a transaction (BARCODE_LABELS_TRNS.fmx): transaction type and serial, optional item range and fixed quantity; the print button fills the work table PRINT_TRNS_BARCODE from the lines (one row per label: quantity + bonus of the line or the quantity typed; item Arabic name, barcode '*' || item code || '*', retail price of the line unit) for report ST_BARCODE_TRNS (printed by the report engine)",
+  "proc": {
+    "procedure": "app_rules3_st.prepare_barcode_trns",
+    "description_a": "طباعة الباركود للحركات: اختر رقم الحركة ومسلسلها، ويمكن تحديد نطاق الأصناف وكمية ثابتة لكل صنف (الافتراضي الكمية + البونص). عند الضغط على تجهيز الملصقات تُملأ ملصقات تقرير الباركود ST_BARCODE_TRNS ويظهر محتواها في الجدول أدناه.",
+    "description_e": "Transaction barcode labels: choose the transaction type and serial, optionally an item range and a fixed quantity per item (default quantity + bonus). Prepare labels fills the labels of report ST_BARCODE_TRNS, listed below.",
+    "params": [
+      {
+        "name": "TRNS_TYPE_CODE",
+        "arg": "p_type",
+        "label_a": "رقم الحركة",
+        "label_e": "Transaction type",
+        "type": "number",
+        "required": true,
+        "lov_sql": "select t.trns_type_code || ' - ' || decode(:G_LANG, 'en', nvl(t.desc_e, t.desc_a), t.desc_a) d, t.trns_type_code r from st_trns_type t order by t.trns_type_code"
+      },
+      {
+        "name": "TRNS_SERIAL",
+        "arg": "p_serial",
+        "label_a": "مسلسل الحركة",
+        "label_e": "Transaction serial",
+        "type": "number",
+        "required": true
+      },
+      {
+        "name": "FROM_ITEM",
+        "arg": "p_from_item",
+        "label_a": "من صنف",
+        "label_e": "From item",
+        "type": "text",
+        "required": false
+      },
+      {
+        "name": "TO_ITEM",
+        "arg": "p_to_item",
+        "label_a": "إلى صنف",
+        "label_e": "To item",
+        "type": "text",
+        "required": false
+      },
+      {
+        "name": "QTY",
+        "arg": "p_qty",
+        "label_a": "الكمية",
+        "label_e": "Quantity",
+        "type": "number",
+        "required": false
+      }
+    ],
+    "button_a": "تجهيز الملصقات",
+    "button_e": "Prepare labels",
+    "success_a": "تم تجهيز ملصقات الباركود",
+    "preview_title_a": "الملصقات المجهزة للطباعة",
+    "preview_sql": "select p.item_serial, p.item_code, p.item_name, p.barcode, p.sales_price from print_trns_barcode p order by p.item_code, p.item_serial",
+    "preview_columns": [
+      {
+        "name": "ITEM_SERIAL",
+        "label_a": "مسلسل السطر",
+        "type": "NUMBER"
+      },
+      {
+        "name": "ITEM_CODE",
+        "label_a": "رقم الصنف",
+        "type": "STRING"
+      },
+      {
+        "name": "ITEM_NAME",
+        "label_a": "اسم الصنف",
+        "type": "STRING"
+      },
+      {
+        "name": "BARCODE",
+        "label_a": "الباركود",
+        "type": "STRING"
+      },
+      {
+        "name": "SALES_PRICE",
+        "label_a": "سعر البيع",
+        "type": "NUMBER"
+      }
+    ],
+    "print_runs": true
+  }
+}

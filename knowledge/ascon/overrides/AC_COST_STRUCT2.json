@@ -1,0 +1,16 @@
+{
+  "pattern": "AUTO",
+  "notes": "Structure of cost centres 2 (AC_COST_STRCTURES, COST_CENTER_NUMBER = 2, 9-digit codes): level / start defaults, end <= 9, length derived, locked while cost centres 2 exist, delete from the bottom up (APP_RULES3_GL, see processes/AC_COST_STRUCT2.md)",
+  "rules": {
+    "where": "COST_CENTER_NUMBER = 2",
+    "key_expr": {
+      "AC_COST_STRCTURES.COST_CENTER_NUMBER": "app_rules3_gl.cost_struct_no(:new.cost_center_number)",
+      "AC_COST_STRCTURES.COST_STR_LEVEL": "app_rules3_gl.next_cost_level(:new.cost_center_number)"
+    },
+    "row_rules": {
+      "AC_COST_STRCTURES": "app_rules3_gl.cost_struct_row(inserting, :new.cost_center_number, :old.cost_str_level, :old.cost_str_start, :old.cost_str_end, :old.length, :new.cost_str_level, :new.cost_str_desca, :new.cost_str_start, :new.cost_str_end, :new.length);"
+    },
+    "optional": ["AC_COST_STRCTURES.COST_STR_LEVEL", "AC_COST_STRCTURES.COST_STR_START", "AC_COST_STRCTURES.LENGTH"],
+    "readonly": ["AC_COST_STRCTURES.LENGTH"]
+  }
+}

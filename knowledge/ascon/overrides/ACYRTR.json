@@ -1,0 +1,80 @@
+{
+  "pattern": "AUTO",
+  "notes": "Posted entries (read-only as in the legacy form): group filter of the block, POST-QUERY displays (journal name, debit / credit totals, posted document of the sub-system, users), system list, and the per-entry 'cancel posting' button (wave 3b: actions on read-only documents; APP_RULES3_GL.cancel_entry -> APP_PROC_GL.cancel_posting, see processes/ACYRTR.md)",
+  "rules": {
+    "where": "(nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (ENTRY_YEAR, ENTRY_TYPE) in (select entry_year, entry_type from ac_password_entry where password_number = to_number(:G_PASSWORD_NUMBER)))",
+    "info": [
+      {
+        "name": "TYPE",
+        "label_a": "نوع الحركة",
+        "label_e": "Journal",
+        "sql": "select app_rules3_gl.entry_info(:PAGE_ROWID, 'TYPE') from dual"
+      },
+      {
+        "name": "DEBIT",
+        "label_a": "إجمالي المدين",
+        "label_e": "Debit total",
+        "sql": "select app_rules3_gl.entry_info(:PAGE_ROWID, 'DEBIT') from dual"
+      },
+      {
+        "name": "CREDIT",
+        "label_a": "إجمالي الدائن",
+        "label_e": "Credit total",
+        "sql": "select app_rules3_gl.entry_info(:PAGE_ROWID, 'CREDIT') from dual"
+      },
+      {
+        "name": "DIFF",
+        "label_a": "الفرق بين المدين والدائن",
+        "label_e": "Difference",
+        "sql": "select app_rules3_gl.entry_info(:PAGE_ROWID, 'DIFF') from dual"
+      },
+      {
+        "name": "SOURCE",
+        "label_a": "رقم الحركة المرحلة ومسلسلها",
+        "label_e": "Posted Trns.",
+        "sql": "select app_rules3_gl.entry_info(:PAGE_ROWID, 'SOURCE') from dual"
+      },
+      {
+        "name": "CREATED",
+        "label_a": "مدخل السجل",
+        "label_e": "Created by",
+        "sql": "select app_rules3_gl.entry_info(:PAGE_ROWID, 'CREATED') from dual"
+      },
+      {
+        "name": "UPDATED",
+        "label_a": "معدل السجل",
+        "label_e": "Modified by",
+        "sql": "select app_rules3_gl.entry_info(:PAGE_ROWID, 'UPDATED') from dual"
+      },
+      {
+        "name": "POSTED",
+        "label_a": "مرحل القيد",
+        "label_e": "Posted by",
+        "sql": "select app_rules3_gl.entry_info(:PAGE_ROWID, 'POSTED') from dual"
+      }
+    ],
+    "columns": {
+      "AC_YEARLY_TRN.POST_SYSTEM": {
+        "lov": "select case when app_sec.lang = 'en' then nvl(system_desc_e, system_desc_a) else system_desc_a end d, system_number r from sys_systems where system_number not in (0, 99) order by system_number",
+        "widget": "SELECT",
+        "hidden": false,
+        "label_a": "النظام",
+        "label_e": "System"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "CANCEL_POST",
+      "label_a": "إلغاء الترحيل",
+      "label_e": "Cancel Posting",
+      "confirm_a": "هل تريد إلغاء ترحيل القيد الحالي ؟",
+      "confirm_e": "Do you want to delete current entry ?",
+      "condition": "app_rules3_gl.can_cancel_entry(:PAGE_ROWID) = 'Y'",
+      "call": "app_rules3_gl.cancel_entry(:PAGE_ROWID)",
+      "message": "app_rules3_gl.last_message",
+      "success_a": "تم إلغاء ترحيل القيد",
+      "success_e": "Posting cancelled"
+    }
+  ]
+}

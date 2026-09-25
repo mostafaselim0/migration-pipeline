@@ -1,0 +1,74 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "AR_CHART_STRUCTURES"
+  },
+  "details": [
+    {
+      "table": "AR_CHART_STRUCTURES_CHILD",
+      "join": [
+        [
+          "CHR_STRU_LEVEL",
+          "CHR_STRU_LEVEL"
+        ]
+      ],
+      "title_a": "الابناء",
+      "title_e": "Children"
+    },
+    {
+      "table": "AR_LOCKUPS",
+      "join": [
+        [
+          "TAB_PARENT",
+          "CHR_STRU_LEVEL"
+        ]
+      ],
+      "title_a": "رموز المستوى",
+      "title_e": "Level codes"
+    }
+  ],
+  "where": null,
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Customer code structure; wave 3: the legacy lock (only level names while customers exist), start/end/length, bottom-up delete, code length = level length (APP_RULES3_AR).",
+  "rules": {
+    "row_rules": {
+      "AR_CHART_STRUCTURES": "app_rules3_ar.struct_row('CUST', inserting, :new.chr_stru_level, :new.chr_stru_start, :new.chr_stru_end, :new.length, :old.chr_stru_start, :old.chr_stru_end, :old.length);",
+      "AR_LOCKUPS": "app_rules3_ar.lockup_row('CUST', :new.tab_parent, :new.tab_no);"
+    },
+    "readonly": [
+      "AR_CHART_STRUCTURES.CHR_STRU_START",
+      "AR_CHART_STRUCTURES.LENGTH"
+    ],
+    "optional": [
+      "AR_CHART_STRUCTURES.CHR_STRU_START",
+      "AR_CHART_STRUCTURES.LENGTH"
+    ],
+    "add_columns": {
+      "AR_CHART_STRUCTURES.CHR_STRU_LEVEL": {
+        "label_a": "المسلسل",
+        "label_e": "Level"
+      },
+      "AR_CHART_STRUCTURES.CHR_STRU_DESCA": {
+        "label_a": "مسمى الدرجه",
+        "label_e": "Level name"
+      },
+      "AR_CHART_STRUCTURES_CHILD.CHR_STRU_DESC": {
+        "label_a": "الوصف",
+        "label_e": "Description"
+      },
+      "AR_CHART_STRUCTURES_CHILD.DIR": {
+        "label_a": "النوع",
+        "label_e": "Kind"
+      }
+    },
+    "warnings": [
+      {
+        "name": "structure complete",
+        "when": "CREATE,SAVE",
+        "plsql": "return app_rules3_ar.struct_warning('CUST', :PAGE_CHR_STRU_LEVEL, :PAGE_CHR_STRU_END);"
+      }
+    ]
+  }
+}

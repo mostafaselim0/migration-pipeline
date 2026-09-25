@@ -1,0 +1,43 @@
+{
+  "pattern": "AUTO",
+  "notes": "Tax obligation per customer: percentage > 0, customer code typed / chosen (no automatic number), range button (تطبيق) - APP_RULES3_TX, see processes/TX_CUSTOMERS.md",
+  "rules": {
+    "key_expr": {
+      "TX_TAXES_CUSTOMERS.CUSTOMER_CODE": "null"
+    },
+    "row_rules": {
+      "TX_TAXES_CUSTOMERS": "app_rules3_tx.oblig_row('CUST', inserting, :new.customer_code, null, :old.tax_per, :new.tax_per);"
+    },
+    "add_columns": {
+      "TX_TAXES_CUSTOMERS.TAX_CODE": {"label_a": "رقم الضريبة", "label_e": "Tax no."},
+      "TX_TAXES_CUSTOMERS.CUSTOMER_CODE": {"label_a": "رقم العميل", "label_e": "Customer"},
+      "TX_TAXES_CUSTOMERS.TAX_PER": {"label_a": "النسبة", "label_e": "Percentage"},
+      "TX_TAXES_CUSTOMERS.TAX_NO": {"label_a": "الرقم الضريبي", "label_e": "VAT number"}
+    }
+  },
+  "actions": [
+    {
+      "name": "APPLY",
+      "label_a": "تطبيق",
+      "label_e": "Apply",
+      "confirm_a": "هل تريد تطبيق النسبة على العملاء المحددين؟",
+      "confirm_e": "Apply the percentage to the customer range?",
+      "condition": "app_sec.can_page(:APP_PAGE_ID, 'I')",
+      "params": [
+        {"name": "TAX", "label_a": "رقم الضريبة", "label_e": "Tax no.", "type": "number", "required": true,
+         "default": "select min(tax_code) from tx_taxes_types", "default_type": "SQL_QUERY",
+         "lov_sql": "select tax_code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, tax_code r from tx_taxes_types order by tax_code"},
+        {"name": "FROM_CUST", "label_a": "من عميل", "label_e": "From customer", "type": "number", "required": true,
+         "lov_sql": "select code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, code r from customer order by code"},
+        {"name": "TO_CUST", "label_a": "إلى عميل", "label_e": "To customer", "type": "number", "required": true,
+         "lov_sql": "select code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, code r from customer order by code"},
+        {"name": "PER", "label_a": "النسبة", "label_e": "Percentage", "type": "number", "required": true}
+      ],
+      "call": "app_rules3_tx.apply_customers(:TAX, :FROM_CUST, :TO_CUST, :PER)",
+      "message": "app_rules3_tx.last_message",
+      "success_a": "تم التطبيق",
+      "success_e": "Applied",
+      "icon": "fa-check"
+    }
+  ]
+}

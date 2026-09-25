@@ -1,0 +1,8 @@
+{
+ "_about": "ASCON ERP product facts used by the engine. system number = SYS_SYSTEMS.SYSTEM_NUMBER of the legacy registry. A client's client.json can override any entry; a system that is not listed here gets pages 86000+ (screens) and 93000+ (reports) and its reports are looked up in every module folder.",
+ "name": "ASCON ERP",
+ "reference_sources": {"_about": "The product's standard Forms/Reports folder on this server (converted XML + installation folder), used for a client that delivered only its dump. Not in git (1.5 GB of vendor files).",
+                       "xml": "C:/Smart Transformation", "binaries": "C:/Smart Transformation/ASCON"},
+ "system_pages": {"1": 10000, "3": 20000, "4": 30000, "5": 40000, "30": 50000, "31": 60000, "88": 70000, "99": 80000, "0": 85000},
+ "system_dirs": {"1": "AC", "3": "ST", "4": "AR", "5": "VN", "30": "ST", "31": "ST", "88": "TX", "99": "SE", "0": "SE"}
+}

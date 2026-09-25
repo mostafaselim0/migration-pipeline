@@ -1,0 +1,131 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "AR_MAINAREA"
+  },
+  "details": [
+    {
+      "table": "AR_SUBAREA",
+      "join": [
+        [
+          "MAIN_ID",
+          "ID"
+        ]
+      ],
+      "title_a": "المناطق الفرعية",
+      "title_e": "Branches"
+    },
+    {
+      "table": "AR_CTGRY_SUBAREA",
+      "join": [
+        [
+          "MAINAREA_ID",
+          "ID"
+        ]
+      ],
+      "title_a": "اقسام الفرع",
+      "title_e": "Branch departments"
+    },
+    {
+      "table": "AR_SUBAREA_STORES",
+      "join": [
+        [
+          "MAIN_ID",
+          "ID"
+        ]
+      ],
+      "title_a": "المخازن المرتبطة بالفرع",
+      "title_e": "Branch stores"
+    }
+  ],
+  "where": null,
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Main areas with branches, branch departments and branch stores (legacy blocks AR_MAINAREA, AR_SUBAREA, AR_CTGRY_SUBAREA, AR_SUBAREA_STORES); rules in APP_RULES3_AR.",
+  "rules": {
+    "row_rules": {
+      "AR_MAINAREA": "app_rules3_ar.mainarea_row(:new.id, :new.account_no, :new.disc_account, :new.entry_type);",
+      "AR_SUBAREA": "app_rules3_ar.subarea_row(:new.id, :new.account_no, :new.disc_account, :new.sales_mngr, :new.br_mngr);",
+      "AR_SUBAREA_STORES": "app_rules3_ar.subarea_store_row(inserting, :new.main_id, :new.sub_id, :new.store_code);",
+      "AR_CTGRY_SUBAREA": "app_rules3_ar.ctgry_subarea_row(:new.mainarea_id, :new.subarea_id, :new.ctgry_code, :new.ctgry_mngr, :new.account_no);"
+    },
+    "add_columns": {
+      "AR_MAINAREA.ENTRY_TYPE": {
+        "label_a": "نوع قيد الحسابات",
+        "label_e": "Voucher type"
+      },
+      "AR_MAINAREA.CAR_TARGET": {
+        "label_a": "مستهدف السيارة",
+        "label_e": "Car target"
+      },
+      "AR_SUBAREA.SALES_MNGR": {
+        "label_a": "مدير المبيعات",
+        "label_e": "Sales manager"
+      },
+      "AR_CTGRY_SUBAREA.SUBAREA_ID": {
+        "label_a": "الفرع",
+        "label_e": "Branch"
+      },
+      "AR_CTGRY_SUBAREA.CTGRY_CODE": {
+        "label_a": "القسم",
+        "label_e": "Department"
+      },
+      "AR_CTGRY_SUBAREA.CTGRY_MNGR": {
+        "label_a": "مدير القسم",
+        "label_e": "Department manager"
+      },
+      "AR_CTGRY_SUBAREA.ACCOUNT_NO": {
+        "label_a": "رقم حساب القسم",
+        "label_e": "Department account"
+      },
+      "AR_CTGRY_SUBAREA.DUE_NO": {
+        "label_a": "إيام السماح",
+        "label_e": "Allowed days"
+      },
+      "AR_SUBAREA_STORES.SUB_ID": {
+        "label_a": "الفرع",
+        "label_e": "Branch"
+      },
+      "AR_SUBAREA_STORES.STORE_CODE": {
+        "label_a": "كود المخــزن",
+        "label_e": "Store"
+      }
+    },
+    "columns": {
+      "AR_MAINAREA.CAR_NO": {
+        "lov": null,
+        "label_a": "عدد سيارات الفرع",
+        "label_e": "Number of cars"
+      },
+      "AR_MAINAREA.ACCOUNT_NO": {
+        "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 order by 2"
+      },
+      "AR_MAINAREA.DISC_ACCOUNT": {
+        "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 order by 2"
+      },
+      "AR_MAINAREA.ENTRY_TYPE": {
+        "lov": "select entry_type || ' - ' || max(entry_desc) d, entry_type r from ac_trn_codes group by entry_type order by 2",
+        "widget": "SELECT"
+      },
+      "AR_SUBAREA.ACCOUNT_NO": {
+        "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 order by 2"
+      },
+      "AR_SUBAREA.DISC_ACCOUNT": {
+        "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 order by 2"
+      },
+      "AR_SUBAREA.SALES_MNGR": {
+        "lov": "select code || ' - ' || name_a d, code r from salesman order by 2"
+      },
+      "AR_SUBAREA.BR_MNGR": {
+        "lov": "select code || ' - ' || name_a d, code r from salesman order by 2"
+      },
+      "AR_CTGRY_SUBAREA.ACCOUNT_NO": {
+        "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 order by 2"
+      },
+      "AR_CTGRY_SUBAREA.CTGRY_MNGR": {
+        "lov": "select code || ' - ' || name_a d, code r from salesman order by 2"
+      }
+    }
+  }
+}

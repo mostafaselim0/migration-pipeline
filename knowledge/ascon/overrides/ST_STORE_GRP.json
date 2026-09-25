@@ -1,0 +1,53 @@
+{
+  "pattern": "PROCESS",
+  "notes": "stores cost by group (ST_STORE_GRP.fmx, a query screen): transaction stores allowed for the user group x the groups of their items ((SELECT DISTINCT STORE_CODE, GROUP_CODE FROM ST_STORE_ITEM), group permission) with the total cost of the group in the store (sum of the item costs)",
+  "proc": {
+    "procedure": "app_rules3_st.show_store_groups",
+    "description_a": "تكلفة المخازن على مستوى المجموعات: يعرض الجدول لكل مخزن حركات مجموعات أصنافه والتكلفة الكلية لكل مجموعة. يمكن تحديد مخزن ثم الضغط على عرض؛ مجموع عمود التكلفة هو إجمالى التكلفة.",
+    "description_e": "Stores cost by group: the table lists, for each transaction store, the groups of its items with the total cost of each group. Choose a store (optional) and press Show; the sum of the cost column is the grand total.",
+    "params": [
+      {
+        "name": "STORE_CODE",
+        "arg": "p_store",
+        "label_a": "رقم المخزن",
+        "label_e": "Store",
+        "type": "number",
+        "required": false,
+        "lov_sql": "select s.store_code || ' - ' || decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) d, s.store_code r from st_store s where s.store_status = 1 and app_rules3_st.store_allowed(s.store_code) = 1 order by s.store_code"
+      }
+    ],
+    "button_a": "عرض",
+    "button_e": "Show",
+    "success_a": "تم العرض",
+    "preview_title_a": "تكلفة المخازن على مستوى المجموعات",
+    "preview_sql": "select sg.store_code, decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) store_name, sg.group_code, decode(:G_LANG, 'en', nvl(g.name_e, g.name_a), g.name_a) group_name, app_rules3_st.store_group_cost(sg.store_code, sg.group_code) total_cost from (select distinct store_code, group_code from st_store_item) sg, st_store s, st_item_group g where s.store_code = sg.store_code and g.item_group_code = sg.group_code and s.store_status = 1 and app_rules3_st.store_allowed(sg.store_code) = 1 and app_rules3_st.group_allowed(sg.group_code) = 1 and (v('P' || :APP_PAGE_ID || '_STORE_CODE') is null or sg.store_code = to_number(v('P' || :APP_PAGE_ID || '_STORE_CODE'))) order by sg.store_code, sg.group_code",
+    "preview_columns": [
+      {
+        "name": "STORE_CODE",
+        "label_a": "رقم المخزن",
+        "type": "NUMBER"
+      },
+      {
+        "name": "STORE_NAME",
+        "label_a": "اسم المخزن",
+        "type": "STRING"
+      },
+      {
+        "name": "GROUP_CODE",
+        "label_a": "رقم المجموعة",
+        "type": "NUMBER"
+      },
+      {
+        "name": "GROUP_NAME",
+        "label_a": "اسم المجموعة",
+        "type": "STRING"
+      },
+      {
+        "name": "TOTAL_COST",
+        "label_a": "التكلفة الكلية",
+        "type": "NUMBER"
+      }
+    ],
+    "run_right": "query"
+  }
+}

@@ -1,0 +1,52 @@
+{
+ "pattern": "AUTO",
+ "notes": "assembled items (ST_STANDS.fmx): ST_ITEM rows with STAND_FLAG = 1 (group permission filter), typed numeric item code without duplicates, one basic unit with factor 1 and unique factors, units used in transactions locked, components (quantity > 0, unit of the component, no duplicate) and services (no duplicate) required at save; delete refused with transactions; total cost panel (ALLOW_VIEW_COST)",
+ "rules": {
+  "where": "nvl(STAND_FLAG, 0) = 1 and app_rules3_st.group_allowed(ITEM_GROUP_CODE) = 1",
+  "row_rules": {
+   "ST_ITEM": "app_rules3_st.item_row(inserting, updating, :new.item_group_code, :new.item_code, :new.stop_flag, :new.stop_reason, :new.stand_flag, :new.vat_value, :new.min_limit, :new.max_limit, :new.moh_flag, :new.moh_disc, :old.vat_value, :old.min_limit, :old.max_limit, :old.moh_flag, :old.moh_disc);",
+   "ST_ITEM_UNIT": "app_rules3_st.unit_item_row(inserting, updating, :new.group_code, :new.item_code, :new.unit_code, :new.factor, :new.basic_unit, :old.unit_code, :old.factor, :old.basic_unit);",
+   "ST_STAND_ITEMS": "app_rules3_st.stand_item_row(inserting, :new.stand_item_group_code, :new.stand_item_code, :new.item_group_code, :new.item_code, :new.item_unit, :new.item_qty);",
+   "ST_STAND_SERVICES": "app_rules3_st.stand_service_row(inserting, :new.stand_item_group_code, :new.stand_item_code, :new.service_code);"
+  },
+  "validations": [
+   {
+    "name": "بيانات الصنف المجمع: المجموعة والاسم ورقم الصنف",
+    "plsql": "return app_rules3_st.val_item('ST_STANDS', :PAGE_ROWID, :REQUEST, :PAGE_ITEM_GROUP_CODE, :PAGE_ITEM_CODE, :PAGE_NAME_A, :PAGE_PEICE_NO, null, null);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "الوحدة الأساسية والأصناف المركبة",
+    "plsql": "app_rules3_st.item_after('ST_STANDS', :PAGE_ROWID, :REQUEST);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "info": [
+   {"name": "TOTAL_COST", "label_a": "تكلفة كلية", "label_e": "Total cost",
+    "sql": "select to_char(app_rules3_st.stand_cost(:PAGE_ITEM_GROUP_CODE, :PAGE_ITEM_CODE), 'FM999G999G990D0000') from dual"}
+  ],
+  "columns": {
+   "ST_ITEM.ITEM_GROUP_CODE": {"widget": "POPUP",
+    "lov": "select g.item_group_code || ' - ' || g.name_a d, g.item_group_code r from st_item_group g where g.group_status = 1 and app_rules3_st.group_allowed(g.item_group_code) = 1 order by g.item_group_code"},
+   "ST_ITEM.NAME_A": {"required": true},
+   "ST_STAND_ITEMS.ITEM_UNIT": {"widget": "SELECT", "cascade": ["ITEM_GROUP_CODE", "ITEM_CODE"],
+    "lov": "select u.unit_code || ' - ' || u.name_a d, u.unit_code r from st_item_unit iu, st_unit u where u.unit_code = iu.unit_code and iu.group_code = :PAGE_ITEM_GROUP_CODE and iu.item_code = :PAGE_ITEM_CODE order by u.unit_code"}
+  },
+  "computed": {
+   "ST_STAND_ITEMS.ITEM_NAME": {"sql": "(select max(i.name_a) from st_item i where i.item_group_code = t.item_group_code and i.item_code = t.item_code)",
+                                "label_a": "إسم الصنف", "label_e": "Item Nm"},
+   "ST_STAND_ITEMS.ITEM_UNIT_NAME": {"sql": "(select max(u.name_a) from st_unit u where u.unit_code = t.item_unit)",
+                                     "label_a": "اسم الوحدة", "label_e": "Unit Nm"},
+   "ST_STAND_ITEMS.COST_VALUE": {"sql": "case when app_rules3_st.can_view_cost = 1 then (select avg(nvl(d.unit_cost, 0)) from st_trns_mast m, st_trns_det d, st_trns_type ty where m.trns_type_code = d.trns_type_code and m.trns_serial = d.trns_serial and d.trns_type_code = ty.trns_type_code and ty.effect = 1 and d.item_code = t.item_code and d.group_code = t.item_group_code) * nvl((select max(f.factor) from st_item_unit f where f.group_code = t.item_group_code and f.item_code = t.item_code and f.unit_code = t.item_unit), 1) end",
+                                 "type": "NUMBER", "label_a": "التكلفة", "label_e": "Cost"},
+   "ST_STAND_ITEMS.TOTAL_ITEM_COST": {"sql": "case when app_rules3_st.can_view_cost = 1 then nvl((select avg(nvl(d.unit_cost, 0)) from st_trns_mast m, st_trns_det d, st_trns_type ty where m.trns_type_code = d.trns_type_code and m.trns_serial = d.trns_serial and d.trns_type_code = ty.trns_type_code and ty.effect = 1 and d.item_code = t.item_code and d.group_code = t.item_group_code), 0) * nvl((select max(f.factor) from st_item_unit f where f.group_code = t.item_group_code and f.item_code = t.item_code and f.unit_code = t.item_unit), 1) * nvl(t.item_qty, 0) end",
+                                      "type": "NUMBER", "label_a": "التكلفة الكلية", "label_e": "Tot. Cost"},
+   "ST_STAND_SERVICES.UNIT_COST": {"sql": "case when app_rules3_st.can_view_cost = 1 then (select max(s.unit_cost) from st_pd_services s where s.service_code = t.service_code) end",
+                                   "type": "NUMBER", "label_a": "تكلفة وحدة الخدمة", "label_e": "Service Unit Cost"},
+   "ST_STAND_SERVICES.LINE_TOTAL": {"sql": "case when app_rules3_st.can_view_cost = 1 then nvl((select max(s.unit_cost) from st_pd_services s where s.service_code = t.service_code), 0) * nvl(t.units_no, 0) end",
+                                    "type": "NUMBER", "label_a": "التكلفة الكلية", "label_e": "Tot. Cost"}
+  }
+ }
+}

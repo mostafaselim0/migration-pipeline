@@ -1,0 +1,154 @@
+{
+ "pattern": "AUTO",
+ "notes": "quantity reservation: types EFFECT 2 / TRNS_TYPE 17 (none defined in this company), issue-type lot balance checks; wave 3: legacy LOV restrictions, customer defaults, invoice discount / cash-paid checks, totals, button 'صرف الفاتورة' (delivery note + sales invoice) (APP_ACT_ST)",
+ "rules": {
+  "computed": {
+   "ST_TRNS_DET.ITEM_NAME": {"sql": "(select max(nvl(i.name_e, i.name_a)) from st_item i where i.item_group_code = t.group_code and i.item_code = t.item_code)", "label_a": "إســم الصنـــف", "label_e": "Item Name"},
+   "ST_TRNS_DET.EXPIRE_DATE": {"sql": "app_ui.lot_expiry(t.item_confg_id)", "label_a": "تاريخ الصلاحيه", "label_e": "Expiry Date", "type": "DATE"},
+   "ST_TRNS_DET.STORE_BALANCE": {"sql": "case when (nvl(to_number(v('G_USER_CODE')), 0) = 0 or (select nvl(max(u.allow_view_balance), 0) from users u where u.users_code = to_number(v('G_USER_CODE'))) = 1) then round(nvl(get_balance_confg(t.store_code, t.group_code, t.item_code, t.item_confg_id, t.trns_date, t.date_serial, t.item_serial), 0) / nvl((select max(u.factor) from st_item_unit u where u.group_code = t.group_code and u.item_code = t.item_code and u.unit_code = t.unit_code), 1), 3) end", "label_a": "الرصيد قبل الحركة", "label_e": "Bal before Trans", "type": "NUMBER"},
+   "ST_TRNS_DET.STORE_COST": {"sql": "case when (nvl(to_number(v('G_PASSWORD_NUMBER')), 0) = 0 or ((select nvl(max(b.show_cost), 0) from st_basic b) = 1 and (select nvl(max(u.allow_view_cost), 0) from users u where u.users_code = to_number(v('G_USER_CODE'))) = 1)) then get_unit_cost_confg(t.store_code, t.group_code, t.item_code, t.item_confg_id, t.trns_date, t.date_serial, t.item_serial) end", "label_a": "تكلفة الصنف", "label_e": "Item Cost", "type": "NUMBER"}
+  },
+  "columns": {
+   "ST_TRNS_DET.ITEM_CONFG_ID": {"widget": "POPUP", "cascade": "ITEM_CODE", "lov": "select c.item_confg_id || ' - ' || c.lot_number || ' - ' || to_char(c.expire_date, 'DD/MM/YYYY') d, c.item_confg_id r from st_item_confg c where c.item_code = :PAGE_ITEM_CODE order by c.expire_date, c.item_confg_id"}
+  },
+  "where": "TRNS_TYPE_CODE in (select t.trns_type_code from st_trns_type t where t.effect = 2 and t.trns_type in (17)) and nvl(DELETE_FLAG, 0) = 0 and (:G_PASSWORD_NUMBER = 0 or TRNS_TYPE_CODE in (select tp.trns_type_code from st_trnstype_password tp where tp.flag = 1 and tp.password_number = :G_PASSWORD_NUMBER))",
+  "defaults": {
+   "ST_TRNS_MAST.TRNS_TYPE_CODE": {
+    "type": "EXPRESSION",
+    "value": "app_rules_st.default_type('ST_RESERVATION')"
+   },
+   "ST_TRNS_MAST.STORE_CODE": {
+    "type": "EXPRESSION",
+    "value": "app_rules_st.type_store(app_rules_st.default_type('ST_RESERVATION'))"
+   },
+   "ST_TRNS_MAST.DELETE_FLAG": {
+    "type": "STATIC",
+    "value": "0"
+   },
+   "ST_TRNS_MAST.POST_FLAG": {
+    "type": "STATIC",
+    "value": "0"
+   },
+   "ST_TRNS_MAST.TRNS_DATE": {
+    "type": "EXPRESSION",
+    "value": "to_char(sysdate, 'DD/MM/YYYY')"
+   },
+   "ST_TRNS_MAST.CURRENCY_CODE": {
+    "type": "STATIC",
+    "value": "1"
+   },
+   "ST_TRNS_MAST.CURRENCY_RATE": {
+    "type": "STATIC",
+    "value": "1"
+   }
+  },
+  "add_columns": {
+   "ST_TRNS_MAST.DISC_VAL": {
+    "label_a": "مبلغ الخصـم",
+    "label_e": "Disc Val"
+   },
+   "ST_TRNS_MAST.TRNSPORT_VAL": {
+    "label_a": "مبلغ النقل",
+    "label_e": "Transit Amount"
+   },
+   "ST_TRNS_MAST.PAYMENT": {
+    "label_a": "المدفوع نقدي",
+    "label_e": "Cash"
+   }
+  },
+  "validations": [
+   {
+    "name": "legacy header rules (type of the screen, CHECK_DATE, store, account, transfer, posted)",
+    "plsql": "return app_rules_st.val_trns('ST_RESERVATION', :PAGE_ROWID, :REQUEST, :PAGE_TRNS_TYPE_CODE, :PAGE_TRNS_DATE, :PAGE_STORE_CODE, :PAGE_DOC_NO, :PAGE_ACCOUNT_NUMBER1, null, null, null, :PAGE_CURRENCY_CODE, :PAGE_CURRENCY_RATE);",
+    "when": "CREATE,SAVE"
+   },
+   {
+    "name": "قوائم العملاء والموردين والمندوبين والحسابات حسب مجموعة المستخدم",
+    "plsql": "return app_act_st.rsv_validate(:REQUEST, :PAGE_ROWID, :PAGE_TRNS_TYPE_CODE, :PAGE_STORE_CODE, :PAGE_CUSTOMER_CODE, :PAGE_SUPPLIER_CODE, :PAGE_SALESMAN_CODE, :PAGE_ACCOUNT_NUMBER1);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "legacy commit rules (lines required, balances)",
+    "plsql": "app_rules_st.after_trns('ST_RESERVATION', :REQUEST, :PAGE_ROWID);",
+    "when": "CREATE,SAVE"
+   },
+   {
+    "name": "بيانات العميل والخصم والمدفوع نقدا",
+    "plsql": "app_act_st.rsv_after_save(:REQUEST, :PAGE_ROWID);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "info": [
+   {
+    "name": "TOTAL",
+    "label_a": "إجمالى الأصناف",
+    "label_e": "Items total",
+    "sql": "select app_act_st.rsv_info(:PAGE_ROWID, 'TOTAL') from dual"
+   },
+   {
+    "name": "SRV",
+    "label_a": "إجمالي الخدمات",
+    "label_e": "Services total",
+    "sql": "select app_act_st.rsv_info(:PAGE_ROWID, 'SRV') from dual"
+   },
+   {
+    "name": "NET",
+    "label_a": "صافى الفاتورة",
+    "label_e": "Net Inv",
+    "sql": "select app_act_st.rsv_info(:PAGE_ROWID, 'NET') from dual"
+   },
+   {
+    "name": "CHANGE",
+    "label_a": "المتبقي",
+    "label_e": "Change",
+    "sql": "select app_act_st.rsv_info(:PAGE_ROWID, 'CHANGE') from dual"
+   }
+  ],
+  "row_rules": {
+   "ST_TRNS_MAST": "app_rules_st.mast_row(inserting, updating, :new.trns_type_code, :new.trns_serial, :new.trns_date, :new.store_code, :new.doc_no, :new.desc_a, :new.desc_e, :new.delete_flag, :new.post_flag, :new.account_number1, :new.trnsfer_type, :new.trnsfer_serial, :new.trnsfer_from_store, :new.trnsfer_to_store, :old.trns_date, :old.trnsfer_serial, :old.trnsfer_from_store, :old.store_code);",
+   "ST_TRNS_DET": "app_rules_st.det_row(inserting, updating, :new.trns_type_code, :new.trns_serial, :new.item_serial, :new.group_code, :new.item_code, :new.unit_code, :new.item_confg_id, :new.quantity, :new.bonus, :new.basic_qty, :new.unit_price, :new.unit_cost, :new.cost_flag, :new.lot_number, :new.expiry_date, :new.disc1_ratio, :old.group_code, :old.item_code, :old.unit_code, :old.item_confg_id, :old.quantity, :old.basic_qty, :old.unit_price, :old.unit_cost, :new.trnsfer_serial, :new.trnsfer_from_store, :new.trnsfer_to_store);"
+  },
+  "readonly": [
+   "ST_TRNS_MAST.TRNS_SERIAL",
+   "ST_TRNS_MAST.DATE_SERIAL",
+   "ST_TRNS_MAST.POST_FLAG",
+   "ST_TRNS_MAST.AC_ENTRY_NO",
+   "ST_TRNS_MAST.AC_ENTRY_YEAR",
+   "ST_TRNS_MAST.AC_ENTRY_TYPE",
+   "ST_TRNS_DET.UNIT_PRICE_CURR"
+  ],
+  "hidden": [
+   "ST_TRNS_MAST.DATE_SERIAL",
+   "ST_TRNS_MAST.DELETE_FLAG",
+   "ST_TRNS_DET.BASIC_QTY",
+   "ST_TRNS_DET.COST_FLAG"
+  ],
+  "optional": [
+   "ST_TRNS_MAST.DATE_SERIAL",
+   "ST_TRNS_MAST.DELETE_FLAG",
+   "ST_TRNS_DET.BASIC_QTY",
+   "ST_TRNS_DET.COST_FLAG",
+   "ST_TRNS_DET.GROUP_CODE",
+   "ST_TRNS_DET.UNIT_CODE",
+   "ST_TRNS_DET.ITEM_CONFG_ID"
+  ]
+ },
+ "actions": [
+  {
+   "name": "TO_INVOICE",
+   "label_a": "صرف الفاتورة",
+   "label_e": "Delivering Items",
+   "confirm_a": "سوف يتم عمل الفاتورة !! هل تريد الإستمرار",
+   "confirm_e": "Invoice Will Be Done !! Do You Want To Continue ?",
+   "condition": "app_act_st.rsv_can_invoice(:PAGE_ROWID) = 'Y'",
+   "call": "app_act_st.rsv_to_invoice(p_rowid => :PAGE_ROWID)",
+   "message": "app_act_st.last_message",
+   "target_form": "ST_ISSUE_IO",
+   "success_a": "تـم عمـل الفـاتـورة بنـجــاح",
+   "success_e": "Invoice Made Successfully",
+   "icon": "fa-file-text-o"
+  }
+ ]
+}

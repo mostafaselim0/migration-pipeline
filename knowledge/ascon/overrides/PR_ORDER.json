@@ -1,0 +1,484 @@
+{
+ "pattern": "MASTER_DETAIL",
+ "notes": "purchase orders: generated screen blocked insert of lines / update of the header (the .fmb blocks are opened at runtime by CHECK_CLOSE/DEF_USR_SEC); same columns as the generated screen; legacy rules in APP_RULES_PR Wave 3b: legacy LOVs (order types, suppliers, agreements of the supplier, stores, order types, payment methods / conditions, items, units, services, asset types), type fixed after insert, confirm / close / bonus-with-VAT / percent check boxes, item / service / asset names, received and outstanding quantity per line.",
+ "master": {
+  "table": "PR_ORDER",
+  "columns": [
+   "TRNS_TYPE_CODE",
+   "TRNS_SERIAL",
+   "PR_ORDER_DATE",
+   "DOC_NO",
+   "SUPPLIER_CODE",
+   "CNTRCT_SERIAL",
+   "STORE_CODE",
+   "REQUISITION_TYPE",
+   "CURRENCY_CODE",
+   "CURRENCY_RATE",
+   "PAYMENT_METHOD",
+   "PAYMENT_CONDITION_CODE",
+   "TERM_SHIP_CODE",
+   "NOTES",
+   "DISC_VAL",
+   "TOT_DISC1_RATIO",
+   "TOT_DISC2_RATIO",
+   "TOT_DISC3_RATIO",
+   "TOT_DISC1_VALUE",
+   "TOT_DISC2_VALUE",
+   "TOT_DISC3_VALUE",
+   "SHIPMENT_TYPE",
+   "CONFIRM_FLAG",
+   "CLOSE_FLAG",
+   "FOTTER1_MEMO",
+   "FOTTER2_MEMO",
+   "FOTTER3_MEMO",
+   "FOTTER4_MEMO",
+   "FOTTER5_MEMO",
+   "BONUS_WITH_VAT",
+   "TAX_VALUE2",
+   "TAX_VALUE1"
+  ]
+ },
+ "details": [
+  {
+   "table": "PR_ORDER_DET",
+   "join": [
+    [
+     "TRNS_TYPE_CODE",
+     "TRNS_TYPE_CODE"
+    ],
+    [
+     "TRNS_SERIAL",
+     "TRNS_SERIAL"
+    ]
+   ],
+   "title_a": "الاصناف",
+   "title_e": "Items",
+   "columns": [
+    "ITEM_CODE",
+    "UNIT_CODE",
+    "VN_PRICE",
+    "QUANTITY",
+    "PERCENTAGE",
+    "BONUS",
+    "DISC1_RATIO",
+    "DISC1_VALUE",
+    "DISC2_RATIO",
+    "DISC2_VALUE",
+    "DISC3_RATIO",
+    "DISC3_VALUE",
+    "PO_M_DISC_RATIO",
+    "PO_M_DISC_VALUE",
+    "EXTRA_PERCENTAGE",
+    "EXTRA_BONUS",
+    "TAX_VALUE1",
+    "NOTES",
+    "TAX_VALUE2",
+    "ON_SPOT",
+    "NET_COST",
+    "M_DISC_RATIO",
+    "M_DISC_VALUE",
+    "ITEM_COST",
+    "M_EXTRA_BONUS_RATIO",
+    "M_EXTRA_BONUS_VALUE"
+   ]
+  },
+  {
+   "table": "PR_ORDER_SRVC",
+   "join": [
+    [
+     "TRNS_TYPE_CODE",
+     "TRNS_TYPE_CODE"
+    ],
+    [
+     "TRNS_SERIAL",
+     "TRNS_SERIAL"
+    ]
+   ],
+   "title_a": "الخدمات",
+   "title_e": "Services",
+   "columns": [
+    "SERVICE_CODE",
+    "UNIT_CODE_SRVC",
+    "COST_PRCN",
+    "UNIT_COST",
+    "QUANTITY",
+    "PRCN_FLAG"
+   ]
+  },
+  {
+   "table": "PR_ORDER_ASST",
+   "join": [
+    [
+     "TRNS_TYPE_CODE",
+     "TRNS_TYPE_CODE"
+    ],
+    [
+     "TRNS_SERIAL",
+     "TRNS_SERIAL"
+    ]
+   ],
+   "title_a": "الاصول",
+   "title_e": "Assets",
+   "columns": [
+    "CTGRY_CD_ASST",
+    "QUANTITY"
+   ]
+  }
+ ],
+ "insert": true,
+ "update": true,
+ "delete": true,
+ "rules": {
+  "where": "NVL(ST_SRV_ASST_FLAG, 0) != 4 AND (:G_PASSWORD_NUMBER = 0 OR SUPPLIER_CODE IS NULL OR (SUPPLIER_CODE >= (SELECT FROM_SUPPLIER_CODE FROM VN_SUPPLIER_PASSWORD WHERE PASSWORD_NUMBER = :G_PASSWORD_NUMBER) AND SUPPLIER_CODE <= (SELECT TO_SUPPLIER_CODE FROM VN_SUPPLIER_PASSWORD WHERE PASSWORD_NUMBER = :G_PASSWORD_NUMBER)))",
+  "defaults": {
+   "PR_ORDER.TRNS_TYPE_CODE": {
+    "type": "EXPRESSION",
+    "value": "app_rules_pr.default_type('ORDER')"
+   },
+   "PR_ORDER.STORE_CODE": {
+    "type": "EXPRESSION",
+    "value": "app_rules_pr.type_store(app_rules_pr.default_type('ORDER'))"
+   },
+   "PR_ORDER.CONFIRM_FLAG": {
+    "type": "STATIC",
+    "value": "0"
+   },
+   "PR_ORDER.CLOSE_FLAG": {
+    "type": "STATIC",
+    "value": "0"
+   }
+  },
+  "readonly": [
+   "PR_ORDER_DET.ON_SPOT",
+   "PR_ORDER_DET.NET_COST",
+   "PR_ORDER_DET.M_DISC_RATIO",
+   "PR_ORDER_DET.M_DISC_VALUE",
+   "PR_ORDER_DET.ITEM_COST",
+   "PR_ORDER_DET.M_EXTRA_BONUS_RATIO",
+   "PR_ORDER_DET.M_EXTRA_BONUS_VALUE",
+   "PR_ORDER.CONFIRM_FLAG",
+   "PR_ORDER.CLOSE_FLAG"
+  ],
+  "optional": [
+   "PR_ORDER_DET.GROUP_CODE"
+  ],
+  "hidden": [
+   "PR_ORDER_DET.GROUP_CODE"
+  ],
+  "row_rules": {
+   "PR_ORDER": "if app_rules_pr.bypass = 0 then  -- rows written by the APP_ACT_PR buttons: legacy values kept\nif inserting then\n  -- PR_ORDER PRE-INSERT / WHEN-CREATE-RECORD / TRNS_TYPE_CODE and SUPPLIER_CODE WVI\n  if nvl(:new.confirm_flag, 0) = 1 then\n    raise_application_error(-20142, 'لا يمكن إنشاء أمر شراء معتمد: يجب حفظ الأمر وأصنافه أولاً ثم الاعتماد');\n  end if;\n  :new.confirm_flag := 0;\n  :new.close_flag := nvl(:new.close_flag, 0);\n  :new.st_srv_asst_flag := nvl(:new.st_srv_asst_flag, 1);\n  :new.doc_no := nvl(:new.doc_no, app_rules_pr.next_order_doc_no);\n  :new.store_code := nvl(:new.store_code, app_rules_pr.type_store(:new.trns_type_code));\n  if :new.supplier_code is not null and nvl(:new.currency_code, 1) = 1 and app_rules_pr.supplier_currency(:new.supplier_code) <> 1 then\n    :new.currency_code := app_rules_pr.supplier_currency(:new.supplier_code);\n    :new.currency_rate := app_rules_pr.currency_rate(:new.currency_code, :new.pr_order_date, 1);\n  end if;\nelse\n  -- CHECK_CLOSE: a confirmed or closed order is read-only (only CONFIRM_FLAG / CLOSE_FLAG may change)\n  if (nvl(:old.confirm_flag, 0) = 1 or nvl(:old.close_flag, 0) = 1)\n     and app_rules_pr.chg(:new.pr_order_date, :old.pr_order_date)\n       + app_rules_pr.chg(:new.doc_no, :old.doc_no)\n       + app_rules_pr.chg(:new.supplier_code, :old.supplier_code)\n       + app_rules_pr.chg(:new.cntrct_serial, :old.cntrct_serial)\n       + app_rules_pr.chg(:new.store_code, :old.store_code)\n       + app_rules_pr.chg(:new.requisition_type, :old.requisition_type)\n       + app_rules_pr.chg(:new.currency_code, :old.currency_code)\n       + app_rules_pr.chg(:new.currency_rate, :old.currency_rate)\n       + app_rules_pr.chg(:new.payment_method, :old.payment_method)\n       + app_rules_pr.chg(:new.payment_condition_code, :old.payment_condition_code)\n       + app_rules_pr.chg(:new.term_ship_code, :old.term_ship_code)\n       + app_rules_pr.chg(:new.notes, :old.notes)\n       + app_rules_pr.chg(:new.disc_val, :old.disc_val)\n       + app_rules_pr.chg(:new.tot_disc1_ratio, :old.tot_disc1_ratio)\n       + app_rules_pr.chg(:new.tot_disc2_ratio, :old.tot_disc2_ratio)\n       + app_rules_pr.chg(:new.tot_disc3_ratio, :old.tot_disc3_ratio)\n       + app_rules_pr.chg(:new.tot_disc1_value, :old.tot_disc1_value)\n       + app_rules_pr.chg(:new.tot_disc2_value, :old.tot_disc2_value)\n       + app_rules_pr.chg(:new.tot_disc3_value, :old.tot_disc3_value)\n       + app_rules_pr.chg(:new.shipment_type, :old.shipment_type)\n       + app_rules_pr.chg(:new.fotter1_memo, :old.fotter1_memo)\n       + app_rules_pr.chg(:new.fotter2_memo, :old.fotter2_memo)\n       + app_rules_pr.chg(:new.fotter3_memo, :old.fotter3_memo)\n       + app_rules_pr.chg(:new.fotter4_memo, :old.fotter4_memo)\n       + app_rules_pr.chg(:new.fotter5_memo, :old.fotter5_memo)\n       + app_rules_pr.chg(:new.bonus_with_vat, :old.bonus_with_vat)\n       + app_rules_pr.chg(:new.tax_value2, :old.tax_value2)\n       + app_rules_pr.chg(:new.tax_value1, :old.tax_value1) > 0 then\n    raise_application_error(-20131, 'أمر الشراء معتمد أو مقفل ولا يمكن تعديله - يجب إلغاء الاعتماد أو الإقفال أولاً');\n  end if;\n  app_rules_pr.order_update_check(:new.trns_type_code, :new.trns_serial, :old.confirm_flag, :new.confirm_flag);\nend if;\nend if;",
+   "PR_ORDER_DET": "if app_rules_pr.bypass = 0 then  -- rows written by the APP_ACT_PR buttons: legacy values kept\n-- PR_ORDER_DET PRE-INSERT / WVI: confirmed or closed orders are read-only, price and quantity mandatory\napp_rules_pr.order_line_guard(:new.trns_type_code, :new.trns_serial);\nif :new.item_code is not null then\n  :new.group_code := nvl(:new.group_code, app_rules_pr.item_group(:new.item_code));\n  :new.unit_code := nvl(:new.unit_code, app_rules_pr.basic_unit(:new.group_code, :new.item_code));\nend if;\n:new.pr_order_date := nvl(:new.pr_order_date, app_rules_pr.order_date(:new.trns_type_code, :new.trns_serial));\nif (inserting or app_rules_pr.chg(:new.vn_price, :old.vn_price) = 1) and nvl(:new.vn_price, 0) = 0 then\n  raise_application_error(-20141, 'لابد من ادخال سعر الوحدة - الصنف ' || :new.item_code);\nend if;\nif (inserting or app_rules_pr.chg(:new.quantity, :old.quantity) + app_rules_pr.chg(:new.bonus, :old.bonus)\n                 + app_rules_pr.chg(:new.extra_bonus, :old.extra_bonus) > 0)\n   and (nvl(:new.quantity, 0) < 0 or nvl(:new.bonus, 0) < 0\n        or nvl(:new.quantity, 0) + nvl(:new.bonus, 0) + nvl(:new.extra_bonus, 0) <= 0\n        or nvl(:new.quantity, 0) + nvl(:new.bonus, 0) + nvl(:new.extra_bonus, 0) > 999999999999) then\n  raise_application_error(-20141, 'الكمية لا بد أن تكون أكبر من الصفر و اقل من 999999999999 - الصنف ' || :new.item_code);\nend if;\napp_rules_pr.pair_ratio(inserting, :new.quantity, :old.quantity, :new.percentage, :old.percentage, :new.bonus, :old.bonus);\napp_rules_pr.pair_ratio(inserting, :new.quantity, :old.quantity, :new.extra_percentage, :old.extra_percentage, :new.extra_bonus, :old.extra_bonus);\napp_rules_pr.disc_chain(inserting, :new.vn_price, :old.vn_price,\n                        :new.disc1_ratio, :old.disc1_ratio, :new.disc1_value, :old.disc1_value,\n                        :new.disc2_ratio, :old.disc2_ratio, :new.disc2_value, :old.disc2_value,\n                        :new.disc3_ratio, :old.disc3_ratio, :new.disc3_value, :old.disc3_value);\nend if;",
+   "PR_ORDER_SRVC": "if app_rules_pr.bypass = 0 then  -- rows written by the APP_ACT_PR buttons: legacy values kept\n-- PR_ORDER_SRVC: read-only when the order is confirmed / closed; COST_PRCN between 0 and 100\napp_rules_pr.order_line_guard(:new.trns_type_code, :new.trns_serial);\nif nvl(:new.cost_prcn, 0) not between 0 and 100 then\n  raise_application_error(-20141, 'النسبة غير صحيحة');\nend if;\n:new.pr_order_date := nvl(:new.pr_order_date, app_rules_pr.order_date(:new.trns_type_code, :new.trns_serial));\nend if;",
+   "PR_ORDER_ASST": "if app_rules_pr.bypass = 0 then  -- rows written by the APP_ACT_PR buttons: legacy values kept\n-- PR_ORDER_ASST: read-only when the order is confirmed / closed\napp_rules_pr.order_line_guard(:new.trns_type_code, :new.trns_serial);\n:new.pr_order_date := nvl(:new.pr_order_date, app_rules_pr.order_date(:new.trns_type_code, :new.trns_serial));\nend if;"
+  },
+  "validations": [
+   {
+    "name": "legacy header checks",
+    "plsql": "return app_rules_pr.check_order_header(:PAGE_ROWID, :PAGE_TRNS_TYPE_CODE, :PAGE_PR_ORDER_DATE, :PAGE_STORE_CODE, :PAGE_SUPPLIER_CODE, :PAGE_CURRENCY_CODE, :PAGE_CURRENCY_RATE);",
+    "when": "CREATE,SAVE"
+   },
+   {
+    "name": "confirmed / closed order is read-only",
+    "plsql": "return app_rules_pr.check_order_locked(:PAGE_ROWID, :PAGE_CONFIRM_FLAG, :PAGE_CLOSE_FLAG);",
+    "when": "SAVE"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "lines required, discount <= total",
+    "plsql": "app_rules_pr.order_after_save(:PAGE_ROWID, :REQUEST);",
+    "when": "CREATE,SAVE"
+   },
+   {
+    "name": "delete: refuse confirmed / closed, remove lines",
+    "plsql": "app_rules_pr.order_after_delete(:PAGE_ROWID, :PAGE_TRNS_TYPE_CODE, :PAGE_TRNS_SERIAL);",
+    "when": "DELETE"
+   }
+  ],
+  "info": [
+   {
+    "name": "OUTSTANDING",
+    "label_a": "كميات لم يتم إستلامها",
+    "label_e": "Outstanding quantities",
+    "sql": "select app_act_pr.order_outstanding(:PAGE_ROWID) from dual"
+   }
+  ],
+  "columns": {
+   "PR_ORDER.TRNS_TYPE_CODE": {
+    "widget": "SELECT",
+    "readonly_after_insert": true,
+    "lov": "select trns_type_code || ' - ' || desc_a d, trns_type_code r from st_trns_type where nvl(effect, 0) = 7 and nvl(trns_type, 0) = 14 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or trns_type_code in (select tp.trns_type_code from st_trnstype_password tp where tp.flag = 1 and tp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2"
+   },
+   "PR_ORDER.SUPPLIER_CODE": {
+    "widget": "POPUP",
+    "lov": "select s.code || ' - ' || s.name_a d, s.code r from supplier s where nvl(s.stopflag, 0) = 0 and nvl(s.supplier_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (s.code >= (select max(from_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)) and s.code <= (select max(to_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)))) order by 2"
+   },
+   "PR_ORDER.CNTRCT_SERIAL": {
+    "widget": "SELECT",
+    "cascade": "SUPPLIER_CODE",
+    "lov": "select a.serial || ' - ' || k.name_a || ' - ' || to_char(a.end_date, 'DD/MM/YYYY') d, a.serial r from st_supp_agrmnt a, supplier s, st_supp_agrmnt_supp p, st_good_kind k where p.supplier_code = s.code and a.serial = p.serial and a.kind_code = k.kind_code and s.code = :PAGE_SUPPLIER_CODE and nvl(s.stopflag, 0) = 0 order by 2"
+   },
+   "PR_ORDER.STORE_CODE": {
+    "widget": "SELECT",
+    "lov": "select store_code || ' - ' || name_a d, store_code r from st_store where store_status = 1 and nvl(stop_flag, 0) = 0 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or store_code in (select sp.store_code from st_store_password sp where sp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2"
+   },
+   "PR_ORDER.REQUISITION_TYPE": {
+    "widget": "SELECT",
+    "lov": "select serial || ' - ' || nvl(name_a, name_e) d, serial r from st_pr_order_types order by 2",
+    "label_a": "نوع أمر الشراء",
+    "label_e": "P.O Type"
+   },
+   "PR_ORDER.PAYMENT_METHOD": {
+    "widget": "SELECT",
+    "lov": "select pay_cond_code || ' - ' || pay_cond_desc d, pay_cond_code r from lc_pay_cond order by 2"
+   },
+   "PR_ORDER.PAYMENT_CONDITION_CODE": {
+    "widget": "SELECT",
+    "lov": "select cond_no || ' - ' || cond_desca d, cond_no r from lc_pay_credit_cond order by 2"
+   },
+   "PR_ORDER.CONFIRM_FLAG": {
+    "widget": "CHECK",
+    "values": [
+     "1",
+     "0"
+    ]
+   },
+   "PR_ORDER.CLOSE_FLAG": {
+    "widget": "CHECK",
+    "values": [
+     "1",
+     "0"
+    ]
+   },
+   "PR_ORDER.BONUS_WITH_VAT": {
+    "widget": "CHECK",
+    "values": [
+     "1",
+     "0"
+    ],
+    "default": {
+     "type": "STATIC",
+     "value": "0"
+    }
+   },
+   "PR_ORDER_SRVC.PRCN_FLAG": {
+    "widget": "CHECK",
+    "values": [
+     "1",
+     "0"
+    ],
+    "default": {
+     "type": "STATIC",
+     "value": "0"
+    }
+   },
+   "PR_ORDER_DET.ITEM_CODE": {
+    "widget": "POPUP",
+    "lov": "select m.item_code || ' - ' || nvl(m.name_a, m.name_e) d, m.item_code r from st_item m, st_item_group g, st_item_unit u where m.item_group_code = g.item_group_code and u.group_code = m.item_group_code and u.item_code = m.item_code and nvl(m.stop_flag, 0) = 0 and nvl(g.stop_flag, 0) = 0 and nvl(u.basic_unit, 0) = 1 order by 2"
+   },
+   "PR_ORDER_DET.UNIT_CODE": {
+    "widget": "SELECT",
+    "cascade": [
+     "ITEM_CODE",
+     "GROUP_CODE"
+    ],
+    "lov": "select u.unit_code || ' - ' || u.name_a || decode(iu.basic_unit, 1, ' (وحدة أساسية)', '') d, u.unit_code r from st_item_unit iu, st_unit u where iu.item_code = :PAGE_ITEM_CODE and (iu.group_code = :PAGE_GROUP_CODE or :PAGE_GROUP_CODE is null) and iu.unit_code = u.unit_code order by 2"
+   },
+   "PR_ORDER_SRVC.SERVICE_CODE": {
+    "widget": "SELECT",
+    "lov": "select service_code || ' - ' || name_a d, service_code r from st_pu_services where leaf = 1 order by 1"
+   },
+   "PR_ORDER_ASST.CTGRY_CD_ASST": {
+    "widget": "SELECT",
+    "lov": "select ctgry_cd_asct || ' - ' || desc_a_asct d, ctgry_cd_asct r from as_ctgry where leaf = 1 order by 1"
+   }
+  },
+  "computed": {
+   "PR_ORDER_DET.ITEM_NAME_A": {
+    "sql": "(select max(nvl(i.name_a, i.name_e)) from st_item i where i.item_code = t.item_code and i.item_group_code = t.group_code)",
+    "label_a": "إسم الصنف",
+    "label_e": "Item Name"
+   },
+   "PR_ORDER_DET.RECEIVED_QTY": {
+    "sql": "(select nvl(sum(nvl(ld.income_quantity, 0)), 0) from pr_income_lot_det ld, pr_income_lot lm where ld.trns_type_code = lm.trns_type_code and ld.trns_serial = lm.trns_serial and lm.order_trns_type_code = t.trns_type_code and lm.order_trns_serial = t.trns_serial and ld.group_code = t.group_code and ld.item_code = t.item_code and ld.unit_code = t.unit_code)",
+    "label_a": "الكمية المستلمة",
+    "label_e": "Received quantity",
+    "type": "NUMBER"
+   },
+   "PR_ORDER_DET.OUTSTANDING_QTY": {
+    "sql": "greatest((select nvl(sum(nvl(d2.quantity, 0)), 0) from pr_order_det d2 where d2.trns_type_code = t.trns_type_code and d2.trns_serial = t.trns_serial and d2.group_code = t.group_code and d2.item_code = t.item_code and d2.unit_code = t.unit_code) - (select nvl(sum(nvl(ld.income_quantity, 0)), 0) from pr_income_lot_det ld, pr_income_lot lm where ld.trns_type_code = lm.trns_type_code and ld.trns_serial = lm.trns_serial and lm.order_trns_type_code = t.trns_type_code and lm.order_trns_serial = t.trns_serial and ld.group_code = t.group_code and ld.item_code = t.item_code and ld.unit_code = t.unit_code), 0)",
+    "label_a": "كمية لم يتم إستلامها",
+    "label_e": "Outstanding quantity",
+    "type": "NUMBER"
+   },
+   "PR_ORDER_SRVC.SERVICE_NAME": {
+    "sql": "(select max(s.name_a) from st_pu_services s where s.service_code = t.service_code)",
+    "label_a": "اسم الخدمة",
+    "label_e": "Service name"
+   },
+   "PR_ORDER_ASST.DESC_A_ASCT": {
+    "sql": "(select max(c.desc_a_asct) from as_ctgry c where c.ctgry_cd_asct = t.ctgry_cd_asst)",
+    "label_a": "اسم نوع الاصل",
+    "label_e": "Asset type name"
+   }
+  }
+ },
+ "columns": [
+  "TRNS_TYPE_CODE",
+  "TRNS_SERIAL",
+  "PR_ORDER_DATE",
+  "DOC_NO",
+  "SUPPLIER_CODE",
+  "CNTRCT_SERIAL",
+  "STORE_CODE",
+  "REQUISITION_TYPE",
+  "CURRENCY_CODE",
+  "CURRENCY_RATE",
+  "PAYMENT_METHOD",
+  "PAYMENT_CONDITION_CODE",
+  "TERM_SHIP_CODE",
+  "NOTES",
+  "DISC_VAL",
+  "TOT_DISC1_RATIO",
+  "TOT_DISC2_RATIO",
+  "TOT_DISC3_RATIO",
+  "TOT_DISC1_VALUE",
+  "TOT_DISC2_VALUE",
+  "TOT_DISC3_VALUE",
+  "SHIPMENT_TYPE",
+  "CONFIRM_FLAG",
+  "CLOSE_FLAG",
+  "FOTTER1_MEMO",
+  "FOTTER2_MEMO",
+  "FOTTER3_MEMO",
+  "FOTTER4_MEMO",
+  "FOTTER5_MEMO",
+  "BONUS_WITH_VAT",
+  "TAX_VALUE2",
+  "TAX_VALUE1"
+ ],
+ "actions": [
+  {
+   "name": "CONFIRM",
+   "label_a": "إعتماد أمر الشراء",
+   "label_e": "Authorize PO",
+   "confirm_a": "هل تريد اعتماد أمر الشراء؟",
+   "confirm_e": "Authorize the purchase order?",
+   "condition": "app_act_pr.order_can(:PAGE_ROWID, 'CONFIRM') = 'Y'",
+   "call": "app_act_pr.order_confirm(:PAGE_ROWID)",
+   "message": "app_act_pr.last_message",
+   "success_a": "تم إعتماد أمر الشراء",
+   "success_e": "Purchase Has Autherd",
+   "icon": "fa-check"
+  },
+  {
+   "name": "UNCONFIRM",
+   "label_a": "الغاء الاعتماد",
+   "label_e": "Unauthorize",
+   "confirm_a": "هل تريد إلغاء اعتماد أمر الشراء؟",
+   "confirm_e": "Cancel the authorization?",
+   "condition": "app_act_pr.order_can(:PAGE_ROWID, 'UNCONFIRM') = 'Y'",
+   "call": "app_act_pr.order_unconfirm(:PAGE_ROWID)",
+   "message": "app_act_pr.last_message",
+   "success_a": "تم إلغاء إعتماد أمر الشراء",
+   "success_e": "Purchase Has Not Autherd",
+   "icon": "fa-undo"
+  },
+  {
+   "name": "CLOSE",
+   "label_a": "اقفال",
+   "label_e": "Closing",
+   "confirm_a": "هل تريد اقفال أمر الشراء؟",
+   "confirm_e": "Close the purchase order?",
+   "condition": "app_act_pr.order_can(:PAGE_ROWID, 'CLOSE') = 'Y'",
+   "call": "app_act_pr.order_close(:PAGE_ROWID)",
+   "message": "app_act_pr.last_message",
+   "success_a": "تم اقفال أمر الشراء",
+   "success_e": "Purchase Order Closed",
+   "icon": "fa-lock"
+  },
+  {
+   "name": "OPEN",
+   "label_a": "الغاء اقفال",
+   "label_e": "Open",
+   "confirm_a": "هل تريد إلغاء اقفال أمر الشراء؟",
+   "confirm_e": "Open the purchase order again?",
+   "condition": "app_act_pr.order_can(:PAGE_ROWID, 'OPEN') = 'Y'",
+   "call": "app_act_pr.order_open(:PAGE_ROWID)",
+   "message": "app_act_pr.last_message",
+   "success_a": "تم ا الغاء قفال أمر الشراء",
+   "success_e": "Purchase Order Open",
+   "icon": "fa-unlock"
+  },
+  {
+   "name": "GET_ITEMS",
+   "label_a": "إنزال الأصناف",
+   "label_e": "Get Items",
+   "condition": "app_act_pr.order_can(:PAGE_ROWID, 'IMPORT') = 'Y'",
+   "params": [
+    {
+     "name": "FROM_GROUP",
+     "label_a": "من مجموعة",
+     "label_e": "From Group",
+     "type": "number",
+     "lov_sql": "select g.item_group_code || ' - ' || decode(:G_LANG, 'en', nvl(g.name_e, g.name_a), g.name_a) d, g.item_group_code r from st_item_group g order by g.item_group_code"
+    },
+    {
+     "name": "TO_GROUP",
+     "label_a": "إلى مجموعة",
+     "label_e": "To Group",
+     "type": "number",
+     "lov_sql": "select g.item_group_code || ' - ' || decode(:G_LANG, 'en', nvl(g.name_e, g.name_a), g.name_a) d, g.item_group_code r from st_item_group g order by g.item_group_code"
+    }
+   ],
+   "call": "app_act_pr.order_get_items(:PAGE_ROWID, :FROM_GROUP, :TO_GROUP)",
+   "message": "app_act_pr.last_message",
+   "success_a": "تم انزال الأصناف",
+   "success_e": "Items added",
+   "icon": "fa-download"
+  },
+  {
+   "name": "GET_REQ_ITEMS",
+   "label_a": "الأصناف التي وصلت حد الطلب",
+   "label_e": "Items Less Than In Order Level",
+   "condition": "app_act_pr.order_can(:PAGE_ROWID, 'IMPORT') = 'Y'",
+   "params": [
+    {
+     "name": "FROM_DATE",
+     "label_a": "من تاريخ",
+     "label_e": "From Date",
+     "type": "date",
+     "required": true,
+     "default": "to_char(sysdate, 'DD/MM/YYYY')",
+     "default_type": "EXPRESSION"
+    },
+    {
+     "name": "TO_DATE",
+     "label_a": "إلى تاريخ",
+     "label_e": "To Date",
+     "type": "date",
+     "required": true
+    },
+    {
+     "name": "FROM_GROUP",
+     "label_a": "من مجموعة",
+     "label_e": "From Group",
+     "type": "number",
+     "lov_sql": "select g.item_group_code || ' - ' || decode(:G_LANG, 'en', nvl(g.name_e, g.name_a), g.name_a) d, g.item_group_code r from st_item_group g order by g.item_group_code"
+    },
+    {
+     "name": "TO_GROUP",
+     "label_a": "إلى مجموعة",
+     "label_e": "To Group",
+     "type": "number",
+     "lov_sql": "select g.item_group_code || ' - ' || decode(:G_LANG, 'en', nvl(g.name_e, g.name_a), g.name_a) d, g.item_group_code r from st_item_group g order by g.item_group_code"
+    }
+   ],
+   "call": "app_act_pr.order_get_req_items(:PAGE_ROWID, :FROM_DATE, :TO_DATE, :FROM_GROUP, :TO_GROUP)",
+   "message": "app_act_pr.last_message",
+   "success_a": "تم انزال الأصناف",
+   "success_e": "Items added",
+   "icon": "fa-download"
+  }
+ ]
+}

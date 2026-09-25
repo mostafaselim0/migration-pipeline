@@ -1,0 +1,168 @@
+{
+ "pattern": "MASTER_DETAIL",
+ "master": {
+  "table": "ST_TRNS_MAST",
+  "columns": [
+   "TRNS_TYPE_CODE",
+   "TRNS_SERIAL",
+   "INVOICE_NO",
+   "TRNS_DATE",
+   "CUSTOMER_CODE",
+   "PAYMENT_TYPE",
+   "PRINT_FLAG",
+   "PREPARE_FLAG",
+   "REV_FLAG",
+   "DLVR_LOC_FLAG",
+   "DLVR_FLAG",
+   "DLVR2_FLAG",
+   "CUST_AUTH_FLAG",
+   "STORE_CODE",
+   "SALESMAN_CODE",
+   "DOC_NO",
+   "PRINT_DATE",
+   "PREPARE_DATE",
+   "REV_DATE",
+   "DLVR_LOC_DATE",
+   "DLVR_DATE",
+   "DLVR2_DATE",
+   "CUST_AUTH_DATE"
+  ]
+ },
+ "details": [],
+ "insert": false,
+ "update": false,
+ "delete": false,
+ "notes": "Invoice status monitor (read only): sales invoices (EFFECT 2 / TRNS_TYPE 2, not cancelled) within the user's type, customer and store rights, with the print / preparation / review / delivery-area / driver / driver 2 / customer stage flags; the legacy invoice total, last stage, time, customer / area, salesman and payment terms are computed columns shown on the list and the document (wave 3b; APP_RULES3_SA).",
+ "rules": {
+  "where": "TRNS_TYPE_CODE IN (SELECT T.TRNS_TYPE_CODE FROM ST_TRNS_TYPE T WHERE T.TRNS_TYPE = 2 AND T.EFFECT = 2) AND NVL(DELETE_FLAG, 0) = 0 AND (NVL(:G_PASSWORD_NUMBER, 0) = 0 OR TRNS_TYPE_CODE IN (SELECT TP.TRNS_TYPE_CODE FROM ST_TRNSTYPE_PASSWORD TP WHERE TP.FLAG = 1 AND TP.PASSWORD_NUMBER = :G_PASSWORD_NUMBER)) AND (NVL(:G_PASSWORD_NUMBER, 0) = 0 OR CUSTOMER_CODE IN (SELECT CP.CUSTOMER_CODE FROM AR_CUST_PASSWORD CP WHERE CP.PASSWORD_NUMBER = :G_PASSWORD_NUMBER)) AND (NVL(:G_PASSWORD_NUMBER, 0) = 0 OR STORE_CODE IN (SELECT SP.STORE_CODE FROM ST_STORE_PASSWORD SP WHERE SP.FLAG = 1 AND SP.PASSWORD_NUMBER = :G_PASSWORD_NUMBER))",
+  "add_columns": {
+   "ST_TRNS_MAST.TRNS_TYPE_CODE": {
+    "label_a": "رقم الحركة",
+    "label_e": "Transaction type"
+   },
+   "ST_TRNS_MAST.TRNS_SERIAL": {
+    "label_a": "مسلسل",
+    "label_e": "Serial"
+   },
+   "ST_TRNS_MAST.INVOICE_NO": {
+    "label_a": "رقم الفاتورة",
+    "label_e": "Invoice No"
+   },
+   "ST_TRNS_MAST.TRNS_DATE": {
+    "label_a": "تاريخ الفاتورة",
+    "label_e": "Invoice date"
+   },
+   "ST_TRNS_MAST.CUSTOMER_CODE": {
+    "label_a": "رقم العميل",
+    "label_e": "Customer"
+   },
+   "ST_TRNS_MAST.PAYMENT_TYPE": {
+    "label_a": "شروط الدفع",
+    "label_e": "Payment terms"
+   },
+   "ST_TRNS_MAST.PRINT_FLAG": {
+    "label_a": "حالة الطباعة",
+    "label_e": "Printed"
+   },
+   "ST_TRNS_MAST.PREPARE_FLAG": {
+    "label_a": "حالة التحضير",
+    "label_e": "Prepared"
+   },
+   "ST_TRNS_MAST.REV_FLAG": {
+    "label_a": "مراجعة",
+    "label_e": "Reviewed"
+   },
+   "ST_TRNS_MAST.DLVR_LOC_FLAG": {
+    "label_a": "حالة منطقة التسليم",
+    "label_e": "Delivery area"
+   },
+   "ST_TRNS_MAST.DLVR_FLAG": {
+    "label_a": "حالة السائق",
+    "label_e": "Driver"
+   },
+   "ST_TRNS_MAST.DLVR2_FLAG": {
+    "label_a": "حالة السائق 2",
+    "label_e": "Driver 2"
+   },
+   "ST_TRNS_MAST.CUST_AUTH_FLAG": {
+    "label_a": "حالة استلام العميل",
+    "label_e": "Received by customer"
+   },
+   "ST_TRNS_MAST.STORE_CODE": {
+    "label_a": "المخزن",
+    "label_e": "Store"
+   },
+   "ST_TRNS_MAST.SALESMAN_CODE": {
+    "label_a": "المندوب",
+    "label_e": "Salesman"
+   },
+   "ST_TRNS_MAST.PRINT_DATE": {
+    "label_a": "تاريخ الطباعة",
+    "label_e": "Print date"
+   },
+   "ST_TRNS_MAST.PREPARE_DATE": {
+    "label_a": "تاريخ التحضير",
+    "label_e": "Preparation date"
+   },
+   "ST_TRNS_MAST.REV_DATE": {
+    "label_a": "تاريخ المراجعة",
+    "label_e": "Review date"
+   },
+   "ST_TRNS_MAST.DLVR_LOC_DATE": {
+    "label_a": "تاريخ منطقة التسليم",
+    "label_e": "Delivery area date"
+   },
+   "ST_TRNS_MAST.DLVR_DATE": {
+    "label_a": "تاريخ تسليم السائق",
+    "label_e": "Driver delivery date"
+   },
+   "ST_TRNS_MAST.DLVR2_DATE": {
+    "label_a": "تاريخ تسليم السائق 2",
+    "label_e": "Driver 2 delivery date"
+   },
+   "ST_TRNS_MAST.CUST_AUTH_DATE": {
+    "label_a": "تاريخ استلام العميل",
+    "label_e": "Customer receipt date"
+   }
+  },
+  "hidden": [
+   "ST_TRNS_MAST.DATE_SERIAL",
+   "ST_TRNS_MAST.CURRENCY_RATE",
+   "ST_TRNS_MAST.DELETE_FLAG",
+   "ST_TRNS_MAST.CURRENCY_CODE"
+  ],
+  "computed": {
+   "ST_TRNS_MAST.INV_TOTAL": {
+    "sql": "app_rules3_sa.invoice_total(t.trns_type_code, t.trns_serial)",
+    "label_a": "اجمالى الفاتورة",
+    "label_e": "Invoice total",
+    "type": "NUMBER"
+   },
+   "ST_TRNS_MAST.INV_STAGE": {
+    "sql": "app_rules3_sa.invoice_status(t.trns_type_code, t.trns_serial)",
+    "label_a": "اخر حالة للفاتورة",
+    "label_e": "Last stage"
+   },
+   "ST_TRNS_MAST.INV_TIME": {
+    "sql": "to_char(t.insert_date, 'HH24:MI')",
+    "label_a": "وقت الفاتورة",
+    "label_e": "Invoice time"
+   },
+   "ST_TRNS_MAST.CUST_NAME": {
+    "sql": "(select c.old_code || ' - ' || c.name_a || ' / ' || m.name_a || ' - ' || s.name_a from customer c, ar_mainarea m, ar_subarea s where c.code = t.customer_code and m.id (+) = c.mainarea_id and s.main_id (+) = c.mainarea_id and s.id (+) = c.subarea_id)",
+    "label_a": "العميل",
+    "label_e": "Customer"
+   },
+   "ST_TRNS_MAST.SLSMAN_NAME": {
+    "sql": "(select max(nvl(s.name_a, s.name_e)) from salesman s where s.code = t.salesman_code)",
+    "label_a": "اسم المندوب",
+    "label_e": "Salesman name"
+   },
+   "ST_TRNS_MAST.TERMS_NAME": {
+    "sql": "(select max(nvl(p.type_name, p.type_name_e)) from st_payment_terms p where p.serial = t.payment_type)",
+    "label_a": "بيان شروط الدفع",
+    "label_e": "Payment terms name"
+   }
+  }
+ }
+}

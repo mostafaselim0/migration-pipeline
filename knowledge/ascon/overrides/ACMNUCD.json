@@ -1,0 +1,19 @@
+{
+  "pattern": "AUTO",
+  "notes": "Financial statements generator: account + cost centres not repeated in a statement, numerator / denominator must be earlier total-0 lines, lines used as numerator / denominator cannot be changed away or deleted (APP_RULES3_GL, see processes/ACMNUCD.md)",
+  "rules": {
+    "after_save": [
+      {
+        "name": "تكرار الحسابات والبسط والمقام",
+        "plsql": "app_rules3_gl.final_account_after_save(:PAGE_MENU_CODE);",
+        "when": "CREATE,SAVE"
+      }
+    ],
+    "columns": {
+      "AC_FINAL_ACCOUNT.ACTION": {
+        "lov": "select ind || ' - ' || case when app_sec.lang = 'en' then nvl(desc_e, desc_a) else desc_a end d, ind r from ac_menucd_ind order by ind",
+        "widget": "SELECT"
+      }
+    }
+  }
+}

@@ -1,0 +1,170 @@
+{
+  "pattern": "PROCESS",
+  "notes": "Legacy ACUPDT (TEST_AND_UPDATE): tests the daily entries of a voucher range into AC_UPDT_TBL and, if none has an error, moves AC_DAILY_TRN/_DET to AC_YEARLY_TRN/_DET (POST_SYSTEM=1, POST_USER) and deletes them; reproduced in app_proc_gl.post_entries. AC_MASTER balances are not updated (they are derived from AC_YEARLY_TRN_DET).",
+  "proc": {
+    "procedure": "app_proc_gl.post_entries",
+    "description_a": "ترحيل القيود اليومية: يختبر القيود اليومية غير المرحلة فى نطاق القيود المحدد (من سنة / رقم حركة / قيد إلى سنة / رقم حركة / قيد) مع تصفية اختيارية بأرقام المستندات وبالتاريخ. إذا وُجد خطأ فى أى قيد لا يتم ترحيل أى قيد، وتسجل الأخطاء فى ملف أخطاء الترحيل وتظهر فى الجدول أدناه: رقم الحساب غير موجود، الحساب ليس على أدنى مستوى، عملة الحساب غير عملة القيد، مركز تكلفة غير موجود، تاريخ القيد ليس بعد تاريخ الإقفال، الجانب المدين لا يساوى الجانب الدائن، أو القيد مكرر فى القيود المرحلة. عند اختيار (اختبار فقط) يتم الاختبار بدون ترحيل. الترحيل ينقل القيد وأطرافه إلى القيود المرحلة ويحذفه من القيود اليومية.",
+    "description_e": "Post daily entries: tests the unposted daily entries of the voucher range (from year / entry type / entry no. to year / entry type / entry no.), optionally filtered by document numbers and dates. If any entry has an error nothing is posted; the errors are written to the posting-error table and listed below: account does not exist, account not at the lowest level, account currency differs from the entry currency, unknown cost centre, entry date not after the closing date, debit not equal to credit, or voucher already posted. With 'Test only' nothing is posted. Posting moves the entry and its lines to the posted entries and deletes the daily entry.",
+    "params": [
+      {
+        "name": "FROM_YEAR",
+        "arg": "p_from_year",
+        "label_a": "من سنة",
+        "label_e": "From year",
+        "type": "number",
+        "required": true,
+        "default": "app_proc_gl.current_year(to_number(:G_COMPANY_CODE))",
+        "default_type": "EXPRESSION"
+      },
+      {
+        "name": "FROM_TYPE",
+        "arg": "p_from_type",
+        "label_a": "من رقم الحركة",
+        "label_e": "From entry type",
+        "type": "number",
+        "required": true,
+        "lov_sql": "select t.entry_type || ' - ' || max(decode(:G_LANG, 'en', nvl(t.entry_desc_e, t.entry_desc), t.entry_desc)) d, t.entry_type r from ac_trn_codes t where app_proc_gl.type_allowed(t.entry_year, t.entry_type, to_number(:G_COMPANY_CODE), to_number(:G_PASSWORD_NUMBER)) = 1 group by t.entry_type order by t.entry_type",
+        "default": "app_proc_gl.daily_type_bound(app_proc_gl.current_year(to_number(:G_COMPANY_CODE)), to_number(:G_COMPANY_CODE), to_number(:G_PASSWORD_NUMBER), 0)",
+        "default_type": "EXPRESSION"
+      },
+      {
+        "name": "FROM_NO",
+        "arg": "p_from_no",
+        "label_a": "من قيد",
+        "label_e": "From entry no.",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "TO_YEAR",
+        "arg": "p_to_year",
+        "label_a": "إلى سنة",
+        "label_e": "To year",
+        "type": "number",
+        "required": true,
+        "default": "app_proc_gl.current_year(to_number(:G_COMPANY_CODE))",
+        "default_type": "EXPRESSION"
+      },
+      {
+        "name": "TO_TYPE",
+        "arg": "p_to_type",
+        "label_a": "إلى رقم الحركة",
+        "label_e": "To entry type",
+        "type": "number",
+        "required": true,
+        "lov_sql": "select t.entry_type || ' - ' || max(decode(:G_LANG, 'en', nvl(t.entry_desc_e, t.entry_desc), t.entry_desc)) d, t.entry_type r from ac_trn_codes t where app_proc_gl.type_allowed(t.entry_year, t.entry_type, to_number(:G_COMPANY_CODE), to_number(:G_PASSWORD_NUMBER)) = 1 group by t.entry_type order by t.entry_type",
+        "default": "app_proc_gl.daily_type_bound(app_proc_gl.current_year(to_number(:G_COMPANY_CODE)), to_number(:G_COMPANY_CODE), to_number(:G_PASSWORD_NUMBER), 1)",
+        "default_type": "EXPRESSION"
+      },
+      {
+        "name": "TO_NO",
+        "arg": "p_to_no",
+        "label_a": "إلى قيد",
+        "label_e": "To entry no.",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "FROM_ENTRY_DATE",
+        "arg": "p_from_date",
+        "label_a": "من تاريخ",
+        "label_e": "From date",
+        "type": "date",
+        "required": false
+      },
+      {
+        "name": "TO_ENTRY_DATE",
+        "arg": "p_to_date",
+        "label_a": "إلى تاريخ",
+        "label_e": "To date",
+        "type": "date",
+        "required": false
+      },
+      {
+        "name": "TEST_ONLY",
+        "arg": "p_test_only",
+        "label_a": "العملية",
+        "label_e": "Action",
+        "type": "number",
+        "required": true,
+        "default": "1",
+        "default_type": "STATIC",
+        "lov_sql": "select case when app_sec.lang = 'en' then 'Test Only' else 'إخـتبـار فقــــط' end d, 1 r from dual union all select case when app_sec.lang = 'en' then 'Test And Post' else 'اخـتبـار و ترحـيـل' end d, 0 r from dual"
+      },
+      {
+        "name": "FROM_DOC_NO",
+        "arg": "p_from_doc_no",
+        "label_a": "من مستند رقم",
+        "label_e": "From doc. no.",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "TO_DOC_NO",
+        "arg": "p_to_doc_no",
+        "label_a": "إلى مستند رقم",
+        "label_e": "To doc. no.",
+        "type": "number",
+        "required": false
+      }
+    ],
+    "fixed_args": {
+      "p_company_code": "to_number(:G_COMPANY_CODE)",
+      "p_user_code": "to_number(:G_USER_CODE)",
+      "p_password_number": "to_number(:G_PASSWORD_NUMBER)"
+    },
+    "button_a": "تـنـفـيـذ",
+    "button_e": "Execute",
+    "confirm_a": "سيتم اختبار القيود اليومية فى النطاق المحدد، وترحيلها إذا لم يتم اختيار (اختبار فقط) ولم يوجد أى خطأ. هل تريد الاستمرار؟",
+    "success_a": "تمت العملية.",
+    "preview_title_a": "القيود اليومية فى النطاق وأخطاء آخر اختبار ترحيل",
+    "preview_sql": "select t.entry_year, t.entry_type, t.entry_no, t.doc_no, t.entry_date, decode(:G_LANG, 'en', nvl(t.entry_desc_e, t.entry_desc), t.entry_desc) entry_desc, (select nvl(sum(case when d.value > 0 then d.value end), 0) from ac_daily_trn_det d where d.entry_year = t.entry_year and d.entry_type = t.entry_type and d.entry_no = t.entry_no) debit, (select nvl(sum(case when d.value < 0 then -d.value end), 0) from ac_daily_trn_det d where d.entry_year = t.entry_year and d.entry_type = t.entry_type and d.entry_no = t.entry_no) credit, (select listagg(case when u.seq > 0 then '#' || u.seq || ' ' end || u.message || case when u.account_no is not null then ' (' || u.account_no || ')' end, ' | ' on overflow truncate) within group (order by u.seq) from ac_updt_tbl u where u.entry_year = t.entry_year and u.entry_type = t.entry_type and u.entry_no = t.entry_no) posting_errors from ac_daily_trn t where app_proc_gl.type_allowed(t.entry_year, t.entry_type, to_number(:G_COMPANY_CODE), to_number(:G_PASSWORD_NUMBER)) = 1 and app_proc_gl.in_range(t.entry_year, t.entry_type, t.entry_no, to_number(v('P' || :APP_PAGE_ID || '_FROM_YEAR')), to_number(v('P' || :APP_PAGE_ID || '_FROM_TYPE')), to_number(v('P' || :APP_PAGE_ID || '_FROM_NO')), to_number(v('P' || :APP_PAGE_ID || '_TO_YEAR')), to_number(v('P' || :APP_PAGE_ID || '_TO_TYPE')), to_number(v('P' || :APP_PAGE_ID || '_TO_NO'))) = 1 and (t.doc_no >= to_number(v('P' || :APP_PAGE_ID || '_FROM_DOC_NO')) or v('P' || :APP_PAGE_ID || '_FROM_DOC_NO') is null) and (t.doc_no <= to_number(v('P' || :APP_PAGE_ID || '_TO_DOC_NO')) or v('P' || :APP_PAGE_ID || '_TO_DOC_NO') is null) and (t.entry_date >= to_date(v('P' || :APP_PAGE_ID || '_FROM_ENTRY_DATE'), 'DD/MM/YYYY') or v('P' || :APP_PAGE_ID || '_FROM_ENTRY_DATE') is null) and (t.entry_date <= to_date(v('P' || :APP_PAGE_ID || '_TO_ENTRY_DATE'), 'DD/MM/YYYY') or v('P' || :APP_PAGE_ID || '_TO_ENTRY_DATE') is null) order by t.entry_year, t.entry_type, t.entry_no",
+    "preview_columns": [
+      {
+        "name": "ENTRY_YEAR",
+        "label_a": "السنة",
+        "type": "NUMBER"
+      },
+      {
+        "name": "ENTRY_TYPE",
+        "label_a": "رقم الحركة",
+        "type": "NUMBER"
+      },
+      {
+        "name": "ENTRY_NO",
+        "label_a": "رقم القيد",
+        "type": "NUMBER"
+      },
+      {
+        "name": "DOC_NO",
+        "label_a": "رقم المستند",
+        "type": "NUMBER"
+      },
+      {
+        "name": "ENTRY_DATE",
+        "label_a": "تاريخ القيد",
+        "type": "DATE"
+      },
+      {
+        "name": "ENTRY_DESC",
+        "label_a": "البيان",
+        "type": "STRING"
+      },
+      {
+        "name": "DEBIT",
+        "label_a": "مدين",
+        "type": "NUMBER"
+      },
+      {
+        "name": "CREDIT",
+        "label_a": "دائن",
+        "type": "NUMBER"
+      },
+      {
+        "name": "POSTING_ERRORS",
+        "label_a": "أخطاء الترحيل",
+        "type": "STRING"
+      }
+    ]
+  }
+}

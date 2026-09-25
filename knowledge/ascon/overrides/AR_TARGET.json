@@ -1,0 +1,85 @@
+{
+  "pattern": "GRID",
+  "master": {
+    "table": "AR_ALL_TARGET",
+    "columns": [
+      "ALL_SERIAL",
+      "T_YEAR",
+      "CUSTOMER_ID",
+      "SALESMAN_ID",
+      "GROUP_CODE",
+      "ITEM_CODE",
+      "T_SERIAL",
+      "T_VALUE",
+      "T_QTY",
+      "PRCNT",
+      "PRCNT2"
+    ]
+  },
+  "where": null,
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Annual target plan (AR_ALL_TARGET: customers, salesmen, items and periods targets per year / month); the generated grid on AR_ALL_TARGET_CUST was corrected; rules in APP_RULES3_AR.",
+  "rules": {
+    "row_rules": {
+      "AR_ALL_TARGET": "app_rules3_ar.target_row(:new.t_year, :new.customer_id, :new.salesman_id, :new.t_serial, :new.group_code, :new.item_code);"
+    },
+    "readonly": [
+      "AR_ALL_TARGET.ALL_SERIAL",
+      "AR_ALL_TARGET.GROUP_CODE"
+    ],
+    "add_columns": {
+      "AR_ALL_TARGET.ALL_SERIAL": {
+        "label_a": "مسلسل",
+        "label_e": "Serial"
+      },
+      "AR_ALL_TARGET.T_YEAR": {
+        "label_a": "السنة",
+        "label_e": "Year"
+      },
+      "AR_ALL_TARGET.CUSTOMER_ID": {
+        "label_a": "رقم العميل",
+        "label_e": "Customer"
+      },
+      "AR_ALL_TARGET.SALESMAN_ID": {
+        "label_a": "رقم المندوب",
+        "label_e": "Salesman"
+      },
+      "AR_ALL_TARGET.ITEM_CODE": {
+        "label_a": "رقم الصنف",
+        "label_e": "Item"
+      },
+      "AR_ALL_TARGET.GROUP_CODE": {
+        "label_a": "المجموعة",
+        "label_e": "Group"
+      },
+      "AR_ALL_TARGET.T_SERIAL": {
+        "label_a": "الفترة (الشهر 1-12)",
+        "label_e": "Period (month 1-12)"
+      },
+      "AR_ALL_TARGET.T_VALUE": {
+        "label_a": "القيمة",
+        "label_e": "Value"
+      },
+      "AR_ALL_TARGET.T_QTY": {
+        "label_a": "الكمية",
+        "label_e": "Quantity"
+      },
+      "AR_ALL_TARGET.PRCNT": {
+        "label_a": "نسبة 100 %",
+        "label_e": "Percent 100%"
+      },
+      "AR_ALL_TARGET.PRCNT2": {
+        "label_a": "نسبة 110 %",
+        "label_e": "Percent 110%"
+      }
+    },
+    "defaults": {
+      "AR_ALL_TARGET.T_YEAR": {
+        "type": "EXPRESSION",
+        "value": "to_number(to_char(sysdate, 'YYYY'))"
+      }
+    }
+  }
+}

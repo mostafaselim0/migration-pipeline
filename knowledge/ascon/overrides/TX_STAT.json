@@ -1,0 +1,449 @@
+{
+  "pattern": "AUTO",
+  "notes": "Tax statement (VAT return): legacy build button (تكوين), derived period / company tax data, tax indicator per line, AC_5 recompute, only the last statement may be deleted (with its lines), statement boxes and totals as info values (APP_RULES3_TX, see processes/TX_STAT.md)",
+  "rules": {
+    "key_expr": {
+      "TX_TRNS_DET.DET_SERIAL": "tx_trns_det_seq.nextval"
+    },
+    "row_rules": {
+      "TX_TRNS_MAST": "if inserting then\n  app_rules3_tx.stat_mast_row(:new.company_code, :new.tax_code, :new.tax_no, :new.legal_address, :new.from_date, :new.till_date);\nend if;",
+      "TX_TRNS_DET": "app_rules3_tx.stat_det_row(inserting, :new.tax_source, :new.tax_sign, :old.t_tax_flag, :new.t_tax_flag, :old.ac_5, :new.ac_5, :new.tax_value, :new.trns_value);"
+    },
+    "validations": [
+      {
+        "name": "الاقرار: تاريخ الاقرار وفترة التقديم وعدم تعديل الشركة والضريبة",
+        "plsql": "return app_rules3_tx.stat_check(:PAGE_ROWID, :REQUEST, :PAGE_COMPANY_CODE, :PAGE_TAX_CODE, :PAGE_TRNS_DATE);",
+        "when": "CREATE,SAVE"
+      }
+    ],
+    "defaults": {
+      "TX_TRNS_MAST.TRNS_DATE": {
+        "type": "EXPRESSION",
+        "value": "to_char(sysdate, 'DD/MM/YYYY')"
+      },
+      "TX_TRNS_MAST.TAX_CORR": {
+        "type": "STATIC",
+        "value": "0"
+      },
+      "TX_TRNS_MAST.PRE_TAX": {
+        "type": "STATIC",
+        "value": "0"
+      }
+    },
+    "readonly": [
+      "TX_TRNS_MAST.TAX_SERIAL",
+      "TX_TRNS_MAST.TAX_NO",
+      "TX_TRNS_MAST.LEGAL_ADDRESS",
+      "TX_TRNS_MAST.FROM_DATE",
+      "TX_TRNS_MAST.TILL_DATE",
+      "TX_TRNS_DET.INVOICE_NO",
+      "TX_TRNS_DET.TRNS_VALUE",
+      "TX_TRNS_DET.TAX_VALUE",
+      "TX_TRNS_DET.TRNS_DATE",
+      "TX_TRNS_DET.PK1",
+      "TX_TRNS_DET.PK2",
+      "TX_TRNS_DET.PK3",
+      "TX_TRNS_DET.TAX_SOURCE",
+      "TX_TRNS_DET.TAX_SIGN"
+    ],
+    "add_columns": {
+      "TX_TRNS_MAST.COMPANY_CODE": {
+        "label_a": "الشـركـة",
+        "label_e": "Company"
+      },
+      "TX_TRNS_MAST.TAX_SERIAL": {
+        "label_a": "مسلسل الاقرار",
+        "label_e": "Statement serial"
+      },
+      "TX_TRNS_MAST.TAX_NO": {
+        "label_a": "الرقم الضريبي",
+        "label_e": "VAT number"
+      },
+      "TX_TRNS_MAST.LEGAL_ADDRESS": {
+        "label_a": "العنوان القانوني",
+        "label_e": "Legal address"
+      },
+      "TX_TRNS_MAST.TAX_CODE": {
+        "label_a": "الضريبة",
+        "label_e": "Tax"
+      },
+      "TX_TRNS_MAST.TRNS_DATE": {
+        "label_a": "تاريخ الاقرار",
+        "label_e": "Statement date"
+      },
+      "TX_TRNS_MAST.FROM_DATE": {
+        "label_a": "من تاريخ",
+        "label_e": "From date"
+      },
+      "TX_TRNS_MAST.TILL_DATE": {
+        "label_a": "الى تاريخ",
+        "label_e": "To date"
+      },
+      "TX_TRNS_MAST.DESC_A": {
+        "label_a": "ملاحظات",
+        "label_e": "Remarks"
+      },
+      "TX_TRNS_MAST.AUTH_FLAG": {
+        "label_a": "معتمد",
+        "label_e": "Approved"
+      },
+      "TX_TRNS_MAST.TAX_CORR": {
+        "label_a": "تصحيحات الفترة السابقة",
+        "label_e": "Corrections of previous period"
+      },
+      "TX_TRNS_MAST.PRE_TAX": {
+        "label_a": "ضرائب مرحلة الفترات السابقة",
+        "label_e": "Tax carried from previous periods"
+      },
+      "TX_TRNS_DET.TAX_SOURCE": {
+        "label_a": "المصدر",
+        "label_e": "Source"
+      },
+      "TX_TRNS_DET.TAX_SIGN": {
+        "label_a": "الإشارة (1 فاتورة / -1 مرتجع)",
+        "label_e": "Sign (1 invoice / -1 return)"
+      },
+      "TX_TRNS_DET.INVOICE_NO": {
+        "label_a": "رقم الفاتورة",
+        "label_e": "Invoice no."
+      },
+      "TX_TRNS_DET.TRNS_VALUE": {
+        "label_a": "قيمة الفاتورة",
+        "label_e": "Invoice value"
+      },
+      "TX_TRNS_DET.TAX_VALUE": {
+        "label_a": "قيمة الضريبة",
+        "label_e": "Tax value"
+      },
+      "TX_TRNS_DET.DESC_A": {
+        "label_a": "ملاحظات",
+        "label_e": "Remarks"
+      },
+      "TX_TRNS_DET.TRNS_DATE": {
+        "label_a": "التاريخ",
+        "label_e": "Date"
+      },
+      "TX_TRNS_DET.PK1": {
+        "label_a": "نوع الحركة / سنة القيد",
+        "label_e": "Transaction type / entry year"
+      },
+      "TX_TRNS_DET.PK2": {
+        "label_a": "مسلسل الحركة / نوع القيد",
+        "label_e": "Transaction serial / entry type"
+      },
+      "TX_TRNS_DET.PK3": {
+        "label_a": "رقم القيد / المنطقة",
+        "label_e": "Entry no. / area"
+      },
+      "TX_TRNS_DET.T_TAX_FLAG": {
+        "label_a": "مؤشر الضريبة",
+        "label_e": "Tax indicator"
+      },
+      "TX_TRNS_DET.AC_5": {
+        "label_a": "نسبة 5% (1 = نعم)",
+        "label_e": "5% rate (1 = yes)"
+      }
+    },
+    "info": [
+      {
+        "name": "B1",
+        "label_a": "مبيعات خاضعة للنسبة الاساسية (القيمة / الضريبة)",
+        "label_e": "Standard-rated sales (value / tax)",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'B1') from dual"
+      },
+      {
+        "name": "B2",
+        "label_a": "مبيعات دول مجلس التعاون",
+        "label_e": "GCC sales",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'B2') from dual"
+      },
+      {
+        "name": "B3",
+        "label_a": "مبيعات محلية خاضعة للنسبة صفر",
+        "label_e": "Zero-rated domestic sales",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'B3') from dual"
+      },
+      {
+        "name": "B4",
+        "label_a": "صادرات",
+        "label_e": "Exports",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'B4') from dual"
+      },
+      {
+        "name": "B5",
+        "label_a": "مبيعات معفاه",
+        "label_e": "Exempt sales",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'B5') from dual"
+      },
+      {
+        "name": "SALES",
+        "label_a": "اجمالي المبيعات",
+        "label_e": "Total sales",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'SALES') from dual"
+      },
+      {
+        "name": "B6",
+        "label_a": "مشتريات خاضعة للنسبة الاساسية",
+        "label_e": "Standard-rated purchases",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'B6') from dual"
+      },
+      {
+        "name": "B7",
+        "label_a": "استيرادات تدفع بالجمارك",
+        "label_e": "Imports paid at customs",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'B7') from dual"
+      },
+      {
+        "name": "B8",
+        "label_a": "استيرادات مطبقة الاحتساب العكسي",
+        "label_e": "Imports under reverse charge",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'B8') from dual"
+      },
+      {
+        "name": "B9",
+        "label_a": "مشتريات خاضعة للنسبة صفر",
+        "label_e": "Zero-rated purchases",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'B9') from dual"
+      },
+      {
+        "name": "B10",
+        "label_a": "مشتريات معفاه",
+        "label_e": "Exempt purchases",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'B10') from dual"
+      },
+      {
+        "name": "PURCH",
+        "label_a": "اجمالي المشتريات",
+        "label_e": "Total purchases",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'PURCH') from dual"
+      },
+      {
+        "name": "DUE",
+        "label_a": "مستحق ضرائب الفترة",
+        "label_e": "Tax due for the period",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'DUE') from dual"
+      },
+      {
+        "name": "NET",
+        "label_a": "صافي الضريبة المستحقة",
+        "label_e": "Net tax due",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'NET') from dual"
+      },
+      {
+        "name": "DET",
+        "label_a": "قيمة الاقرار تفصيلي",
+        "label_e": "Statement value (lines)",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'DET') from dual"
+      },
+      {
+        "name": "GL",
+        "label_a": "قيمة الاقرار حسابات",
+        "label_e": "Statement value (GL accounts)",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'GL') from dual"
+      },
+      {
+        "name": "T_SLS",
+        "label_a": "ضريبة المبيعات (مخرجات)",
+        "label_e": "Sales tax (outputs)",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'SLS') from dual"
+      },
+      {
+        "name": "T_PUR",
+        "label_a": "ضريبة المشتريات (مدخلات)",
+        "label_e": "Purchases tax (inputs)",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'PUR') from dual"
+      },
+      {
+        "name": "T_CUST",
+        "label_a": "ضريبة العملاء",
+        "label_e": "Customers tax",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'CUST') from dual"
+      },
+      {
+        "name": "T_SUPP",
+        "label_a": "ضريبة الموردين",
+        "label_e": "Suppliers tax",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'SUPP') from dual"
+      },
+      {
+        "name": "T_ENTRY",
+        "label_a": "ضريبة الحسابات",
+        "label_e": "GL entries tax",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'ENTRY') from dual"
+      },
+      {
+        "name": "S0",
+        "label_a": "مبيعات 0%",
+        "label_e": "Sales 0%",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'S0') from dual"
+      },
+      {
+        "name": "S5",
+        "label_a": "مبيعات 5%",
+        "label_e": "Sales 5%",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'S5') from dual"
+      },
+      {
+        "name": "S15",
+        "label_a": "مبيعات 15%",
+        "label_e": "Sales 15%",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'S15') from dual"
+      },
+      {
+        "name": "RS0",
+        "label_a": "مرتجع مبيعات 0%",
+        "label_e": "Sales returns 0%",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'RS0') from dual"
+      },
+      {
+        "name": "RS5",
+        "label_a": "مرتجع مبيعات 5%",
+        "label_e": "Sales returns 5%",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'RS5') from dual"
+      },
+      {
+        "name": "RS15",
+        "label_a": "مرتجع مبيعات 15%",
+        "label_e": "Sales returns 15%",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'RS15') from dual"
+      },
+      {
+        "name": "P0",
+        "label_a": "مشتريات 0%",
+        "label_e": "Purchases 0%",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'P0') from dual"
+      },
+      {
+        "name": "P5",
+        "label_a": "مشتريات 5%",
+        "label_e": "Purchases 5%",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'P5') from dual"
+      },
+      {
+        "name": "P15",
+        "label_a": "مشتريات 15%",
+        "label_e": "Purchases 15%",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'P15') from dual"
+      },
+      {
+        "name": "RP0",
+        "label_a": "مرتجع مشتريات 0%",
+        "label_e": "Purchase returns 0%",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'RP0') from dual"
+      },
+      {
+        "name": "RP5",
+        "label_a": "مرتجع مشتريات 5%",
+        "label_e": "Purchase returns 5%",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'RP5') from dual"
+      },
+      {
+        "name": "RP15",
+        "label_a": "مرتجع مشتريات 15%",
+        "label_e": "Purchase returns 15%",
+        "sql": "select app_rules3_tx.stat_info(:PAGE_ROWID, 'RP15') from dual"
+      }
+    ],
+    "columns": {
+      "TX_TRNS_MAST.COMPANY_CODE": {
+        "readonly_after_insert": true
+      },
+      "TX_TRNS_MAST.TAX_CODE": {
+        "readonly_after_insert": true
+      },
+      "TX_TRNS_MAST.TRNS_DATE": {
+        "readonly_after_insert": true,
+        "required": true
+      },
+      "TX_TRNS_DET.T_TAX_FLAG": {
+        "lov": "select r || ' - ' || d d, r from (select 1 r, 'نسبة اساسية' d, 'S' k from dual union all select 2 r, 'مجلس التعاون' d, 'S' k from dual union all select 3 r, 'بدون (صفر بالمائة)' d, 'S' k from dual union all select 4 r, 'صادرات (صفر بالمائة)' d, 'S' k from dual union all select 5 r, 'معفاه' d, 'S' k from dual union all select 6 r, 'نسبة اساسية' d, 'P' k from dual union all select 7 r, 'الاستيرادات التي تدفع في الجمارك' d, 'P' k from dual union all select 8 r, 'الاستيرادات مطبقة عليها الاحتساب العكسي' d, 'P' k from dual union all select 9 r, 'بدون (صفر بالمائة)' d, 'P' k from dual union all select 10 r, 'معفاه' d, 'P' k from dual union all select 0 r, 'معالج حسابات' d, 'X' k from dual) where k = 'X' or (k = 'S' and (:PAGE_TAX_SOURCE in ('CUST', 'SLS') or (:PAGE_TAX_SOURCE = 'ENTRY' and :PAGE_TAX_SIGN = -1))) or (k = 'P' and (:PAGE_TAX_SOURCE in ('SUPP', 'PUR') or (:PAGE_TAX_SOURCE = 'ENTRY' and nvl(:PAGE_TAX_SIGN, 0) != -1))) or (r = 6 and :PAGE_TAX_SOURCE = 'ENTRY' and :PAGE_TAX_SIGN = -1) order by decode(r, 0, 99, r)",
+        "widget": "SELECT",
+        "cascade": [
+          "TAX_SOURCE",
+          "TAX_SIGN"
+        ],
+        "required": true
+      },
+      "TX_TRNS_DET.TAX_SOURCE": {
+        "static": [
+          [
+            "المبيعات",
+            "SLS",
+            "Sales"
+          ],
+          [
+            "المشتريات",
+            "PUR",
+            "Purchases"
+          ],
+          [
+            "العملاء",
+            "CUST",
+            "Customers"
+          ],
+          [
+            "الموردين",
+            "SUPP",
+            "Suppliers"
+          ],
+          [
+            "الحسابات",
+            "ENTRY",
+            "Accounts"
+          ]
+        ]
+      },
+      "TX_TRNS_DET.TAX_SIGN": {
+        "static": [
+          [
+            "فاتورة",
+            "1",
+            "Invoice"
+          ],
+          [
+            "مرتجع",
+            "-1",
+            "Return"
+          ]
+        ],
+        "label_a": "الإشارة",
+        "label_e": "Sign"
+      },
+      "TX_TRNS_DET.AC_5": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ],
+        "label_a": "نسبة 5%",
+        "label_e": "5% rate"
+      }
+    },
+    "computed": {
+      "TX_TRNS_DET.PER": {
+        "sql": "case when nvl(t.trns_value, 1) = 0 then null else round(nvl(t.tax_value, 0) / nvl(t.trns_value, 1) * 100, 0) end",
+        "label_a": "نسبة الضريبة %",
+        "label_e": "Tax %",
+        "type": "NUMBER"
+      }
+    },
+    "blocks": {
+      "TX_TRNS_DET": {
+        "insert": false,
+        "delete": false
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "BUILD",
+      "label_a": "تكوين",
+      "label_e": "Build statement",
+      "call": "app_rules3_tx.build_statement(:PAGE_ROWID)",
+      "message": "app_rules3_tx.last_message",
+      "success_a": "تم تكوين الاقرار",
+      "success_e": "Statement built",
+      "icon": "fa-cogs"
+    }
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "pattern": "AUTO",
+  "notes": "GL data grants of a group (journals, accounts, cost centres 1/2, estimate periods per company; read by APP_RULES_GL / APP_PROC_GL / APP_RULES_AR); derived level and end position, grant-all and add-main-accounts buttons, deleting a main account removes its sub accounts (APP_RULES3_SE, see processes/ACPASS_ADMIN.md)",
+  "rules": {
+    "row_rules": {
+      "AC_PASSWORD_MASTER": "app_rules3_se.account_row(:new.account_number, :new.account_level, :new.account_end_pos);",
+      "AC_PASSWORD_COST1": "app_rules3_se.cost_row(1, :new.cost_code, :new.cost_level, :new.cost_end_pos);",
+      "AC_PASSWORD_COST2": "app_rules3_se.cost_row(2, :new.cost_code, :new.cost_level, :new.cost_end_pos);"
+    },
+    "readonly": [
+      "AC_PASSWORD_MASTER.ACCOUNT_LEVEL",
+      "AC_PASSWORD_MASTER.ACCOUNT_END_POS",
+      "AC_PASSWORD_COST1.COST_LEVEL",
+      "AC_PASSWORD_COST1.COST_END_POS",
+      "AC_PASSWORD_COST2.COST_LEVEL",
+      "AC_PASSWORD_COST2.COST_END_POS"
+    ],
+    "optional": [
+      "AC_PASSWORD_MASTER.ACCOUNT_LEVEL",
+      "AC_PASSWORD_MASTER.ACCOUNT_END_POS",
+      "AC_PASSWORD_COST1.COST_LEVEL",
+      "AC_PASSWORD_COST1.COST_END_POS",
+      "AC_PASSWORD_COST2.COST_LEVEL",
+      "AC_PASSWORD_COST2.COST_END_POS"
+    ],
+    "columns": {
+      "AC_PASSWORD_ENTRY.ENTRY_TYPE": {
+        "lov": "select c.entry_type || ' - ' || case when app_sec.lang = 'en' then nvl(c.entry_desc_e, c.entry_desc) else c.entry_desc end d, c.entry_type r from ac_trn_codes c where c.entry_year = :PAGE_ENTRY_YEAR and (c.entry_year, c.entry_type) in (select t.entry_year, t.entry_type from ac_company_entry t where t.company_code = :PAGE_COMPANY_CODE) order by c.entry_type",
+        "widget": "SELECT",
+        "cascade": [
+          "ENTRY_YEAR",
+          "COMPANY_CODE"
+        ]
+      },
+      "AC_PASSWORD_MASTER.ACCOUNT_NUMBER": {
+        "lov": "select m.account_number || ' - ' || case when app_sec.lang = 'en' then nvl(m.account_name_e, m.account_name) else m.account_name end d, m.account_number r from ac_master m where m.account_number in (select t.account_number from ac_company_master t where t.company_code = :PAGE_COMPANY_CODE) order by m.account_number",
+        "widget": "POPUP",
+        "cascade": "COMPANY_CODE"
+      },
+      "AC_PASSWORD_COST1.COST_CODE": {
+        "lov": "select c.cost_code || ' - ' || case when app_sec.lang = 'en' then nvl(c.cost_desc_e, c.cost_desc) else c.cost_desc end d, c.cost_code r from ac_cost_centers c where c.cost_code in (select t.cost_code from ac_company_cost1 t where t.company_code = :PAGE_COMPANY_CODE) order by c.cost_code",
+        "widget": "POPUP",
+        "cascade": "COMPANY_CODE"
+      },
+      "AC_PASSWORD_COST2.COST_CODE": {
+        "lov": "select c.cost_code || ' - ' || case when app_sec.lang = 'en' then nvl(c.cost_desc_e, c.cost_desc) else c.cost_desc end d, c.cost_code r from ac_cost_centers2 c where c.cost_code in (select t.cost_code from ac_company_cost2 t where t.company_code = :PAGE_COMPANY_CODE) order by c.cost_code",
+        "widget": "POPUP",
+        "cascade": "COMPANY_CODE"
+      },
+      "AC_PASSWORD_EST_PERIOD.PERIOD_CODE": {
+        "lov": "select p.period_code || ' - ' || case when app_sec.lang = 'en' then nvl(p.period_name_e, p.period_name) else p.period_name end d, p.period_code r from ac_estimate_periods p where p.period_code in (select t.period_code from ac_company_est_period t where t.company_code = :PAGE_COMPANY_CODE) order by p.period_code",
+        "widget": "SELECT",
+        "cascade": "COMPANY_CODE"
+      },
+      "AC_PASSWORD_COST2.COST_LEVEL": {
+        "label_a": "مستوى مركز التكلفة 2",
+        "label_e": "Cost centre 2 level"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "GRANT_ALL",
+      "label_a": "منح الكل",
+      "label_e": "Grant all",
+      "confirm_a": "سيتم استبدال صلاحيات المجموعة للشركة المختارة بكل ما تملكه الشركة من هذا النوع. هل تريد الاستمرار؟",
+      "confirm_e": "The group's grants of this kind for the chosen company will be replaced by everything the company has. Continue?",
+      "params": [
+        {
+          "name": "COMPANY",
+          "label_a": "رقم الشركة",
+          "label_e": "Company",
+          "type": "number",
+          "required": true,
+          "default": "G_COMPANY_CODE",
+          "default_type": "ITEM",
+          "lov_sql": "select c.company_code || ' - ' || nvl(c.company_desc, c.company_desc_e) d, c.company_code r from company c where c.company_code in (select g.company_code from group_company g where g.password_number = to_number(:PAGE_PASSWORD_NUMBER)) order by 2"
+        },
+        {
+          "name": "KIND",
+          "label_a": "النوع",
+          "label_e": "Kind",
+          "type": "text",
+          "required": true,
+          "lov_sql": "select case when app_sec.lang = 'en' then e else a end d, r from (select 'جميع الحركات' a, 'All journals' e, 'ENTRY' r, 1 s from dual union all select 'جميع الحسابات', 'All accounts', 'MASTER', 2 from dual union all select 'مركز التكلفة 1', 'Cost centre 1', 'COST1', 3 from dual union all select 'مركز التكلفة 2', 'Cost centre 2', 'COST2', 4 from dual union all select 'جميع الفترات', 'All periods', 'PERIOD', 5 from dual) order by s"
+        }
+      ],
+      "call": "app_rules3_se.ac_grant_all(:PAGE_ROWID, :COMPANY, :KIND)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "تم منح الصلاحيات",
+      "success_e": "Grants added",
+      "icon": "fa-check-square-o"
+    },
+    {
+      "name": "ADD_PARENTS",
+      "label_a": "إضافة الحسابات الرئيسيه للحسابات الفرعيه المضافه",
+      "label_e": "Add main accounts / centres of the added sub accounts",
+      "params": [
+        {
+          "name": "COMPANY",
+          "label_a": "رقم الشركة",
+          "label_e": "Company",
+          "type": "number",
+          "required": true,
+          "default": "G_COMPANY_CODE",
+          "default_type": "ITEM",
+          "lov_sql": "select c.company_code || ' - ' || nvl(c.company_desc, c.company_desc_e) d, c.company_code r from company c where c.company_code in (select g.company_code from group_company g where g.password_number = to_number(:PAGE_PASSWORD_NUMBER)) order by 2"
+        },
+        {
+          "name": "KIND",
+          "label_a": "النوع",
+          "label_e": "Kind",
+          "type": "text",
+          "required": true,
+          "lov_sql": "select case when app_sec.lang = 'en' then e else a end d, r from (select 'الحسابات' a, 'Accounts' e, 'MASTER' r, 1 s from dual union all select 'مراكز التكلفة 1', 'Cost centres 1', 'COST1', 2 from dual union all select 'مراكز التكلفة 2', 'Cost centres 2', 'COST2', 3 from dual) order by s"
+        }
+      ],
+      "call": "app_rules3_se.ac_add_parents(:PAGE_ROWID, :COMPANY, :KIND)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "تمت إضافة الحسابات الرئيسية",
+      "success_e": "Main accounts added",
+      "icon": "fa-sitemap"
+    }
+  ]
+}

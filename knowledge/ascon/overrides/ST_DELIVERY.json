@@ -1,0 +1,161 @@
+{
+  "pattern": "AUTO",
+  "notes": "Delivery notes (ST_DELIVERY_MAST, types EFFECT 7 / TRNS_TYPE 31; unused, no types configured): numbering, sales-order link, line = order line, delivered <= ordered, lot balance (APP_RULES_SA); wave 3: buttons 'تحويل الي فاتورة بيع' (INSERT_ISSUE_TRNS / DEVIDE_CONFGS / UPDATE_DISC) and 'إلغاء مذكرة التسليم', delete rules, NOTE_NO repeat check, credit / balance / totals display (APP_ACT_ST)",
+  "rules": {
+  "computed": {
+   "ST_DELIVERY_DET.ITEM_NAME": {"sql": "(select max(nvl(i.name_e, i.name_a)) from st_item i where i.item_code = t.item_code)", "label_a": "إسم الصنف", "label_e": "Item Name"}
+  },
+  "columns": {
+   "ST_DELIVERY_MAST.PAYMENT_TERMS": {"widget": "SELECT", "lov": "select p.serial || ' - ' || p.type_name d, p.serial r from st_payment_terms p order by p.serial"},
+   "ST_DELIVERY_MAST.DELIVERY_TERMS": {"widget": "SELECT", "lov": "select d.serial || ' - ' || d.delivery_term_name d, d.serial r from st_delivery_terms d order by d.serial"},
+   "ST_DELIVERY_MAST.EMP_CODE": {"lov": null}
+  },
+    "where": "TRNS_TYPE_CODE IN (SELECT T.TRNS_TYPE_CODE FROM ST_TRNS_TYPE T WHERE NVL(T.EFFECT,0) = 7 AND NVL(T.TRNS_TYPE,0) = 31) AND (NVL(:G_PASSWORD_NUMBER,0) = 0 OR TRNS_TYPE_CODE IN (SELECT TP.TRNS_TYPE_CODE FROM ST_TRNSTYPE_PASSWORD TP WHERE TP.FLAG = 1 AND TP.PASSWORD_NUMBER = :G_PASSWORD_NUMBER))",
+    "defaults": {
+      "ST_DELIVERY_MAST.TRNS_TYPE_CODE": {
+        "type": "SQL_QUERY",
+        "value": "select app_rules_sa.first_type('DLV') from dual"
+      },
+      "ST_DELIVERY_MAST.DELIVERY_DATE": {
+        "type": "EXPRESSION",
+        "value": "to_char(sysdate, 'DD/MM/YYYY')"
+      },
+      "ST_DELIVERY_MAST.DELETE_FLAG": {
+        "type": "STATIC",
+        "value": "0"
+      }
+    },
+    "readonly": [
+      "ST_DELIVERY_MAST.TRNS_SERIAL",
+      "ST_DELIVERY_MAST.NOTE_NO",
+      "ST_DELIVERY_MAST.DELETE_FLAG",
+      "ST_DELIVERY_MAST.POST_FLAG",
+      "ST_DELIVERY_DET.UNIT_PRICE"
+    ],
+    "key_expr": {
+      "ST_DELIVERY_DET.SERIAL": "app_rules_sa.dlv_line_serial(:new.trns_type_code, :new.trns_serial, :new.item_group_code, :new.item_code)"
+    },
+    "row_rules": {
+      "ST_DELIVERY_MAST": "app_rules_sa.dlv_mast_row(inserting, :new.trns_type_code, :new.trns_serial, :new.delivery_date, :new.delivery_serial, :new.note_no, :new.store_code, :new.order_trns_type_code, :new.order_trns_serial, :new.customer_code, :new.supplier_code, :new.salesman_code, :new.delete_flag, :new.delivary_state);",
+      "ST_DELIVERY_DET": "app_rules_sa.dlv_det_row(inserting, :new.trns_type_code, :new.trns_serial, :new.serial, :new.item_group_code, :new.item_code, :new.unit_code, :new.item_confg_id, :new.delivered_qty, :new.bonus, :new.unit_price, :new.unit_price_curr, :new.store_code);"
+    },
+    "validations": [
+      {
+        "name": "قواعد مذكرة التسليم",
+        "when": "CREATE,SAVE",
+        "plsql": "return app_rules_sa.dlv_validate(:REQUEST, :PAGE_ROWID, :PAGE_TRNS_TYPE_CODE, :PAGE_DELIVERY_DATE, :PAGE_ORDER_TRNS_TYPE_CODE, :PAGE_ORDER_TRNS_SERIAL);"
+      },
+      {
+        "name": "تكرار رقم المستند (DOC_REPEAT = 2)",
+        "when": "CREATE,SAVE",
+        "plsql": "return app_act_st.dlv_note_error(:PAGE_ROWID, :PAGE_TRNS_TYPE_CODE, :PAGE_NOTE_NO);"
+      }
+    ],
+    "warnings": [
+      {
+        "name": "تكرار رقم المستند (DOC_REPEAT = 3)",
+        "when": "CREATE,SAVE",
+        "plsql": "return app_act_st.dlv_note_warning(:PAGE_ROWID, :PAGE_TRNS_TYPE_CODE, :PAGE_NOTE_NO);"
+      }
+    ],
+    "after_save": [
+      {
+        "name": "كميات وأرصدة مذكرة التسليم",
+        "when": "CREATE,SAVE",
+        "plsql": "app_rules_sa.dlv_after_save(:REQUEST, :PAGE_ROWID);"
+      },
+      {
+        "name": "حذف مذكرة التسليم (فاتورة مبيعات أو فاتورة مجمعة)",
+        "when": "DELETE",
+        "plsql": "app_act_st.dlv_after_delete(:PAGE_TRNS_TYPE_CODE, :PAGE_TRNS_SERIAL);"
+      }
+    ],
+    "info": [
+      {
+        "name": "INV",
+        "label_a": "فاتورة المبيعات",
+        "label_e": "Sales invoice",
+        "sql": "select app_act_st.dlv_info(:PAGE_ROWID, 'INV') from dual"
+      },
+      {
+        "name": "TOTAL",
+        "label_a": "الاجمالى",
+        "label_e": "Total",
+        "sql": "select app_act_st.dlv_info(:PAGE_ROWID, 'TOTAL') from dual"
+      },
+      {
+        "name": "NET",
+        "label_a": "صافى الفاتورة",
+        "label_e": "Net Value",
+        "sql": "select app_act_st.dlv_info(:PAGE_ROWID, 'NET') from dual"
+      },
+      {
+        "name": "LIMIT",
+        "label_a": "حد الإئتمان",
+        "label_e": "Cr. Limit",
+        "sql": "select app_act_st.dlv_info(:PAGE_ROWID, 'LIMIT') from dual"
+      },
+      {
+        "name": "BAL",
+        "label_a": "الرصيد الجارى",
+        "label_e": "Curr Bal",
+        "sql": "select app_act_st.dlv_info(:PAGE_ROWID, 'BAL') from dual"
+      },
+      {
+        "name": "REMAIN",
+        "label_a": "متبقى الإئتمان",
+        "label_e": "Remaining credit",
+        "sql": "select app_act_st.dlv_info(:PAGE_ROWID, 'REMAIN') from dual"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "name": "TO_INVOICE",
+      "label_a": "تحويل الي فاتورة بيع",
+      "label_e": "Transfer To Sales Invoice",
+      "confirm_a": "هل تريد تحويل مذكرة التسليم إلى فاتورة مبيعات؟",
+      "confirm_e": "Transfer the delivery document to a sales invoice?",
+      "condition": "app_act_st.dlv_can_invoice(:PAGE_ROWID) = 'Y'",
+      "params": [
+        {
+          "name": "SALES_TYPE",
+          "label_a": "رقم فاتورة المبيعات",
+          "label_e": "Sales Invoice No.",
+          "type": "number",
+          "required": true,
+          "default": "app_act_st.dlv_first_sales_type(:PAGE_ROWID)",
+          "default_type": "EXPRESSION",
+          "lov_sql": "select t.trns_type_code || ' - ' || decode(:G_LANG, 'en', t.desc_e, t.desc_a) d, t.trns_type_code r from st_trns_type t where nvl(t.effect, 0) = 2 and t.store_code = :PAGE_STORE_CODE and (nvl(:G_PASSWORD_NUMBER, 0) = 0 or t.trns_type_code in (select tp.trns_type_code from st_trnstype_password tp where tp.flag = 1 and tp.password_number = :G_PASSWORD_NUMBER)) order by t.trns_type_code"
+        },
+        {
+          "name": "SALES_DATE",
+          "label_a": "تاريخ فاتورة المبيعات",
+          "label_e": "Sales Invoice date",
+          "type": "date",
+          "required": true,
+          "default": "to_char(sysdate, 'DD/MM/YYYY')",
+          "default_type": "EXPRESSION"
+        }
+      ],
+      "call": "app_act_st.dlv_to_invoice(p_rowid => :PAGE_ROWID, p_sales_type => :SALES_TYPE, p_date => :SALES_DATE)",
+      "message": "app_act_st.last_message",
+      "target_form": "ST_ISSUE_IO",
+      "success_a": "تم تحويل مذكرة التسليم إلي فاتورة مبيعات",
+      "success_e": "Delivery Document Transferred To Sales Invoice"
+    },
+    {
+      "name": "CANCEL_NOTE",
+      "label_a": "إلغاء مذكرة التسليم",
+      "label_e": "Cancel Delivery Document",
+      "confirm_a": "سيتم إلغاء مذكرة التسليم وحذف الصادر الخاص بها...هل تريد الإستمرار",
+      "confirm_e": "Delivery Document Will Canceled...Do you want to continue",
+      "condition": "app_act_st.dlv_can_cancel(:PAGE_ROWID) = 'Y'",
+      "call": "app_act_st.dlv_cancel(p_rowid => :PAGE_ROWID)",
+      "message": "app_act_st.last_message",
+      "success_a": "تم إلغاء مذكرة التسليم",
+      "success_e": "Successful canceled delivery document",
+      "icon": "fa-ban"
+    }
+  ]
+}

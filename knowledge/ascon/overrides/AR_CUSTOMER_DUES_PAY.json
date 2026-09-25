@@ -1,0 +1,231 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "AR_CUSTOMER_DUES_PAY"
+  },
+  "details": [
+    {
+      "table": "AR_CUSTOMER_DUES_PAY_DET",
+      "join": [
+        [
+          "MAST_ID",
+          "MAST_ID"
+        ],
+        [
+          "MAST_SERIAL",
+          "MAST_SERIAL"
+        ]
+      ],
+      "title_a": "صرف مستحقات العملاء",
+      "title_e": "Paid dues"
+    }
+  ],
+  "where": null,
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Payment of the customers' dues (incentives / rents registered with AR_CUSTOMER_DUES): header per transaction type with the paid lines; buttons execute (fill), post (GL voucher + customers' credit transactions) and cancel posting; the generated single form was corrected; rules in APP_RULES3_AR.",
+  "rules": {
+    "where": "MAST_ID in (select ID from AR_TRNSTYPE where EFFECT = 1 and TRNS_TYPE = 6) and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or MAST_ID in (select TRNS_ID from AR_TRNSTYPE_PASSWORD where FLAG = 1 and PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)))",
+    "row_rules": {
+      "AR_CUSTOMER_DUES_PAY": "app_rules3_ar.pay_mast_row(inserting, :new.mast_id, :new.mast_serial, :new.mainarea_id, :new.subarea_id, :new.salesman_code, :new.ctgry_code, :new.due_type, :new.post_flag, :old.post_flag, :old.mainarea_id, :old.subarea_id, :old.salesman_code, :old.ctgry_code, :old.due_type);",
+      "AR_CUSTOMER_DUES_PAY_DET": "app_rules3_ar.pay_det_row(:new.mast_id, :new.mast_serial, :new.ar_trns_serial, :old.ar_trns_serial);"
+    },
+    "defaults": {
+      "AR_CUSTOMER_DUES_PAY.DUE_TYPE": {
+        "type": "STATIC",
+        "value": "1"
+      },
+      "AR_CUSTOMER_DUES_PAY.POST_FLAG": {
+        "type": "STATIC",
+        "value": "0"
+      },
+      "AR_CUSTOMER_DUES_PAY.PAY_DATE": {
+        "type": "EXPRESSION",
+        "value": "to_char(sysdate, 'DD/MM/YYYY')"
+      },
+      "AR_CUSTOMER_DUES_PAY.MAST_ID": {
+        "type": "SQL_QUERY",
+        "value": "select min(id) from ar_trnstype where effect = 1 and trns_type = 6"
+      }
+    },
+    "columns": {
+      "AR_CUSTOMER_DUES_PAY.DUE_TYPE": {
+        "static": [
+          [
+            "حوافز",
+            "1"
+          ],
+          [
+            "ايجار",
+            "2"
+          ]
+        ],
+        "widget": "RADIO",
+        "label_a": "نوع الصرف",
+        "label_e": "Payment type"
+      },
+      "AR_CUSTOMER_DUES_PAY.MAST_ID": {
+        "lov": "select id || ' - ' || description_a d, id r from ar_trnstype where effect = 1 and trns_type = 6 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or id in (select trns_id from ar_trnstype_password where flag = 1 and password_number = to_number(:G_PASSWORD_NUMBER))) order by 2",
+        "widget": "SELECT",
+        "readonly_after_insert": true
+      },
+      "AR_CUSTOMER_DUES_PAY.SALESMAN_CODE": {
+        "lov": "select code || ' - ' || name_a d, code r from salesman where (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (code >= (select min(from_salesman) from ar_customer_password where password_number = to_number(:G_PASSWORD_NUMBER)) and code <= (select max(to_salesman) from ar_customer_password where password_number = to_number(:G_PASSWORD_NUMBER)))) order by 2"
+      }
+    },
+    "readonly": [
+      "AR_CUSTOMER_DUES_PAY.MAST_SERIAL",
+      "AR_CUSTOMER_DUES_PAY.POST_FLAG",
+      "AR_CUSTOMER_DUES_PAY.ENTRY_YEAR",
+      "AR_CUSTOMER_DUES_PAY.ENTRY_TYPE",
+      "AR_CUSTOMER_DUES_PAY.ENTRY_NO",
+      "AR_CUSTOMER_DUES_PAY_DET.AR_TRNS_ID",
+      "AR_CUSTOMER_DUES_PAY_DET.AR_TRNS_SERIAL",
+      "AR_CUSTOMER_DUES_PAY_DET.AR_MAINAREA_ID",
+      "AR_CUSTOMER_DUES_PAY_DET.AR_SUBAREA_ID"
+    ],
+    "optional": [
+      "AR_CUSTOMER_DUES_PAY.MAST_SERIAL",
+      "AR_CUSTOMER_DUES_PAY_DET.DUE_SERIAL"
+    ],
+    "add_columns": {
+      "AR_CUSTOMER_DUES_PAY.MAST_ID": {
+        "label_a": "رقم الحركة",
+        "label_e": "Transaction type"
+      },
+      "AR_CUSTOMER_DUES_PAY.MAST_SERIAL": {
+        "label_a": "مسلسل",
+        "label_e": "Serial"
+      },
+      "AR_CUSTOMER_DUES_PAY.MAINAREA_ID": {
+        "label_a": "المنطقـة",
+        "label_e": "Area"
+      },
+      "AR_CUSTOMER_DUES_PAY.SUBAREA_ID": {
+        "label_a": "الفـرع",
+        "label_e": "Branch"
+      },
+      "AR_CUSTOMER_DUES_PAY.SALESMAN_CODE": {
+        "label_a": "رقم المندوب",
+        "label_e": "Salesman"
+      },
+      "AR_CUSTOMER_DUES_PAY.CTGRY_CODE": {
+        "label_a": "رقم القسم",
+        "label_e": "Department"
+      },
+      "AR_CUSTOMER_DUES_PAY.PAY_DATE": {
+        "label_a": "في تاريخ",
+        "label_e": "Payment date"
+      },
+      "AR_CUSTOMER_DUES_PAY.DUE_TYPE": {
+        "label_a": "نوع الصرف (1 حوافز / 2 ايجار)",
+        "label_e": "Payment type (1 incentives / 2 rent)"
+      },
+      "AR_CUSTOMER_DUES_PAY.POST_FLAG": {
+        "label_a": "مرحل",
+        "label_e": "Posted"
+      },
+      "AR_CUSTOMER_DUES_PAY.ENTRY_YEAR": {
+        "label_a": "سنة القيد",
+        "label_e": "Voucher year"
+      },
+      "AR_CUSTOMER_DUES_PAY.ENTRY_TYPE": {
+        "label_a": "نوع القيد",
+        "label_e": "Voucher type"
+      },
+      "AR_CUSTOMER_DUES_PAY.ENTRY_NO": {
+        "label_a": "رقم القيد",
+        "label_e": "Voucher no."
+      },
+      "AR_CUSTOMER_DUES_PAY_DET.DUE_SERIAL": {
+        "label_a": "مسلسل",
+        "label_e": "Serial"
+      },
+      "AR_CUSTOMER_DUES_PAY_DET.CUSTOMER_CODE": {
+        "label_a": "العميل",
+        "label_e": "Customer"
+      },
+      "AR_CUSTOMER_DUES_PAY_DET.SALESMAN_CODE": {
+        "label_a": "رقم المندوب",
+        "label_e": "Salesman"
+      },
+      "AR_CUSTOMER_DUES_PAY_DET.PAY_AMOUNT": {
+        "label_a": "المنصرف",
+        "label_e": "Paid"
+      },
+      "AR_CUSTOMER_DUES_PAY_DET.REMARKS": {
+        "label_a": "ملاحظات",
+        "label_e": "Remarks"
+      },
+      "AR_CUSTOMER_DUES_PAY_DET.AR_TRNS_SERIAL": {
+        "label_a": "مسلسل حركة العميل",
+        "label_e": "Customer transaction serial"
+      }
+    },
+    "info": [
+      {
+        "name": "DUE",
+        "label_a": "المستحق",
+        "label_e": "Due",
+        "sql": "select to_char(sum(app_rules3_ar.pay_due(mast_id, mast_serial, customer_code, salesman_code, 'DUE')), 'FM999G999G999G990D00') from ar_customer_dues_pay_det where mast_id = to_number(:PAGE_MAST_ID) and mast_serial = to_number(:PAGE_MAST_SERIAL)"
+      },
+      {
+        "name": "PAID",
+        "label_a": "اجمالي المدفوع (حركات أخرى)",
+        "label_e": "Paid by other documents",
+        "sql": "select to_char(sum(app_rules3_ar.pay_due(mast_id, mast_serial, customer_code, salesman_code, 'PAID')), 'FM999G999G999G990D00') from ar_customer_dues_pay_det where mast_id = to_number(:PAGE_MAST_ID) and mast_serial = to_number(:PAGE_MAST_SERIAL)"
+      },
+      {
+        "name": "PAY",
+        "label_a": "المنصرف",
+        "label_e": "Paid now",
+        "sql": "select to_char(sum(pay_amount), 'FM999G999G999G990D00') from ar_customer_dues_pay_det where mast_id = to_number(:PAGE_MAST_ID) and mast_serial = to_number(:PAGE_MAST_SERIAL)"
+      },
+      {
+        "name": "POST",
+        "label_a": "القيد",
+        "label_e": "Voucher",
+        "sql": "select case when nvl(post_flag, 0) = 1 then app_rules3_ar.msg('القيد مرحل ', 'Posted voucher ') || entry_year || '/' || entry_type || '/' || entry_no else app_rules3_ar.msg('القيد غر مرحل', 'Not posted') end from ar_customer_dues_pay where rowid = chartorowid(:PAGE_ROWID)"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "name": "FILL",
+      "label_a": "تنفيذ",
+      "label_e": "Execute",
+      "confirm_a": "هل تريد إنزال مستحقات العملاء غير المصروفة؟",
+      "confirm_e": "Load the unpaid customer dues?",
+      "condition": "nvl(to_number(:PAGE_POST_FLAG), 0) = 0",
+      "call": "app_rules3_ar.pay_fill(:PAGE_ROWID)",
+      "success_a": "تم التنفيذ",
+      "success_e": "Done",
+      "icon": "fa-download"
+    },
+    {
+      "name": "POST",
+      "label_a": "ترحيل",
+      "label_e": "Post",
+      "confirm_a": "هل تريد ترحيل الصرف إلى الحسابات؟",
+      "confirm_e": "Post the payment to the accounts?",
+      "condition": "nvl(to_number(:PAGE_POST_FLAG), 0) = 0",
+      "call": "app_rules3_ar.pay_post(:PAGE_ROWID)",
+      "success_a": "تمت عملية الترحيل",
+      "success_e": "POST COMPLEATE",
+      "icon": "fa-check"
+    },
+    {
+      "name": "UNPOST",
+      "label_a": "الغاء ترحيل",
+      "label_e": "Cancel posting",
+      "confirm_a": "هل تريد الغاء ترحيل الصرف؟",
+      "confirm_e": "Cancel the posting of the payment?",
+      "condition": "nvl(to_number(:PAGE_POST_FLAG), 0) = 1",
+      "call": "app_rules3_ar.pay_unpost(:PAGE_ROWID)",
+      "success_a": "تمت عملية الغاء الترحيل",
+      "success_e": "Cancel Post Compleate",
+      "icon": "fa-undo"
+    }
+  ]
+}

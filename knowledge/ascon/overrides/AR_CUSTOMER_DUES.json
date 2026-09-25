@@ -1,0 +1,192 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "AR_CUSTOMER_DUES"
+  },
+  "details": [
+    {
+      "table": "AR_CUSTOMER_DUES_DET",
+      "join": [
+        [
+          "MAINAREA_ID",
+          "MAINAREA_ID"
+        ],
+        [
+          "MAST_SERIAL",
+          "MAST_SERIAL"
+        ]
+      ],
+      "title_a": "مستحقات العملاء",
+      "title_e": "Customer dues"
+    }
+  ],
+  "where": null,
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Customer dues (incentives / rents): header per area with the customers' dues; buttons execute (fill), post (GL voucher) and cancel posting; the generated single form was corrected; rules in APP_RULES3_AR.",
+  "rules": {
+    "row_rules": {
+      "AR_CUSTOMER_DUES": "app_rules3_ar.dues_mast_row(inserting, :new.mainarea_id, :new.mast_serial, :new.subarea_id, :new.salesman_code, :new.ctgry_code, :new.due_date, :new.due_type, :new.f_date, :new.t_date, :new.d_account_number, :new.c_account_number, :new.post_flag, :old.post_flag, :old.subarea_id, :old.salesman_code, :old.ctgry_code, :old.due_date, :old.due_type);",
+      "AR_CUSTOMER_DUES_DET": "app_rules3_ar.dues_det_check(:new.mainarea_id, :new.mast_serial);"
+    },
+    "defaults": {
+      "AR_CUSTOMER_DUES.DUE_TYPE": {
+        "type": "STATIC",
+        "value": "1"
+      },
+      "AR_CUSTOMER_DUES.POST_FLAG": {
+        "type": "STATIC",
+        "value": "0"
+      }
+    },
+    "columns": {
+      "AR_CUSTOMER_DUES.DUE_TYPE": {
+        "static": [
+          [
+            "حوافز",
+            "1"
+          ],
+          [
+            "ايجار",
+            "2"
+          ]
+        ],
+        "widget": "RADIO",
+        "label_a": "نوع الاستحقاق",
+        "label_e": "Due type"
+      },
+      "AR_CUSTOMER_DUES.SALESMAN_CODE": {
+        "lov": "select code || ' - ' || name_a d, code r from salesman where (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (code >= (select min(from_salesman) from ar_customer_password where password_number = to_number(:G_PASSWORD_NUMBER)) and code <= (select max(to_salesman) from ar_customer_password where password_number = to_number(:G_PASSWORD_NUMBER)))) order by 2"
+      },
+      "AR_CUSTOMER_DUES.D_ACCOUNT_NUMBER": {
+        "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 order by 2"
+      },
+      "AR_CUSTOMER_DUES.C_ACCOUNT_NUMBER": {
+        "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 order by 2"
+      }
+    },
+    "readonly": [
+      "AR_CUSTOMER_DUES.MAST_SERIAL",
+      "AR_CUSTOMER_DUES.POST_FLAG",
+      "AR_CUSTOMER_DUES.ENTRY_NO",
+      "AR_CUSTOMER_DUES_DET.SLS_AMOUNT"
+    ],
+    "add_columns": {
+      "AR_CUSTOMER_DUES.DUE_DATE": {
+        "label_a": "في تاريخ",
+        "label_e": "Due date"
+      },
+      "AR_CUSTOMER_DUES.DUE_TYPE": {
+        "label_a": "نوع الاستحقاق (1 حوافز / 2 ايجار)",
+        "label_e": "Due type (1 incentives / 2 rent)"
+      },
+      "AR_CUSTOMER_DUES.F_DATE": {
+        "label_a": "من تاريخ",
+        "label_e": "From date"
+      },
+      "AR_CUSTOMER_DUES.T_DATE": {
+        "label_a": "الى تاريخ",
+        "label_e": "To date"
+      },
+      "AR_CUSTOMER_DUES.SALESMAN_CODE": {
+        "label_a": "رقم المندوب",
+        "label_e": "Salesman"
+      },
+      "AR_CUSTOMER_DUES.D_ACCOUNT_NUMBER": {
+        "label_a": "رقم الحساب المدين",
+        "label_e": "Debit account"
+      },
+      "AR_CUSTOMER_DUES.C_ACCOUNT_NUMBER": {
+        "label_a": "رقم الحساب الدائن",
+        "label_e": "Credit account"
+      },
+      "AR_CUSTOMER_DUES.ENTRY_TYPE": {
+        "label_a": "نوع القيد",
+        "label_e": "Voucher type"
+      },
+      "AR_CUSTOMER_DUES_DET.CUSTOMER_CODE": {
+        "label_a": "العميل",
+        "label_e": "Customer"
+      },
+      "AR_CUSTOMER_DUES_DET.SALESMAN_CODE": {
+        "label_a": "المندوب",
+        "label_e": "Salesman"
+      },
+      "AR_CUSTOMER_DUES_DET.SLS_AMOUNT": {
+        "label_a": "المبيعات",
+        "label_e": "Sales"
+      },
+      "AR_CUSTOMER_DUES_DET.DUE_AMOUNT": {
+        "label_a": "المستحق",
+        "label_e": "Due"
+      },
+      "AR_CUSTOMER_DUES_DET.EXCLUD_LIMIT": {
+        "label_a": "حد معفي",
+        "label_e": "Exempt limit"
+      },
+      "AR_CUSTOMER_DUES_DET.REMARKS": {
+        "label_a": "ملاحظات",
+        "label_e": "Remarks"
+      }
+    },
+    "info": [
+      {
+        "name": "SLS",
+        "label_a": "إجمالي المبيعات",
+        "label_e": "Total sales",
+        "sql": "select to_char(sum(sls_amount), 'FM999G999G999G990D00') from ar_customer_dues_det where mainarea_id = to_number(:PAGE_MAINAREA_ID) and mast_serial = to_number(:PAGE_MAST_SERIAL)"
+      },
+      {
+        "name": "DUE",
+        "label_a": "إجمالي المستحق",
+        "label_e": "Total due",
+        "sql": "select to_char(sum(due_amount), 'FM999G999G999G990D00') from ar_customer_dues_det where mainarea_id = to_number(:PAGE_MAINAREA_ID) and mast_serial = to_number(:PAGE_MAST_SERIAL)"
+      },
+      {
+        "name": "POST",
+        "label_a": "القيد",
+        "label_e": "Voucher",
+        "sql": "select case when nvl(post_flag, 0) = 1 then app_rules3_ar.msg('القيد مرحل ', 'Posted voucher ') || entry_year || '/' || entry_type || '/' || entry_no else app_rules3_ar.msg('القيد غر مرحل', 'Not posted') end from ar_customer_dues where rowid = chartorowid(:PAGE_ROWID)"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "name": "FILL",
+      "label_a": "تنفيذ",
+      "label_e": "Execute",
+      "confirm_a": "هل تريد إنزال العملاء المستحقين؟",
+      "confirm_e": "Load the customers of the dues?",
+      "condition": "nvl(to_number(:PAGE_POST_FLAG), 0) = 0",
+      "call": "app_rules3_ar.dues_fill(:PAGE_ROWID)",
+      "success_a": "تم التنفيذ",
+      "success_e": "Done",
+      "icon": "fa-download"
+    },
+    {
+      "name": "POST",
+      "label_a": "ترحيل",
+      "label_e": "Post",
+      "confirm_a": "هل تريد ترحيل المستحقات إلى الحسابات؟",
+      "confirm_e": "Post the dues to the accounts?",
+      "condition": "nvl(to_number(:PAGE_POST_FLAG), 0) = 0",
+      "call": "app_rules3_ar.dues_post(:PAGE_ROWID)",
+      "success_a": "تمت عملية الترحيل",
+      "success_e": "Posted",
+      "icon": "fa-check"
+    },
+    {
+      "name": "UNPOST",
+      "label_a": "الغاء ترحيل",
+      "label_e": "Cancel posting",
+      "confirm_a": "هل تريد الغاء ترحيل المستحقات؟",
+      "confirm_e": "Cancel the posting of the dues?",
+      "condition": "nvl(to_number(:PAGE_POST_FLAG), 0) = 1",
+      "call": "app_rules3_ar.dues_unpost(:PAGE_ROWID)",
+      "success_a": "تمت عملية الغاء الترحيل",
+      "success_e": "Posting cancelled",
+      "icon": "fa-undo"
+    }
+  ]
+}

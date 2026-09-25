@@ -1,0 +1,82 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "PASSWORD"
+  },
+  "details": [
+    {
+      "table": "PY_DEPT_HIER_PASSWORD",
+      "join": [
+        [
+          "PASSWORD_NUMBER",
+          "PASSWORD_NUMBER"
+        ]
+      ],
+      "title_a": "صلاحية الهيكل الادارى",
+      "title_e": "Department structures"
+    },
+    {
+      "table": "PY_DEPT_PASSWORD",
+      "join": [
+        [
+          "PASSWORD_NUMBER",
+          "PASSWORD_NUMBER"
+        ]
+      ],
+      "title_a": "الأقسام",
+      "title_e": "Department range"
+    },
+    {
+      "table": "PY_EMPLOYEE_PASSWORD",
+      "join": [
+        [
+          "PASSWORD_NUMBER",
+          "PASSWORD_NUMBER"
+        ]
+      ],
+      "title_a": "الموظفين",
+      "title_e": "Employee range"
+    }
+  ],
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "HR / payroll grants of a group (PY_DEPT_HIER_PASSWORD structures, PY_DEPT_PASSWORD / PY_EMPLOYEE_PASSWORD ranges); duplicate-structure message and all structures button (APP_RULES3_SE, see processes/PYPASS.md)",
+  "rules": {
+    "readonly": [
+      "PASSWORD.GROUP_DESC",
+      "PASSWORD.GROUP_DESC_E"
+    ],
+    "key_expr": {
+      "PY_DEPT_HIER_PASSWORD.D_CODE": "app_rules3_se.required('الهيكل الإدارى', 'Department structure')"
+    },
+    "add_columns": {
+      "PY_DEPT_HIER_PASSWORD.D_CODE": {
+        "label_a": "الهيكل الإدارى",
+        "label_e": "Department structure"
+      }
+    },
+    "row_rules": {
+      "PY_DEPT_HIER_PASSWORD": "if inserting then app_rules3_se.dup_row('PY_DEPT_HIER_PASSWORD', :new.password_number, :new.company_code, :new.d_code); end if;"
+    },
+    "columns": {
+      "PY_DEPT_HIER_PASSWORD.D_CODE": {
+        "lov": "select d_code || ' - ' || case when app_sec.lang = 'en' then nvl(d_name_e, d_name) else d_name end d, d_code r from py_dept_hier where company_code = :PAGE_COMPANY_CODE order by d_code",
+        "widget": "SELECT",
+        "cascade": "COMPANY_CODE"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "ALL_DEPT",
+      "label_a": "كل الهياكل",
+      "label_e": "All department structures",
+      "call": "app_rules3_se.py_all_dept(:PAGE_ROWID)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "تمت إضافة الهياكل",
+      "success_e": "Structures added",
+      "icon": "fa-sitemap"
+    }
+  ]
+}

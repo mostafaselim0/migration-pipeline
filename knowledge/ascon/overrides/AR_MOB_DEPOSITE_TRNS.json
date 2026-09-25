@@ -1,0 +1,193 @@
+{
+  "pattern": "REPORT_FORM",
+  "master": {
+    "table": "MOB_DEPOSITE_TRNS"
+  },
+  "where": null,
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Salesmen bank deposits (from the cash / transfer boxes of the salesmen, mobile application): approve, refuse, post (GL voucher bank branch account / salesman account) and cancel posting; rules in APP_RULES3_AR.",
+  "rules": {
+    "where": "(nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or SALESMAN_ID in (select SALESMAN_CODE from AR_SALESMAN_PASSWORD where PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)))",
+    "row_rules": {
+      "MOB_DEPOSITE_TRNS": "app_rules3_ar.mob_row(inserting, :new.salesman_id, :new.trns_date, :new.total_value, :new.bank_code, :new.branch_code, :new.pay_type, :new.ref_doc, :new.posted_trns_date, :new.trns_status, :new.post_flag, :old.salesman_id, :old.trns_date, :old.total_value, :old.bank_code, :old.branch_code, :old.pay_type, :old.ref_doc, :old.posted_trns_date, :old.trns_status, :old.post_flag);"
+    },
+    "defaults": {
+      "MOB_DEPOSITE_TRNS.TRNS_STATUS": {
+        "type": "STATIC",
+        "value": "0"
+      },
+      "MOB_DEPOSITE_TRNS.POST_FLAG": {
+        "type": "STATIC",
+        "value": "0"
+      },
+      "MOB_DEPOSITE_TRNS.PAY_TYPE": {
+        "type": "STATIC",
+        "value": "0"
+      },
+      "MOB_DEPOSITE_TRNS.TRNS_DATE": {
+        "type": "EXPRESSION",
+        "value": "to_char(sysdate, 'DD/MM/YYYY')"
+      }
+    },
+    "readonly": [
+      "MOB_DEPOSITE_TRNS.MOB_TRNS_SEQ",
+      "MOB_DEPOSITE_TRNS.TRNS_STATUS",
+      "MOB_DEPOSITE_TRNS.POST_FLAG",
+      "MOB_DEPOSITE_TRNS.ENTRY_YEAR",
+      "MOB_DEPOSITE_TRNS.ENTRY_TYPE",
+      "MOB_DEPOSITE_TRNS.ENTRY_NO"
+    ],
+    "optional": [
+      "MOB_DEPOSITE_TRNS.MOB_TRNS_SEQ"
+    ],
+    "columns": {
+      "MOB_DEPOSITE_TRNS.SALESMAN_ID": {
+        "lov": "select code || ' - ' || name_a d, code r from salesman where (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or code in (select salesman_code from ar_salesman_password where password_number = to_number(:G_PASSWORD_NUMBER))) order by 2"
+      },
+      "MOB_DEPOSITE_TRNS.BANK_CODE": {
+        "lov": "select code || ' - ' || name_a d, code r from bank where (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or code in (select bank_code from bank_password where password_number = to_number(:G_PASSWORD_NUMBER))) order by 2"
+      },
+      "MOB_DEPOSITE_TRNS.BRANCH_CODE": {
+        "lov": "select b.bank_code || '/' || b.code || ' - ' || b.desc_a d, b.code r from bank_branchs b order by b.bank_code, b.code"
+      },
+      "MOB_DEPOSITE_TRNS.TRNS_STATUS": {
+        "static": [
+          [
+            "تحت الاجراء",
+            "0"
+          ],
+          [
+            "معتمدة",
+            "1"
+          ],
+          [
+            "مرفوضة",
+            "2"
+          ]
+        ]
+      }
+    },
+    "add_columns": {
+      "MOB_DEPOSITE_TRNS.MOB_TRNS_SEQ": {
+        "label_a": "مسلسل",
+        "label_e": "Serial"
+      },
+      "MOB_DEPOSITE_TRNS.SALESMAN_ID": {
+        "label_a": "المندوب",
+        "label_e": "Salesman"
+      },
+      "MOB_DEPOSITE_TRNS.TRNS_DATE": {
+        "label_a": "تاريخ الحركة",
+        "label_e": "Date"
+      },
+      "MOB_DEPOSITE_TRNS.TOTAL_VALUE": {
+        "label_a": "اجمالى الحركة",
+        "label_e": "Total"
+      },
+      "MOB_DEPOSITE_TRNS.BANK_CODE": {
+        "label_a": "البنك",
+        "label_e": "Bank"
+      },
+      "MOB_DEPOSITE_TRNS.BRANCH_CODE": {
+        "label_a": "الفرع",
+        "label_e": "Branch"
+      },
+      "MOB_DEPOSITE_TRNS.BANK_DOC_NO": {
+        "label_a": "رقم المستند",
+        "label_e": "Document no."
+      },
+      "MOB_DEPOSITE_TRNS.DESC_A": {
+        "label_a": "البيان عربي",
+        "label_e": "Description (Arabic)"
+      },
+      "MOB_DEPOSITE_TRNS.DESC_E": {
+        "label_a": "البيان لاتيني",
+        "label_e": "Description (English)"
+      },
+      "MOB_DEPOSITE_TRNS.PAY_TYPE": {
+        "label_a": "نوع السداد (0 نقدى / حوالات)",
+        "label_e": "Pay type (0 cash / transfers)"
+      },
+      "MOB_DEPOSITE_TRNS.TRNS_STATUS": {
+        "label_a": "حالة الحركة",
+        "label_e": "Status"
+      },
+      "MOB_DEPOSITE_TRNS.REF_DOC": {
+        "label_a": "مرجع البنك",
+        "label_e": "Bank reference"
+      },
+      "MOB_DEPOSITE_TRNS.POSTED_TRNS_DATE": {
+        "label_a": "تاريخ الترحيل",
+        "label_e": "Posting date"
+      },
+      "MOB_DEPOSITE_TRNS.POST_FLAG": {
+        "label_a": "مرحل",
+        "label_e": "Posted"
+      },
+      "MOB_DEPOSITE_TRNS.ENTRY_YEAR": {
+        "label_a": "سنة القيد",
+        "label_e": "Voucher year"
+      },
+      "MOB_DEPOSITE_TRNS.ENTRY_TYPE": {
+        "label_a": "نوع القيد",
+        "label_e": "Voucher type"
+      },
+      "MOB_DEPOSITE_TRNS.ENTRY_NO": {
+        "label_a": "رقم القيد",
+        "label_e": "Voucher no."
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "AUTH",
+      "label_a": "اعتماد",
+      "label_e": "Approve",
+      "confirm_a": "هل تريد اعتماد الايداع؟",
+      "confirm_e": "Approve the deposit?",
+      "condition": "nvl(to_number(:PAGE_TRNS_STATUS), 0) = 0",
+      "call": "app_rules3_ar.mob_auth(:PAGE_ROWID)",
+      "success_a": "تم التنفيذ",
+      "success_e": "Transaction Done",
+      "icon": "fa-check-circle"
+    },
+    {
+      "name": "REFUSE",
+      "label_a": "رفض",
+      "label_e": "Refuse",
+      "confirm_a": "هل تريد رفض الايداع؟",
+      "confirm_e": "Refuse the deposit?",
+      "condition": "nvl(to_number(:PAGE_TRNS_STATUS), 0) in (0, 1) and nvl(to_number(:PAGE_POST_FLAG), 0) = 0",
+      "call": "app_rules3_ar.mob_refuse(:PAGE_ROWID)",
+      "success_a": "تم التنفيذ",
+      "success_e": "Transaction Done",
+      "icon": "fa-times-circle"
+    },
+    {
+      "name": "POST",
+      "label_a": "الترحيل",
+      "label_e": "Post",
+      "confirm_a": "هل تريد ترحيل الايداع إلى الحسابات؟",
+      "confirm_e": "Post the deposit to the accounts?",
+      "condition": "nvl(to_number(:PAGE_TRNS_STATUS), 0) = 1 and nvl(to_number(:PAGE_POST_FLAG), 0) = 0",
+      "call": "app_rules3_ar.mob_post(:PAGE_ROWID)",
+      "success_a": "تمت عملية الترحيل",
+      "success_e": "Posted",
+      "icon": "fa-check"
+    },
+    {
+      "name": "UNPOST",
+      "label_a": "الغاء الترحيل",
+      "label_e": "Cancel posting",
+      "confirm_a": "هل تريد الغاء ترحيل الايداع؟",
+      "confirm_e": "Cancel the posting?",
+      "condition": "nvl(to_number(:PAGE_POST_FLAG), 0) = 1",
+      "call": "app_rules3_ar.mob_unpost(:PAGE_ROWID)",
+      "success_a": "تمت عملية الغاء الترحيل",
+      "success_e": "Posting cancelled",
+      "icon": "fa-undo"
+    }
+  ]
+}

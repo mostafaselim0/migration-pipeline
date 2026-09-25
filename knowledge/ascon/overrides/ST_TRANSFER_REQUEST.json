@@ -1,0 +1,119 @@
+{
+ "pattern": "AUTO",
+ "notes": "transfer request: ST_TRNS_MAST_REQUEST types EFFECT 7 / TRNS_TYPE 9, DATE_SERIAL per date, locked once a transfer is issued; action TO_ISSUE = issue transfer from the request (legacy REQ_TRNS_* of ST_TRANSFER_FROM, APP_CONV); wave 3: delete refused once transferred (DB hooks APP_RULES_ST_REQ_BD / _REQDET_BD), duplicate DOC_NO question, store balance display (APP_ACT_ST)",
+ "rules": {
+  "computed": {
+   "ST_TRNS_DET_REQUEST.ITEM_NAME": {"sql": "(select max(nvl(i.name_e, i.name_a)) from st_item i where i.item_group_code = t.group_code and i.item_code = t.item_code)", "label_a": "إســم الصنـــف", "label_e": "Item Name"},
+   "ST_TRNS_DET_REQUEST.STORE_BALANCE": {"sql": "case when (nvl(to_number(v('G_USER_CODE')), 0) = 0 or (select nvl(max(u.allow_view_balance), 0) from users u where u.users_code = to_number(v('G_USER_CODE'))) = 1) then round((select nvl(sum(get_balance_confg(h.store_code, c.group_code, c.item_code, c.item_confg_id, h.trns_date)), 0) from st_trns_mast_request h, st_item_confg c where h.trns_type_code = t.trns_type_code and h.trns_serial = t.trns_serial and c.group_code = t.group_code and c.item_code = t.item_code) / nvl((select max(u.factor) from st_item_unit u where u.group_code = t.group_code and u.item_code = t.item_code and u.unit_code = t.unit_code), 1), 3) end", "label_a": "رصيد المستودع", "label_e": "Store Balance", "type": "NUMBER"}
+  },
+  "columns": {
+   "ST_TRNS_MAST_REQUEST.TRNSFER_TO_STORE": {"widget": "SELECT", "lov": "select s.store_code || ' - ' || s.name_a d, s.store_code r from st_store s where s.store_status = 1 and nvl(s.stop_flag, 0) = 0 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or s.store_code in (select sp.store_code from st_store_password sp where sp.password_number = to_number(:G_PASSWORD_NUMBER))) order by s.store_code"}
+  },
+  "where": "TRNS_TYPE_CODE in (select t.trns_type_code from st_trns_type t where t.effect = 7 and t.trns_type = 9) and (:G_PASSWORD_NUMBER = 0 or TRNS_TYPE_CODE in (select tp.trns_type_code from st_trnstype_password tp where tp.password_number = :G_PASSWORD_NUMBER))",
+  "key_expr": {
+   "ST_TRNS_MAST_REQUEST.DATE_SERIAL": "app_rules_st.next_req_date_serial(:new.trns_date)"
+  },
+  "defaults": {
+   "ST_TRNS_MAST_REQUEST.TRNS_TYPE_CODE": {
+    "type": "EXPRESSION",
+    "value": "app_rules_st.default_type('ST_TRANSFER_REQUEST')"
+   },
+   "ST_TRNS_MAST_REQUEST.STORE_CODE": {
+    "type": "EXPRESSION",
+    "value": "app_rules_st.type_store(app_rules_st.default_type('ST_TRANSFER_REQUEST'))"
+   },
+   "ST_TRNS_MAST_REQUEST.DELETE_FLAG": {
+    "type": "STATIC",
+    "value": "0"
+   },
+   "ST_TRNS_MAST_REQUEST.POST_FLAG": {
+    "type": "STATIC",
+    "value": "0"
+   },
+   "ST_TRNS_MAST_REQUEST.TO_TRANSFER_FLAG": {
+    "type": "STATIC",
+    "value": "0"
+   }
+  },
+  "validations": [
+   {
+    "name": "legacy header rules (type of the screen, CHECK_DATE, stores, transfer issued)",
+    "plsql": "return app_rules_st.val_req(:PAGE_ROWID, :REQUEST, :PAGE_TRNS_TYPE_CODE, :PAGE_TRNS_DATE, :PAGE_STORE_CODE, :PAGE_TRNSFER_TO_STORE, :PAGE_DOC_NO);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "legacy commit rule (lines required)",
+    "plsql": "app_rules_st.after_req(:REQUEST, :PAGE_ROWID);",
+    "when": "SAVE"
+   }
+  ],
+  "row_rules": {
+   "ST_TRNS_MAST_REQUEST": "app_rules_st.req_mast_row(inserting, :new.trns_type_code, :new.desc_a, :new.delete_flag, :new.post_flag, :new.to_transfer_flag);",
+   "ST_TRNS_DET_REQUEST": "app_rules_st.req_det_row(:new.trns_type_code, :new.trns_serial, :new.group_code, :new.item_code, :new.unit_code, :new.quantity, :new.basic_qty, :new.cost_flag);"
+  },
+  "readonly": [
+   "ST_TRNS_MAST_REQUEST.TRNS_SERIAL",
+   "ST_TRNS_MAST_REQUEST.TO_TRANSFER_FLAG"
+  ],
+  "hidden": [
+   "ST_TRNS_MAST_REQUEST.DATE_SERIAL",
+   "ST_TRNS_MAST_REQUEST.DELETE_FLAG",
+   "ST_TRNS_MAST_REQUEST.POST_FLAG",
+   "ST_TRNS_DET_REQUEST.BASIC_QTY",
+   "ST_TRNS_DET_REQUEST.COST_FLAG"
+  ],
+  "optional": [
+   "ST_TRNS_MAST_REQUEST.DATE_SERIAL",
+   "ST_TRNS_MAST_REQUEST.DELETE_FLAG",
+   "ST_TRNS_MAST_REQUEST.POST_FLAG",
+   "ST_TRNS_DET_REQUEST.BASIC_QTY",
+   "ST_TRNS_DET_REQUEST.COST_FLAG",
+   "ST_TRNS_DET_REQUEST.UNIT_CODE"
+  ],
+  "warnings": [
+   {
+    "name": "رقم المستند مكرر (هل تريد الإستمرار)",
+    "plsql": "return app_act_st.trq_doc_warn(:PAGE_ROWID, :PAGE_TRNS_TYPE_CODE, :PAGE_DOC_NO);",
+    "when": "CREATE,SAVE"
+   }
+  ]
+ },
+ "actions": [
+  {
+   "name": "TO_ISSUE",
+   "label_a": "عمل حركة تحويل",
+   "label_e": "Issue the transfer",
+   "confirm_a": "هل تريد عمل حركة تحويل (صادر) بأصناف طلب التحويل؟ يتم اختيار الشحنات حسب تاريخ الصلاحية والرصيد.",
+   "confirm_e": "Issue a transfer with the items of this request? The lots are taken by expiry date and stock.",
+   "condition": "app_conv.can_trq_to_transfer(:PAGE_ROWID) = 'Y'",
+   "params": [
+    {
+     "name": "TRNS_TYPE",
+     "label_a": "رقم حركة التحويل",
+     "label_e": "Transfer type",
+     "type": "number",
+     "required": true,
+     "default": "app_conv.first_target_type('TRQ_TRANSFER', :PAGE_ROWID)",
+     "default_type": "EXPRESSION",
+     "lov_sql": "select t.trns_type_code || ' - ' || decode(:G_LANG, 'en', t.desc_e, t.desc_a) d, t.trns_type_code r from st_trns_type t where t.effect = 5 and t.trns_type = 9 and (nvl(:G_PASSWORD_NUMBER, 0) = 0 or t.trns_type_code in (select tp.trns_type_code from st_trnstype_password tp where tp.password_number = :G_PASSWORD_NUMBER and tp.flag = 1)) order by t.trns_type_code"
+    },
+    {
+     "name": "TRNS_DATE",
+     "label_a": "تاريخ التحويل",
+     "label_e": "Transfer date",
+     "type": "date",
+     "required": true,
+     "default": "to_char(sysdate, 'DD/MM/YYYY')",
+     "default_type": "EXPRESSION"
+    }
+   ],
+   "call": "app_conv.trq_to_transfer(p_rowid => :PAGE_ROWID, p_trns_type => :TRNS_TYPE, p_date => :TRNS_DATE)",
+   "message": "app_conv.last_message",
+   "target_form": "ST_TRANSFER_FROM",
+   "success_a": "تم عمل حركة التحويل",
+   "success_e": "The transfer was issued"
+  }
+ ]
+}

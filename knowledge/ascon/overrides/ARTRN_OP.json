@@ -1,0 +1,59 @@
+{
+  "pattern": "AUTO",
+  "notes": "Customer opening balances (debit and credit menu entries, AR types with TRNS_TYPE 6): header checks, line checks and derivations, generated customer transaction (AR_MAINTRNS / AR_SUBTRNS) and customer balance fields per line, delete / change rules (APP_RULES3_AR).",
+  "rules": {
+    "where": "TRNS_ID in (select ID from AR_TRNSTYPE where TRNS_TYPE = 6) and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or TRNS_ID in (select TRNS_ID from AR_TRNSTYPE_PASSWORD where FLAG = 1 and PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)))",
+    "defaults": {
+      "AR_MAINTRNS_OP.TRNS_ID": {
+        "type": "SQL_QUERY",
+        "value": "select app_rules3_ar.op_default_type from dual"
+      }
+    },
+    "row_rules": {
+      "AR_MAINTRNS_OP": "if app_rules3_ar.is_form('ARTRN_OP') then app_rules3_ar.op_mast_row(inserting, :new.trns_id, :new.trns_serial, :new.trns_date, :new.doc_no, :new.description_a, :new.description_e, :old.trns_id, :old.trns_serial); end if;",
+      "AR_SUBTRNS_OP": "if app_rules3_ar.is_form('ARTRN_OP') then app_rules3_ar.op_line_row(inserting, :new.trns_id, :new.trns_serial, :new.customer_id, :new.ctgry_code, :new.mainarea_id, :new.subarea_id, :new.salesman_id, :new.currency_code, :new.currency_rate, :new.total_value, :new.bill_id1, :new.bill_id2, :new.r_trns_serial, :old.customer_id, :old.ctgry_code, :old.salesman_id, :old.total_value, :old.r_trns_serial); end if;"
+    },
+    "after_save": [
+      {
+        "name": "رصيد إفتتاحى مكرر للعميل",
+        "plsql": "begin\n  app_rules3_ar.op_after_save(:PAGE_ROWID);\nend;",
+        "when": "CREATE,SAVE"
+      }
+    ],
+    "optional": [
+      "AR_SUBTRNS_OP.MAINAREA_ID",
+      "AR_SUBTRNS_OP.SUBAREA_ID"
+    ],
+    "readonly": [
+      "AR_SUBTRNS_OP.MAINAREA_ID",
+      "AR_SUBTRNS_OP.SUBAREA_ID",
+      "AR_MAINTRNS_OP.TRNS_SERIAL"
+    ],
+    "add_columns": {
+      "AR_SUBTRNS_OP.BILL_ID1": {
+        "label_a": "رقــــــــــم الفاتـــــــورة",
+        "label_e": "Invoice no."
+      }
+    },
+    "info": [
+      {
+        "name": "TOT",
+        "label_a": "الاجمالي",
+        "label_e": "Total",
+        "sql": "select to_char(sum(total_value), 'FM999G999G999G990D00') from ar_subtrns_op where trns_id = to_number(:PAGE_TRNS_ID) and trns_serial = to_number(:PAGE_TRNS_SERIAL)"
+      },
+      {
+        "name": "TOTR",
+        "label_a": "الاجمالي بالريال",
+        "label_e": "Total (local currency)",
+        "sql": "select to_char(sum(total_value * nvl(currency_rate, 1)), 'FM999G999G999G990D00') from ar_subtrns_op where trns_id = to_number(:PAGE_TRNS_ID) and trns_serial = to_number(:PAGE_TRNS_SERIAL)"
+      },
+      {
+        "name": "EFF",
+        "label_a": "التأثير",
+        "label_e": "Effect",
+        "sql": "select max(case effect when 0 then app_rules3_ar.msg('مدين', 'Debit') when 1 then app_rules3_ar.msg('دائن', 'Credit') end) from ar_trnstype where id = to_number(:PAGE_TRNS_ID)"
+      }
+    ]
+  }
+}

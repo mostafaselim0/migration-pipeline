@@ -1,0 +1,168 @@
+{
+  "pattern": "PROCESS",
+  "notes": "stores transaction status (ST_SALES_ORDER_STAT.fmx, a query screen over the view ST_TRNS_ALL): store range (default first / last allowed store) and date range required, document kind (quotations, sales orders, sales invoices, sales returns, purchase orders, incoming lots, purchase invoices, purchase returns, transfers, transfer receipts), transferred / not transferred to the next document, customer / supplier; per document the totals (items, discounts, tax, total) of the legacy queries; types limited by ST_TRNSTYPE_PASSWORD FLAG = 1",
+  "proc": {
+    "procedure": "app_rules3_st.show_docs",
+    "description_a": "متابعة حركات المخازن: أدخل نطاق المخازن والفترة، ويمكن تحديد نوع الحركات (عروض الأسعار، أوامر البيع، فواتير ومرتجعات المبيعات، أوامر الشراء، الرسائل الواردة، فواتير ومرتجعات المشتريات، تحويلات المخازن واستلامها) ونوع البيانات (محول / غير محول للحركة التالية) والعميل أو المورد، ثم اضغط تنفيذ الاستعلام.",
+    "description_e": "Stores transaction status: enter the store range and the period; optionally the document kind, the transfer status to the next document and the customer / supplier; then press Run query.",
+    "params": [
+      {
+        "name": "FROM_STORE",
+        "arg": "p_from_store",
+        "label_a": "من مخزن",
+        "label_e": "From store",
+        "type": "number",
+        "required": true,
+        "default": "select min(store_code) from st_store where nvl(store_status, 0) = 1 and nvl(stop_flag, 0) = 0 and (:G_PASSWORD_NUMBER = 0 or store_code in (select store_code from st_store_password where password_number = :G_PASSWORD_NUMBER))",
+        "default_type": "SQL_QUERY",
+        "lov_sql": "select s.store_code || ' - ' || decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) d, s.store_code r from st_store s where nvl(s.store_status, 0) = 1 and nvl(s.stop_flag, 0) = 0 and (:G_PASSWORD_NUMBER = 0 or s.store_code in (select sp.store_code from st_store_password sp where sp.password_number = :G_PASSWORD_NUMBER)) order by 2"
+      },
+      {
+        "name": "TO_STORE",
+        "arg": "p_to_store",
+        "label_a": "الى مخزن",
+        "label_e": "To store",
+        "type": "number",
+        "required": true,
+        "default": "select max(store_code) from st_store where nvl(store_status, 0) = 1 and nvl(stop_flag, 0) = 0 and (:G_PASSWORD_NUMBER = 0 or store_code in (select store_code from st_store_password where password_number = :G_PASSWORD_NUMBER))",
+        "default_type": "SQL_QUERY",
+        "lov_sql": "select s.store_code || ' - ' || decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) d, s.store_code r from st_store s where nvl(s.store_status, 0) = 1 and nvl(s.stop_flag, 0) = 0 and (:G_PASSWORD_NUMBER = 0 or s.store_code in (select sp.store_code from st_store_password sp where sp.password_number = :G_PASSWORD_NUMBER)) order by 2 desc"
+      },
+      {
+        "name": "FROM_DATE",
+        "arg": "p_from_date",
+        "label_a": "من تاريخ",
+        "label_e": "From date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "name": "TO_DATE",
+        "arg": "p_to_date",
+        "label_a": "الى تاريخ",
+        "label_e": "To date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "name": "TRNS_FILTER",
+        "arg": "p_trns_filter",
+        "label_a": "نوع الحركات",
+        "label_e": "Transaction kind",
+        "type": "number",
+        "required": false,
+        "lov_sql": "select case when :G_LANG = 'en' then e else a end d, r from (select 0 r, 'عروض أسعار المبيعات' a, 'Sales price proposals' e from dual union all select 1, 'أوامر البيع', 'Sales orders' from dual union all select 2, 'فواتير المبيعات', 'Sales invoices' from dual union all select 3, 'مرتجع المبيعات', 'Sales returns' from dual union all select 4, 'أوامر الشراء', 'Purchase orders' from dual union all select 5, 'الرسائل الواردة', 'Incoming lots' from dual union all select 6, 'فواتير المشتريات', 'Purchase invoices' from dual union all select 7, 'مرتجع المشتريات', 'Purchase returns' from dual union all select 8, 'تحويلات المخازن', 'Store transfers' from dual union all select 9, 'استلام تحويلات المخازن', 'Transfer receipts' from dual) order by r"
+      },
+      {
+        "name": "NEXT_FILTER",
+        "arg": "p_next_filter",
+        "label_a": "نوع البيانات",
+        "label_e": "Info type",
+        "type": "number",
+        "required": false,
+        "lov_sql": "select decode(:G_LANG, 'en', 'Not transferred to the next document', 'غير محول للحركة التالية') d, 1 r from dual union all select decode(:G_LANG, 'en', 'Transferred to the next document', 'محول للحركة التالية'), 2 from dual"
+      },
+      {
+        "name": "FROM_CODE",
+        "arg": "p_from_code",
+        "label_a": "العميل / المورد",
+        "label_e": "Customer / supplier",
+        "type": "number",
+        "required": false
+      }
+    ],
+    "button_a": "تنفيذ الاستعلام",
+    "button_e": "Run query",
+    "success_a": "تم تنفيذ الاستعلام",
+    "preview_title_a": "حركات المخازن",
+    "preview_sql": "select a.tree_order, case a.tree_order when 1 then decode(:G_LANG, 'en', 'Sales price proposal', 'عرض أسعار مبيعات') when 2 then decode(:G_LANG, 'en', 'Sales order', 'أمر بيع') when 3 then decode(:G_LANG, 'en', 'Sales invoice', 'فاتورة مبيعات') when 4 then decode(:G_LANG, 'en', 'Sales return', 'مرتجع مبيعات') when 5 then decode(:G_LANG, 'en', 'Purchase order', 'أمر شراء') when 6 then decode(:G_LANG, 'en', 'Incoming lot', 'رسالة واردة') when 7 then decode(:G_LANG, 'en', 'Purchase invoice', 'فاتورة مشتريات') when 8 then decode(:G_LANG, 'en', 'Purchase return', 'مرتجع مشتريات') when 9 then decode(:G_LANG, 'en', 'Store transfer', 'تحويل مخزني') else decode(:G_LANG, 'en', 'Transfer receipt', 'استلام تحويل') end type_desc, a.trns_type_code, a.trns_serial, a.trns_date, a.doc_no, a.invoice_no, a.store_code, (select decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) from st_store s where s.store_code = a.store_code) store_name, a.from_code, case when a.tree_order in (1, 2, 3, 4) then (select decode(:G_LANG, 'en', nvl(c.name_e, c.name_a), c.name_a) from customer c where c.code = a.from_code) when a.tree_order in (5, 6, 7, 8) then (select decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) from supplier s where s.code = a.from_code) else (select decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) from st_store s where s.store_code = a.from_code) end from_name, decode(:G_LANG, 'en', nvl(a.desc_e, a.desc_a), a.desc_a) description, a.next_trns, app_rules3_st.doc_total(a.tree_order, a.trns_type_code, a.trns_serial, 'ITEMS') total_before_disc, app_rules3_st.doc_total(a.tree_order, a.trns_type_code, a.trns_serial, 'DISC') disc_total, app_rules3_st.doc_total(a.tree_order, a.trns_type_code, a.trns_serial, 'TAX') tax_total, app_rules3_st.doc_total(a.tree_order, a.trns_type_code, a.trns_serial, 'TOTAL') total from st_trns_all a where a.store_code between to_number(v('P' || :APP_PAGE_ID || '_FROM_STORE')) and to_number(v('P' || :APP_PAGE_ID || '_TO_STORE')) and a.trns_date between to_date(v('P' || :APP_PAGE_ID || '_FROM_DATE'), 'DD/MM/YYYY') and to_date(v('P' || :APP_PAGE_ID || '_TO_DATE'), 'DD/MM/YYYY') and (v('P' || :APP_PAGE_ID || '_TRNS_FILTER') is null or a.tree_order = to_number(v('P' || :APP_PAGE_ID || '_TRNS_FILTER')) + 1) and (v('P' || :APP_PAGE_ID || '_NEXT_FILTER') is null or (v('P' || :APP_PAGE_ID || '_NEXT_FILTER') = '1' and a.next_trns is null) or (v('P' || :APP_PAGE_ID || '_NEXT_FILTER') = '2' and a.next_trns is not null)) and (v('P' || :APP_PAGE_ID || '_FROM_CODE') is null or a.from_code = to_number(v('P' || :APP_PAGE_ID || '_FROM_CODE'))) and app_rules3_st.trns_type_allowed(a.trns_type_code) = 1 order by a.trns_date desc, a.trns_type_code, a.trns_serial",
+    "preview_columns": [
+      {
+        "name": "TREE_ORDER",
+        "label_a": "ترتيب النوع",
+        "type": "NUMBER"
+      },
+      {
+        "name": "TYPE_DESC",
+        "label_a": "نوع الحركة",
+        "type": "STRING"
+      },
+      {
+        "name": "TRNS_TYPE_CODE",
+        "label_a": "رقم الحركة",
+        "type": "NUMBER"
+      },
+      {
+        "name": "TRNS_SERIAL",
+        "label_a": "مسلسل الحركة",
+        "type": "NUMBER"
+      },
+      {
+        "name": "TRNS_DATE",
+        "label_a": "تاريخ الحركة",
+        "type": "DATE"
+      },
+      {
+        "name": "DOC_NO",
+        "label_a": "رقم المستند",
+        "type": "STRING"
+      },
+      {
+        "name": "INVOICE_NO",
+        "label_a": "رقم العقد / الفاتورة",
+        "type": "STRING"
+      },
+      {
+        "name": "STORE_CODE",
+        "label_a": "رقم المخزن",
+        "type": "NUMBER"
+      },
+      {
+        "name": "STORE_NAME",
+        "label_a": "اسم المخزن",
+        "type": "STRING"
+      },
+      {
+        "name": "FROM_CODE",
+        "label_a": "العميل / المورد / المخزن المحول عليه",
+        "type": "NUMBER"
+      },
+      {
+        "name": "FROM_NAME",
+        "label_a": "الاسم",
+        "type": "STRING"
+      },
+      {
+        "name": "DESCRIPTION",
+        "label_a": "البيان",
+        "type": "STRING"
+      },
+      {
+        "name": "NEXT_TRNS",
+        "label_a": "الحركة المحول عليها",
+        "type": "STRING"
+      },
+      {
+        "name": "TOTAL_BEFORE_DISC",
+        "label_a": "اجمالى الأصناف",
+        "type": "NUMBER"
+      },
+      {
+        "name": "DISC_TOTAL",
+        "label_a": "اجمالى الخصومات",
+        "type": "NUMBER"
+      },
+      {
+        "name": "TAX_TOTAL",
+        "label_a": "اجمالى الضريبة",
+        "type": "NUMBER"
+      },
+      {
+        "name": "TOTAL",
+        "label_a": "اجمالى الحركة",
+        "type": "NUMBER"
+      }
+    ],
+    "run_right": "query"
+  }
+}

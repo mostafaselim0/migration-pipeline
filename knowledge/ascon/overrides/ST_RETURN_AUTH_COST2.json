@@ -1,0 +1,360 @@
+{
+ "pattern": "MASTER_DETAIL",
+ "notes": "Approval of purchase returns without invoice (ST_TRNS_AUTH_MAST + ST_TRNS_AUTH_DET): same tables as generated, legacy columns (display items of the generated screen made the expenses read-only); legacy block WHERE, numbering, header checks, approvals (RT_ALLOW_APPROVE / 2), lot balance, converted documents read-only, buttons convert to a purchase return / cancel the conversion (APP_RULES3_PR) Wave 3b: approval / converted check boxes, legacy LOVs (return types, stores, suppliers, cost centre, accounts, items, units and lots with balance as cascading lists), item name and lot expiry / number shown on the lines.",
+ "master": {
+  "table": "ST_TRNS_AUTH_MAST",
+  "columns": [
+   "TRNS_TYPE_CODE",
+   "TRNS_SERIAL",
+   "TRNS_DATE",
+   "DOC_NO",
+   "INVOICE_NO",
+   "STORE_CODE",
+   "SUPPLIER_CODE",
+   "CURRENCY_CODE",
+   "CURRENCY_RATE",
+   "DESC_A",
+   "DESC_E",
+   "COST_CODE",
+   "ACCOUNT_NUMBER1",
+   "ACCOUNT_NUMBER2",
+   "ACCOUNT_NUMBER3",
+   "ACCOUNT_NUMBER4",
+   "CUSTOMER_CODE",
+   "DISC_VAL",
+   "FREIGHT_VAL",
+   "CUSTOMS_VAL",
+   "TRNSPORT_VAL",
+   "INSURANCE_VAL",
+   "COMMISSION_VAL",
+   "OTHERS_VAL",
+   "SUPP_FREIGHT_VAL",
+   "SUPP_INSURANCE_VAL",
+   "SUPP_OTHERS_VAL",
+   "TOT_DISC1_VALUE",
+   "TOT_DISC2_VALUE",
+   "TOT_DISC3_VALUE",
+   "TAX_VALUE1",
+   "TAX_VALUE2",
+   "APPROVE",
+   "APPROVE2",
+   "POST_FLAG",
+   "DATE_SERIAL",
+   "DELETE_FLAG"
+  ]
+ },
+ "details": [
+  {
+   "table": "ST_TRNS_AUTH_DET",
+   "join": [
+    [
+     "TRNS_TYPE_CODE",
+     "TRNS_TYPE_CODE"
+    ],
+    [
+     "TRNS_SERIAL",
+     "TRNS_SERIAL"
+    ]
+   ],
+   "title_a": "أصناف المرتجع",
+   "title_e": "Returned items",
+   "columns": [
+    "ITEM_CODE",
+    "GROUP_CODE",
+    "UNIT_CODE",
+    "ITEM_CONFG_ID",
+    "QUANTITY",
+    "BONUS_RATIO",
+    "BONUS",
+    "EXTRA_BONUS_RATIO",
+    "EXTRA_BONUS",
+    "UNIT_PRICE_CURR",
+    "UNIT_PRICE",
+    "DISC1_RATIO",
+    "DISC1_VALUE",
+    "DISC2_RATIO",
+    "DISC2_VALUE",
+    "DISC3_RATIO",
+    "DISC3_VALUE",
+    "DET_DISC",
+    "TAX_VALUE1",
+    "TAX_VALUE2",
+    "BASIC_QTY",
+    "COST_FLAG"
+   ]
+  }
+ ],
+ "insert": true,
+ "update": true,
+ "delete": true,
+ "columns": [
+  "TRNS_TYPE_CODE",
+  "TRNS_SERIAL",
+  "TRNS_DATE",
+  "DOC_NO",
+  "INVOICE_NO",
+  "STORE_CODE",
+  "SUPPLIER_CODE",
+  "CURRENCY_CODE",
+  "CURRENCY_RATE",
+  "DESC_A",
+  "DESC_E",
+  "COST_CODE",
+  "ACCOUNT_NUMBER1",
+  "ACCOUNT_NUMBER2",
+  "ACCOUNT_NUMBER3",
+  "ACCOUNT_NUMBER4",
+  "CUSTOMER_CODE",
+  "DISC_VAL",
+  "FREIGHT_VAL",
+  "CUSTOMS_VAL",
+  "TRNSPORT_VAL",
+  "INSURANCE_VAL",
+  "COMMISSION_VAL",
+  "OTHERS_VAL",
+  "SUPP_FREIGHT_VAL",
+  "SUPP_INSURANCE_VAL",
+  "SUPP_OTHERS_VAL",
+  "TOT_DISC1_VALUE",
+  "TOT_DISC2_VALUE",
+  "TOT_DISC3_VALUE",
+  "TAX_VALUE1",
+  "TAX_VALUE2",
+  "APPROVE",
+  "APPROVE2",
+  "POST_FLAG",
+  "DATE_SERIAL",
+  "DELETE_FLAG"
+ ],
+ "rules": {
+  "where": "TRNS_TYPE_CODE IN (SELECT T.TRNS_TYPE_CODE FROM ST_TRNS_TYPE T WHERE T.EFFECT = 3 AND (T.TRNS_TYPE = 3 OR T.TRNS_TYPE = 5)) AND NVL(DELETE_FLAG, 0) = 0 AND (NVL(:G_PASSWORD_NUMBER, 0) = 0 OR TRNS_TYPE_CODE IN (SELECT TP.TRNS_TYPE_CODE FROM ST_TRNSTYPE_PASSWORD TP WHERE TP.FLAG = 1 AND TP.PASSWORD_NUMBER = :G_PASSWORD_NUMBER)) AND RET_TRNS_TYPE_CODE IS NULL",
+  "add_columns": {
+   "ST_TRNS_AUTH_MAST.APPROVE": {
+    "label_a": "الإعتماد الأول",
+    "label_e": "First approval"
+   },
+   "ST_TRNS_AUTH_MAST.APPROVE2": {
+    "label_a": "إعتماد الإدارة",
+    "label_e": "Management approval"
+   },
+   "ST_TRNS_AUTH_MAST.POST_FLAG": {
+    "label_a": "تم الترحيل إلى مرتجع مشتريات",
+    "label_e": "Converted to a purchase return"
+   },
+   "ST_TRNS_AUTH_MAST.DISC_VAL": {
+    "label_a": "خصــم مشتريـات",
+    "label_e": "Purchase discount"
+   },
+   "ST_TRNS_AUTH_DET.UNIT_PRICE_CURR": {
+    "label_a": "سعر المرتجع عملة (فارغ = سعر الشحنة)",
+    "label_e": "Return price in currency (empty = lot price)"
+   },
+   "ST_TRNS_AUTH_DET.UNIT_PRICE": {
+    "label_a": "سعر المرتجع ريال",
+    "label_e": "Return price in riyal"
+   }
+  },
+  "readonly": [
+   "ST_TRNS_AUTH_MAST.TRNS_SERIAL",
+   "ST_TRNS_AUTH_MAST.POST_FLAG",
+   "ST_TRNS_AUTH_DET.GROUP_CODE",
+   "ST_TRNS_AUTH_DET.UNIT_PRICE"
+  ],
+  "hidden": [
+   "ST_TRNS_AUTH_MAST.DATE_SERIAL",
+   "ST_TRNS_AUTH_MAST.DELETE_FLAG",
+   "ST_TRNS_AUTH_DET.BASIC_QTY",
+   "ST_TRNS_AUTH_DET.COST_FLAG"
+  ],
+  "optional": [
+   "ST_TRNS_AUTH_MAST.DATE_SERIAL",
+   "ST_TRNS_AUTH_MAST.DELETE_FLAG",
+   "ST_TRNS_AUTH_DET.BASIC_QTY",
+   "ST_TRNS_AUTH_DET.COST_FLAG",
+   "ST_TRNS_AUTH_DET.GROUP_CODE",
+   "ST_TRNS_AUTH_DET.UNIT_CODE"
+  ],
+  "defaults": {
+   "ST_TRNS_AUTH_MAST.TRNS_TYPE_CODE": {
+    "type": "EXPRESSION",
+    "value": "app_rules_pr.default_type('RETURN')"
+   },
+   "ST_TRNS_AUTH_MAST.STORE_CODE": {
+    "type": "EXPRESSION",
+    "value": "app_rules_pr.type_store(app_rules_pr.default_type('RETURN'))"
+   },
+   "ST_TRNS_AUTH_MAST.APPROVE": {
+    "type": "STATIC",
+    "value": "0"
+   },
+   "ST_TRNS_AUTH_MAST.APPROVE2": {
+    "type": "STATIC",
+    "value": "0"
+   },
+   "ST_TRNS_AUTH_MAST.POST_FLAG": {
+    "type": "STATIC",
+    "value": "0"
+   },
+   "ST_TRNS_AUTH_MAST.DELETE_FLAG": {
+    "type": "STATIC",
+    "value": "0"
+   }
+  },
+  "row_rules": {
+   "ST_TRNS_AUTH_MAST": "-- legacy PRE-INSERT / WVI: date serial, store of the type, supplier currency, invoice number; approvals with rights and stamps;\n-- a converted document (POST_FLAG = 1) is read-only\napp_rules3_pr.auth_mast_row(inserting, :new.trns_type_code, :new.trns_date, :new.date_serial, :new.store_code, :new.supplier_code,\n  :new.currency_code, :new.currency_rate, :new.delete_flag, :new.post_flag, :old.post_flag,\n  :new.approve, :old.approve, :new.approve_date, :new.approve_users_code,\n  :new.approve2, :old.approve2, :new.approve2_date, :new.approve2_users_code, :new.invoice_no, :new.trns_serial);",
+   "ST_TRNS_AUTH_DET": "-- legacy line WVI: item, group, basic unit, lot of the item and its price, quantity > 0, bonus / discount pairs, basic quantity,\n-- riyal price, header store / date / date serial\napp_rules3_pr.auth_det_row(inserting, :new.trns_type_code, :new.trns_serial, :new.group_code, :new.item_code, :new.unit_code,\n  :new.item_confg_id, :new.quantity, :old.quantity, :new.bonus_ratio, :old.bonus_ratio, :new.bonus, :old.bonus,\n  :new.extra_bonus_ratio, :old.extra_bonus_ratio, :new.extra_bonus, :old.extra_bonus,\n  :new.unit_price_curr, :old.unit_price_curr, :new.unit_price,\n  :new.disc1_ratio, :old.disc1_ratio, :new.disc1_value, :old.disc1_value, :new.disc2_ratio, :old.disc2_ratio, :new.disc2_value, :old.disc2_value,\n  :new.disc3_ratio, :old.disc3_ratio, :new.disc3_value, :old.disc3_value,\n  :new.basic_qty, :new.store_code, :new.trns_date, :new.date_serial, :new.delete_flag, :new.cost_flag);"
+  },
+  "validations": [
+   {
+    "name": "مرتجع بدون فاتورة: نوع الحركة والمخزن والتاريخ والعملة والمستند والحسابات والقيم",
+    "when": "CREATE,SAVE",
+    "plsql": "return app_rules3_pr.auth_validate(:REQUEST, :PAGE_ROWID, :PAGE_TRNS_TYPE_CODE, :PAGE_TRNS_DATE, :PAGE_STORE_CODE, :PAGE_CURRENCY_CODE, :PAGE_CURRENCY_RATE, :PAGE_DOC_NO, :PAGE_ACCOUNT_NUMBER1, :PAGE_ACCOUNT_NUMBER2, :PAGE_ACCOUNT_NUMBER3, :PAGE_ACCOUNT_NUMBER4, :PAGE_DISC_VAL || ':' || :PAGE_FREIGHT_VAL || ':' || :PAGE_CUSTOMS_VAL || ':' || :PAGE_TRNSPORT_VAL || ':' || :PAGE_INSURANCE_VAL || ':' || :PAGE_COMMISSION_VAL || ':' || :PAGE_OTHERS_VAL || ':' || :PAGE_SUPP_FREIGHT_VAL || ':' || :PAGE_SUPP_INSURANCE_VAL || ':' || :PAGE_SUPP_OTHERS_VAL);"
+   }
+  ],
+  "warnings": [
+   {
+    "name": "الحركة بدون مورد",
+    "when": "CREATE,SAVE",
+    "plsql": "return app_rules3_pr.auth_warning(:PAGE_SUPPLIER_CODE);"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "أصناف المرتجع: الأصناف مطلوبة، الحد الأقصى، الصنف المكرر، رصيد الشحنة",
+    "when": "CREATE,SAVE",
+    "plsql": "app_rules3_pr.auth_after_save(:REQUEST, :PAGE_ROWID);"
+   },
+   {
+    "name": "الحذف: لا يحذف المستند المرحل إلى مرتجع مشتريات",
+    "when": "DELETE",
+    "plsql": "app_rules3_pr.auth_after_delete(:PAGE_TRNS_TYPE_CODE, :PAGE_TRNS_SERIAL);"
+   }
+  ],
+  "columns": {
+   "ST_TRNS_AUTH_MAST.APPROVE": {
+    "widget": "CHECK",
+    "values": [
+     "1",
+     "0"
+    ],
+    "label_a": "الإعتماد الأول",
+    "label_e": "First approval"
+   },
+   "ST_TRNS_AUTH_MAST.APPROVE2": {
+    "widget": "CHECK",
+    "values": [
+     "1",
+     "0"
+    ],
+    "label_a": "إعتماد الإدارة",
+    "label_e": "Management approval"
+   },
+   "ST_TRNS_AUTH_MAST.POST_FLAG": {
+    "widget": "CHECK",
+    "values": [
+     "1",
+     "0"
+    ]
+   },
+   "ST_TRNS_AUTH_MAST.TRNS_TYPE_CODE": {
+    "lov": "select trns_type_code || ' - ' || desc_a d, trns_type_code r from st_trns_type where effect = 3 and trns_type in (3, 5) and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or trns_type_code in (select tp.trns_type_code from st_trnstype_password tp where tp.flag = 1 and tp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2",
+    "widget": "SELECT"
+   },
+   "ST_TRNS_AUTH_MAST.STORE_CODE": {
+    "lov": "select st.store_code || ' - ' || st.name_a d, st.store_code r from st_store st where nvl(st.store_status, 0) = 1 and nvl(st.stop_flag, 0) = 0 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or st.store_code in (select s2.store_code from st_store s2, st_chart_structure chrt, st_store_password sp where s2.store_status = 1 and sp.password_number = to_number(:G_PASSWORD_NUMBER) and sp.flag = 1 and chrt.chr_stru_level = (select s3.store_level from st_store s3 where s3.store_code = sp.store_code) and chrt.chr_type = 1 and substr(sp.store_code, 1, chrt.chr_stru_end) = substr(s2.store_code, 1, chrt.chr_stru_end))) order by 2",
+    "widget": "SELECT"
+   },
+   "ST_TRNS_AUTH_MAST.SUPPLIER_CODE": {
+    "lov": "select s.code || ' - ' || s.name_a d, s.code r from supplier s where nvl(s.stopflag, 0) = 0 and nvl(s.supplier_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (s.code >= (select max(from_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)) and s.code <= (select max(to_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)))) order by 2",
+    "widget": "POPUP"
+   },
+   "ST_TRNS_AUTH_MAST.COST_CODE": {
+    "lov": "select c.cost_code || ' - ' || c.cost_desc d, c.cost_code r from ac_cost_centers c where c.cost_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or c.cost_code in (select m2.cost_code from ac_cost_centers m2, ac_password_cost1 p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = :G_COMPANY_CODE and rpad(substr(to_char(p2.cost_code), 1, p2.cost_end_pos), 9, 0) = rpad(substr(to_char(m2.cost_code), 1, p2.cost_end_pos), 9, 0) and m2.cost_status = 1)) order by 2",
+    "widget": "SELECT"
+   },
+   "ST_TRNS_AUTH_MAST.ACCOUNT_NUMBER1": {
+    "lov": "select a.account_number || ' - ' || a.account_name d, a.account_number r from ac_master a where a.account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or a.account_number in (select m2.account_number from ac_master m2, ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = :G_COMPANY_CODE and rpad(substr(to_char(p2.account_number), 1, p2.account_end_pos), 12, '0') = rpad(substr(to_char(m2.account_number), 1, p2.account_end_pos), 12, '0'))) order by 2",
+    "widget": "POPUP"
+   },
+   "ST_TRNS_AUTH_MAST.ACCOUNT_NUMBER2": {
+    "lov": "select a.account_number || ' - ' || a.account_name d, a.account_number r from ac_master a where a.account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or a.account_number in (select m2.account_number from ac_master m2, ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = :G_COMPANY_CODE and rpad(substr(to_char(p2.account_number), 1, p2.account_end_pos), 12, '0') = rpad(substr(to_char(m2.account_number), 1, p2.account_end_pos), 12, '0'))) order by 2",
+    "widget": "POPUP"
+   },
+   "ST_TRNS_AUTH_MAST.ACCOUNT_NUMBER3": {
+    "lov": "select a.account_number || ' - ' || a.account_name d, a.account_number r from ac_master a where a.account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or a.account_number in (select m2.account_number from ac_master m2, ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = :G_COMPANY_CODE and rpad(substr(to_char(p2.account_number), 1, p2.account_end_pos), 12, '0') = rpad(substr(to_char(m2.account_number), 1, p2.account_end_pos), 12, '0'))) order by 2",
+    "widget": "POPUP"
+   },
+   "ST_TRNS_AUTH_MAST.ACCOUNT_NUMBER4": {
+    "lov": "select a.account_number || ' - ' || a.account_name d, a.account_number r from ac_master a where a.account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or a.account_number in (select m2.account_number from ac_master m2, ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = :G_COMPANY_CODE and rpad(substr(to_char(p2.account_number), 1, p2.account_end_pos), 12, '0') = rpad(substr(to_char(m2.account_number), 1, p2.account_end_pos), 12, '0'))) order by 2",
+    "widget": "POPUP"
+   },
+   "ST_TRNS_AUTH_DET.ITEM_CODE": {
+    "lov": "select it.item_code || ' - ' || nvl(it.name_a, it.name_e) d, it.item_code r from st_item it, st_item_unit iu where nvl(it.stop_flag, 0) = 0 and it.item_group_code = iu.group_code and it.item_code = iu.item_code and nvl(iu.basic_unit, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or it.item_group_code in (select gp.group_code from st_group_password gp where gp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2",
+    "widget": "POPUP"
+   },
+   "ST_TRNS_AUTH_DET.UNIT_CODE": {
+    "lov": "select u.unit_code || ' - ' || u.name_a || decode(iu.basic_unit, 1, ' (وحدة أساسية)', '') d, u.unit_code r from st_item_unit iu, st_unit u where iu.item_code = :PAGE_ITEM_CODE and (iu.group_code = :PAGE_GROUP_CODE or :PAGE_GROUP_CODE is null) and iu.unit_code = u.unit_code order by 2",
+    "widget": "SELECT",
+    "cascade": [
+     "ITEM_CODE",
+     "GROUP_CODE"
+    ]
+   },
+   "ST_TRNS_AUTH_DET.ITEM_CONFG_ID": {
+    "lov": "select g.item_confg_id || ' - ' || to_char(g.expire_date, 'DD-MM-YYYY') || nvl2(g.lot_number, ' - ' || g.lot_number, '') || ' - الرصيد ' || get_balance_confg(m.store_code, g.group_code, g.item_code, g.item_confg_id, m.trns_date, m.date_serial, :PAGE_ITEM_SERIAL) d, g.item_confg_id r from st_item_confg g, st_trns_auth_mast m where g.item_code = :PAGE_ITEM_CODE and (g.group_code = :PAGE_GROUP_CODE or :PAGE_GROUP_CODE is null) and m.trns_type_code = :PAGE_TRNS_TYPE_CODE and m.trns_serial = :PAGE_TRNS_SERIAL and get_balance_confg(m.store_code, g.group_code, g.item_code, g.item_confg_id, m.trns_date, m.date_serial, :PAGE_ITEM_SERIAL) > 0 order by g.item_confg_id",
+    "widget": "SELECT",
+    "cascade": [
+     "ITEM_CODE",
+     "GROUP_CODE",
+     "TRNS_TYPE_CODE",
+     "TRNS_SERIAL",
+     "ITEM_SERIAL"
+    ]
+   }
+  },
+  "computed": {
+   "ST_TRNS_AUTH_DET.ITEM_NAME": {
+    "sql": "(select max(nvl(i.name_a, i.name_e)) from st_item i where i.item_code = t.item_code and i.item_group_code = t.group_code)",
+    "label_a": "إســم الصنـــف",
+    "label_e": "Item Name"
+   },
+   "ST_TRNS_AUTH_DET.EXPIRE_DATE": {
+    "sql": "(select max(g.expire_date) from st_item_confg g where g.item_confg_id = t.item_confg_id)",
+    "label_a": "تاريخ الصلاحية",
+    "label_e": "Expire Date",
+    "type": "DATE"
+   },
+   "ST_TRNS_AUTH_DET.LOT_NUMBER": {
+    "sql": "(select max(g.lot_number) from st_item_confg g where g.item_confg_id = t.item_confg_id)",
+    "label_a": "رقم التشغيلة",
+    "label_e": "Lot No"
+   }
+  }
+ },
+ "actions": [
+  {
+   "name": "CONVERT",
+   "label_a": "ترحيل السند",
+   "label_e": "Convert to purchase return",
+   "confirm_a": "هل تريد تحويل المستند المعتمد إلى مرتجع مشتريات؟",
+   "confirm_e": "Convert the approved document into a purchase return?",
+   "condition": "app_rules3_pr.auth_can(:PAGE_ROWID, 'CONVERT') = 'Y'",
+   "call": "app_rules3_pr.auth_convert(:PAGE_ROWID)",
+   "message": "app_rules3_pr.last_message",
+   "success_a": "تم التحويل",
+   "success_e": "Converted"
+  },
+  {
+   "name": "CANCEL_CONVERT",
+   "label_a": "إلغاء الترحيل",
+   "label_e": "Cancel the conversion",
+   "confirm_a": "هل تريد حذف مرتجع المشتريات الناتج وإلغاء الترحيل؟",
+   "confirm_e": "Delete the created purchase return and cancel the conversion?",
+   "condition": "app_rules3_pr.auth_can(:PAGE_ROWID, 'CANCEL') = 'Y'",
+   "call": "app_rules3_pr.auth_cancel(:PAGE_ROWID)",
+   "message": "app_rules3_pr.last_message",
+   "success_a": "تم إلغاء الترحيل",
+   "success_e": "The conversion was cancelled"
+  }
+ ]
+}

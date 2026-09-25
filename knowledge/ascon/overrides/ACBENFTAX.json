@@ -1,0 +1,40 @@
+{
+  "pattern": "GRID",
+  "master": {
+    "table": "AC_BENF_TAX"
+  },
+  "details": [],
+  "where": null,
+  "order_by": "BENF_CODE",
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Setup list of service providers and their VAT numbers: one multi-record block on AC_BENF_TAX (BENF_CODE = max+1, TAX_NO must be 15 digits and unique; APP_RULES3_GL, see processes/ACBENFTAX.md).",
+  "rules": {
+    "row_rules": {
+      "AC_BENF_TAX": "app_rules3_gl.benf_tax_row(:new.tax_no);"
+    },
+    "readonly": [
+      "AC_BENF_TAX.BENF_CODE"
+    ],
+    "add_columns": {
+      "AC_BENF_TAX.BENF_CODE": {
+        "label_a": "كود المنشأة",
+        "label_e": "Provider code"
+      },
+      "AC_BENF_TAX.BENF_NAME": {
+        "label_a": "أسم المنشأة",
+        "label_e": "Provider name"
+      },
+      "AC_BENF_TAX.TAX_NO": {
+        "label_a": "الرقم الضريبي",
+        "label_e": "VAT number"
+      }
+    },
+    "columns": {
+      "AC_BENF_TAX.BENF_CODE": {
+        "lov": null
+      }
+    }
+  }
+}

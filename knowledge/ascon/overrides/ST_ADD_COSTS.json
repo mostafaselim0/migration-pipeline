@@ -1,0 +1,12 @@
+{
+ "pattern": "AUTO",
+ "notes": "additional costs: code max+1 (generated key), code and cost value greater than zero (.fmx messages)",
+ "rules": {
+  "columns": {
+   "ST_ADD_COSTS.COST_CODE": {"lov": null}
+  },
+  "row_rules": {
+   "ST_ADD_COSTS": "app_rules3_st.add_cost_row(:new.cost_code, :new.cost_value);"
+  }
+ }
+}

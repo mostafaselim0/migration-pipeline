@@ -1,0 +1,7 @@
+{
+  "pattern": "REPORT_FORM",
+  "master": {"table": "SE_USERS_AUTH"},
+  "details": [],
+  "insert": false, "update": false, "delete": false,
+  "notes": "Users' approvals (SE_USERS_AUTH): read-only history; the legacy approve / reject workflow over SE_AUTH chains (PY vacation orders) is not reconstructed (see processes/SE_USERS_AUTH.md)"
+}

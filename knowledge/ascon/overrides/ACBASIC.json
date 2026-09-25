@@ -1,0 +1,247 @@
+{
+  "pattern": "AUTO",
+  "notes": "GL system parameters of the session company: closing date (no unposted documents before it), date range, single / multiple currencies, sub accounts of the parameters; the radio / check items the generator did not place are added (APP_RULES3_GL, see processes/ACBASIC.md)",
+  "rules": {
+    "where": "COMPANY_CODE = to_number(:G_COMPANY_CODE)",
+    "validations": [
+      {
+        "name": "تاريخ الإقفال والتواريخ والعملات وحسابات المؤشرات",
+        "plsql": "return app_rules3_gl.check_basic(:PAGE_ROWID, :PAGE_COMPANY_CODE, :PAGE_CLOSE_DATE, :PAGE_MIN_DATE, :PAGE_MAX_DATE, :PAGE_CURRENCY_STTS, :PAGE_INCOME1_ACCT, :PAGE_OUTCOME1_ACCT, :PAGE_PROFIT_ACCT, :PAGE_CURRENCY_ACCT, :PAGE_COST_CODE_ACCT1, :PAGE_COST_CODE_ACCT2);",
+        "when": "CREATE,SAVE"
+      }
+    ],
+    "readonly": [
+      "AC_BASIC.COMPANY_CODE"
+    ],
+    "add_columns": {
+      "AC_BASIC.CURRENCY_STTS": {
+        "label_a": "العملات (0 عملة واحدة / 1 عملات مختلفة)",
+        "label_e": "Currencies (0 single / 1 multiple)"
+      },
+      "AC_BASIC.DOC_REPEAT": {
+        "label_a": "تكرار رقم المستند (1 مسموح / 2 غير مسموح / 3 سؤال المستخدم)",
+        "label_e": "Repeat doc. no. (1 allowed / 2 refused / 3 ask)"
+      },
+      "AC_BASIC.COST_CODE1_ENTER": {
+        "label_a": "إدخال مركز التكلفة 1 فى شاشة القيود (إجبارى / إختيارى)",
+        "label_e": "Cost centre 1 in vouchers (mandatory / optional)"
+      },
+      "AC_BASIC.COST_CODE2_ENTER": {
+        "label_a": "إدخال مركز التكلفة 2 فى شاشة القيود (إجبارى / إختيارى)",
+        "label_e": "Cost centre 2 in vouchers (mandatory / optional)"
+      },
+      "AC_BASIC.FX_USR_ENTRY": {
+        "label_a": "تثبيت رقم الحركة كما هو معرف للمستخدم",
+        "label_e": "Fix the journal as defined for the user"
+      },
+      "AC_BASIC.FX_USR_COST1": {
+        "label_a": "تثبيت مركز التكلفة 1 كما هو معرف للمستخدم",
+        "label_e": "Fix cost centre 1 as defined for the user"
+      },
+      "AC_BASIC.FX_USR_COST2": {
+        "label_a": "تثبيت مركز التكلفة 2 كما هو معرف للمستخدم",
+        "label_e": "Fix cost centre 2 as defined for the user"
+      },
+      "AC_BASIC.BALANCE_ENTRY_FLAG": {
+        "label_a": "عدم السماح بادخال قيود غير متزنة",
+        "label_e": "Refuse unbalanced entries"
+      },
+      "AC_BASIC.STOP_ESTIMATE_TEST": {
+        "label_a": "ايقاف الحساب اذا تعدى الموازنة",
+        "label_e": "Stop the account when the budget is exceeded"
+      },
+      "AC_BASIC.REV_FLAG": {
+        "label_a": "مراجعة القيود",
+        "label_e": "Entries revision"
+      },
+      "AC_BASIC.BANK_ACCT": {
+        "label_a": "حساب البنك",
+        "label_e": "Bank account"
+      }
+    },
+    "columns": {
+      "AC_BASIC.CURRENCY_STTS": {
+        "static": [
+          [
+            "عملة واحدة",
+            "0",
+            "Single Currency"
+          ],
+          [
+            "عملات مختلفة",
+            "1",
+            "Multi Currency"
+          ]
+        ],
+        "widget": "RADIO",
+        "label_a": "العملات",
+        "label_e": "Currencies"
+      },
+      "AC_BASIC.DOC_REPEAT": {
+        "static": [
+          [
+            "نعم",
+            "1",
+            "Yes"
+          ],
+          [
+            "لا",
+            "2",
+            "No"
+          ],
+          [
+            "سؤال المستخدم",
+            "3",
+            "Ask User"
+          ]
+        ],
+        "widget": "RADIO",
+        "label_a": "تكرار رقم المستند",
+        "label_e": "Repeat doc. no."
+      },
+      "AC_BASIC.COST_CODE1_ENTER": {
+        "static": [
+          [
+            "اجباري",
+            "0",
+            "Mandatory"
+          ],
+          [
+            "اختياري",
+            "1",
+            "Optional"
+          ]
+        ],
+        "widget": "RADIO",
+        "label_a": "إدخال مركز التكلفة 1 فى شاشة القيود",
+        "label_e": "Cost centre 1 in vouchers"
+      },
+      "AC_BASIC.COST_CODE2_ENTER": {
+        "static": [
+          [
+            "إجباري",
+            "0",
+            "Mandatory"
+          ],
+          [
+            "اختياري",
+            "1",
+            "Optional"
+          ]
+        ],
+        "widget": "RADIO",
+        "label_a": "إدخال مركز التكلفة 2 فى شاشة القيود",
+        "label_e": "Cost centre 2 in vouchers"
+      },
+      "AC_BASIC.FX_USR_ENTRY": {
+        "static": [
+          [
+            "نعم",
+            "1",
+            "Yes"
+          ],
+          [
+            "لا",
+            "2",
+            "No"
+          ],
+          [
+            "سؤال المستخدم",
+            "3",
+            "Ask User"
+          ]
+        ],
+        "widget": "RADIO"
+      },
+      "AC_BASIC.FX_USR_COST1": {
+        "static": [
+          [
+            "نعم",
+            "1",
+            "Yes"
+          ],
+          [
+            "لا",
+            "2",
+            "No"
+          ],
+          [
+            "سؤال المستخدم",
+            "3",
+            "Ask User"
+          ]
+        ],
+        "widget": "RADIO"
+      },
+      "AC_BASIC.FX_USR_COST2": {
+        "static": [
+          [
+            "نعم",
+            "1",
+            "Yes"
+          ],
+          [
+            "لا",
+            "2",
+            "No"
+          ],
+          [
+            "سؤال المستخدم",
+            "3",
+            "Ask User"
+          ]
+        ],
+        "widget": "RADIO"
+      },
+      "AC_BASIC.BALANCE_ENTRY_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "AC_BASIC.STOP_ESTIMATE_TEST": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "AC_BASIC.REV_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "AC_BASIC.DISTP_ENTRY": {
+        "lov": "select entry_type || ' - ' || max(case when app_sec.lang = 'en' then nvl(entry_desc_e, entry_desc) else entry_desc end) d, entry_type r from ac_trn_codes where nvl(ac_flag, 0) = 0 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (entry_year, entry_type) in (select p1.entry_year, p1.entry_type from ac_password_entry p1 where p1.password_number = to_number(:G_PASSWORD_NUMBER) and p1.company_code = to_number(:G_COMPANY_CODE))) group by entry_type order by entry_type",
+        "widget": "SELECT"
+      },
+      "AC_BASIC.INCOME1_ACCT": {
+        "lov": "select account_number || ' - ' || case when app_sec.lang = 'en' then nvl(account_name_e, account_name) else account_name end d, account_number r from ac_master where nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or account_number in (select p2.account_number from ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE)) order by account_number",
+        "widget": "POPUP"
+      },
+      "AC_BASIC.OUTCOME1_ACCT": {
+        "lov": "select account_number || ' - ' || case when app_sec.lang = 'en' then nvl(account_name_e, account_name) else account_name end d, account_number r from ac_master where nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or account_number in (select p2.account_number from ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE)) order by account_number",
+        "widget": "POPUP"
+      },
+      "AC_BASIC.PROFIT_ACCT": {
+        "lov": "select account_number || ' - ' || case when app_sec.lang = 'en' then nvl(account_name_e, account_name) else account_name end d, account_number r from ac_master where nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or account_number in (select p2.account_number from ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE)) order by account_number",
+        "widget": "POPUP"
+      },
+      "AC_BASIC.CURRENCY_ACCT": {
+        "lov": "select account_number || ' - ' || case when app_sec.lang = 'en' then nvl(account_name_e, account_name) else account_name end d, account_number r from ac_master where nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or account_number in (select p2.account_number from ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE)) order by account_number",
+        "widget": "POPUP"
+      },
+      "AC_BASIC.COST_CODE_ACCT1": {
+        "lov": "select account_number || ' - ' || case when app_sec.lang = 'en' then nvl(account_name_e, account_name) else account_name end d, account_number r from ac_master where nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or account_number in (select p2.account_number from ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE)) order by account_number",
+        "widget": "POPUP"
+      },
+      "AC_BASIC.COST_CODE_ACCT2": {
+        "lov": "select account_number || ' - ' || case when app_sec.lang = 'en' then nvl(account_name_e, account_name) else account_name end d, account_number r from ac_master where nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or account_number in (select p2.account_number from ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE)) order by account_number",
+        "widget": "POPUP"
+      }
+    }
+  }
+}

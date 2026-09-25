@@ -1,0 +1,23 @@
+{
+  "pattern": "AUTO",
+  "notes": "Currencies and their rate periods: currency number 1..9998 (1 = local, rate 1), rate range, unique rate-period dates, local / used currencies not deleted (APP_RULES3_GL, see processes/ACCRNCY.md)",
+  "rules": {
+    "validations": [
+      {
+        "name": "رقم العملة وسعر التحويل",
+        "plsql": "return app_rules3_gl.check_currency(:PAGE_ROWID, :PAGE_CURRENCY_CODE, :PAGE_RATE);",
+        "when": "CREATE,SAVE"
+      }
+    ],
+    "row_rules": {
+      "AC_CURRENCY": "app_rules3_gl.currency_row(:new.currency_code, :new.rate);"
+    },
+    "after_save": [
+      {
+        "name": "تواريخ فترات معامل التحويل",
+        "plsql": "app_rules3_gl.currency_after_save(:PAGE_CURRENCY_CODE);",
+        "when": "CREATE,SAVE"
+      }
+    ]
+  }
+}

@@ -1,0 +1,645 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "USERS"
+  },
+  "details": [
+    {
+      "table": "GROUP_USERS",
+      "join": [
+        [
+          "USERS_CODE",
+          "USERS_CODE"
+        ]
+      ],
+      "title_a": "المجموعات",
+      "title_e": "Groups"
+    },
+    {
+      "table": "SE_USERS_ROLES",
+      "join": [
+        [
+          "USERS_CODE",
+          "USERS_CODE"
+        ]
+      ],
+      "title_a": "الادوار",
+      "title_e": "Roles"
+    },
+    {
+      "table": "SE_USERS_NOTIFICATION",
+      "join": [
+        [
+          "USERS_CODE",
+          "USERS_CODE"
+        ]
+      ],
+      "title_a": "التنبيهات",
+      "title_e": "Notifications"
+    }
+  ],
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Users (USERS) with their groups, roles and notifications; legacy password encoding + APEX one-time password, one default group, copy rights / all groups / zero password buttons, user 0 protected (APP_RULES3_SE, see processes/ACGROUP_USERS.md)",
+  "rules": {
+    "where": "(USERS_CODE = to_number(:G_USER_CODE) or nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0)",
+    "key_expr": {
+      "SE_USERS_ROLES.ROLE_ID": "app_rules3_se.required('رقم الدور', 'Role')",
+      "SE_USERS_NOTIFICATION.NOTIF_ID": "app_rules3_se.required('رقم التنبيه', 'Notification')"
+    },
+    "row_rules": {
+      "USERS": "app_rules3_se.users_row(inserting, :new.users_code, :old.password, :new.password, :new.lang_flag);",
+      "GROUP_USERS": "app_rules3_se.group_users_row(inserting, :new.users_code, :new.password_number, :new.isdefault);"
+    },
+    "after_save": [
+      {
+        "name": "مجموعة أساسية واحدة للمستخدم",
+        "plsql": "declare\n  l number;\nbegin\n  select users_code into l from users where rowid = chartorowid(:PAGE_ROWID);\n  app_rules3_se.fix_default_group(l);\nend;",
+        "when": "CREATE,SAVE"
+      }
+    ],
+    "readonly": [
+      "USERS.CHANGE_TIME"
+    ],
+    "add_columns": {
+      "USERS.MOBILE_USER": {
+        "label_a": "مستخدم تطبيق الجوال",
+        "label_e": "Mobile application user"
+      },
+      "USERS.CHANGE_SALES_PRICE": {
+        "label_a": "مسموح بتغير سعر البيع بالمبيعات",
+        "label_e": "May change the sales price"
+      },
+      "USERS.PRINT_INV_FLAG": {
+        "label_a": "مسموح بطباعة الفواتير",
+        "label_e": "May print invoices"
+      },
+      "USERS.C_PRINT_INV_FLAG": {
+        "label_a": "مسموح بالغاء الفواتير المطبوعة",
+        "label_e": "May cancel printed invoices"
+      },
+      "USERS.VN_PAY_AUTH1": {
+        "label_a": "اعتماد اذن صرف (مستودع)",
+        "label_e": "Payment order approval (store)"
+      },
+      "USERS.VN_PAY_AUTH2": {
+        "label_a": "اعتماد اذن صرف (طلبيات)",
+        "label_e": "Payment order approval (orders)"
+      },
+      "USERS.VN_PAY_AUTH3": {
+        "label_a": "اعتماد اذن صرف (حسابات)",
+        "label_e": "Payment order approval (accounts)"
+      },
+      "USERS.VN_PAY_AUTH4": {
+        "label_a": "اعتماد اذن صرف (الادارة)",
+        "label_e": "Payment order approval (management)"
+      },
+      "USERS.VN_PAY_AUTH5": {
+        "label_a": "اعتماد اذن صرف (مدير مالي)",
+        "label_e": "Payment order approval (financial manager)"
+      },
+      "USERS.VN_PAY_AUTH6": {
+        "label_a": "اعتماد اذن صرف (مدير عام)",
+        "label_e": "Payment order approval (general manager)"
+      },
+      "USERS.ALLOW_RP_CHECK_PAY": {
+        "label_a": "مسموح بادخال تاريخ تسليم السندات",
+        "label_e": "May enter the voucher delivery date"
+      },
+      "USERS.ALLOW_RP_CHECK_PAY_C": {
+        "label_a": "مسموح بادخال تاريخ تسليم الشيكات",
+        "label_e": "May enter the cheque delivery date"
+      },
+      "USERS.ALLOW_CLOSE_PR": {
+        "label_a": "إقفال أمر الشراء",
+        "label_e": "May close purchase orders"
+      },
+      "USERS.ALLOW_OVER_DUES_FLAG": {
+        "label_a": "استثناء حدود الائتمانية",
+        "label_e": "Credit limit exception"
+      },
+      "USERS.ALLOW_SALES_ORDER_FLAG": {
+        "label_a": "اعتماد اوامر البيع",
+        "label_e": "Sales order approval"
+      },
+      "USERS.ALLOW_APPROVE": {
+        "label_a": "مسموح بإعتماد عرض السعر 1",
+        "label_e": "Quotation approval 1"
+      },
+      "USERS.ALLOW_APPROVE2": {
+        "label_a": "مسموح بإعتماد عرض السعر 2",
+        "label_e": "Quotation approval 2"
+      },
+      "USERS.ALLOW_APPROVE3": {
+        "label_a": "مسموح بإعتماد عرض السعر 3",
+        "label_e": "Quotation approval 3"
+      },
+      "USERS.OWNER_SALES_ORDER_ONLY": {
+        "label_a": "مسموح بالإستعلام عن حركاته فقط",
+        "label_e": "Queries own transactions only"
+      },
+      "USERS.HAS_PERMISSION_BONUS": {
+        "label_a": "مسموح بتعديل السياسة",
+        "label_e": "May change the (bonus) policy"
+      },
+      "USERS.CHANGE_CONFG_SALES_PRICE": {
+        "label_a": "مسموح بتغير سعر بيع شحنة",
+        "label_e": "May change the sales price of a lot"
+      },
+      "USERS.DELETE_AR_ADJESTMENT": {
+        "label_a": "مسموح بحذف تسويات العملاء",
+        "label_e": "May delete customer adjustments"
+      },
+      "USERS.EDIT_AGRMNT_DATE": {
+        "label_a": "مسموح بتغير تاريخ الاتفاقية",
+        "label_e": "May change the agreement date"
+      },
+      "USERS.SUPP_AGRMNT_APPROVAL": {
+        "label_a": "إعتماد إتفاقية المورد",
+        "label_e": "Supplier agreement approval"
+      },
+      "USERS.RT_ALLOW_APPROVE": {
+        "label_a": "اعتماد مرتجع مشتريات بدون فواتير 1",
+        "label_e": "Purchase return without invoice approval 1"
+      },
+      "USERS.RT_ALLOW_APPROVE2": {
+        "label_a": "اعتماد مرتجع مشتريات بدون فواتير 2",
+        "label_e": "Purchase return without invoice approval 2"
+      },
+      "USERS.ENABLE_CHANGE_CLASS": {
+        "label_a": "مسموح بتغيير الفئة بالمبيعات",
+        "label_e": "May change the price class in sales"
+      },
+      "USERS.EDIT_RP_DATE": {
+        "label_a": "مسموح بتغير تاريخ سند الصرف (صناديق)",
+        "label_e": "May change the payment voucher date (cash boxes)"
+      },
+      "USERS.ALLOW_SUPP_DISC": {
+        "label_a": "مسموح بأضافة خصم المورد بالمشتريات",
+        "label_e": "May add the supplier discount in purchasing"
+      },
+      "USERS.INV_PREPARE_FLAG": {
+        "label_a": "تحضير فواتير (تحضير)",
+        "label_e": "Invoice preparation (prepare)"
+      },
+      "USERS.INV_REV_FLAG": {
+        "label_a": "تحضير فواتير (مراجعة)",
+        "label_e": "Invoice preparation (review)"
+      },
+      "USERS.INV_DLVR_LOC_FLAG": {
+        "label_a": "تحضير فواتير (منطقة تسليم)",
+        "label_e": "Invoice preparation (delivery area)"
+      },
+      "USERS.INV_DLVR_FLAG": {
+        "label_a": "تحضير فواتير (تسليم سائق)",
+        "label_e": "Invoice preparation (driver delivery)"
+      },
+      "USERS.INV_DLVR2_FLAG": {
+        "label_a": "تحضير فواتير (تسليم سائق 2)",
+        "label_e": "Invoice preparation (driver delivery 2)"
+      },
+      "USERS.INV_CUST_AUTH_FLAG": {
+        "label_a": "تحضير فواتير (تسليم عميل)",
+        "label_e": "Invoice preparation (customer delivery)"
+      },
+      "USERS.C_INV_PREPARE_FLAG": {
+        "label_a": "الغاء تحضير فواتير (تحضير)",
+        "label_e": "Cancel invoice preparation (prepare)"
+      },
+      "USERS.C_INV_REV_FLAG": {
+        "label_a": "الغاء تحضير فواتير (مراجعة)",
+        "label_e": "Cancel invoice preparation (review)"
+      },
+      "USERS.C_INV_DLVR_LOC_FLAG": {
+        "label_a": "الغاء تحضير فواتير (منطقة تسليم)",
+        "label_e": "Cancel invoice preparation (delivery area)"
+      },
+      "USERS.C_INV_DLVR_FLAG": {
+        "label_a": "الغاء تحضير فواتير (تسليم سائق)",
+        "label_e": "Cancel invoice preparation (driver delivery)"
+      },
+      "USERS.C_INV_DLVR2_FLAG": {
+        "label_a": "الغاء تحضير فواتير (تسليم سائق 2)",
+        "label_e": "Cancel invoice preparation (driver delivery 2)"
+      },
+      "USERS.C_INV_CUST_AUTH_FLAG": {
+        "label_a": "الغاء تحضير فواتير (تسليم عميل)",
+        "label_e": "Cancel invoice preparation (customer delivery)"
+      },
+      "USERS.LATE_SEC": {
+        "label_a": "مسموح بتعديل تأخيرات الحضور والانصراف",
+        "label_e": "May edit attendance late arrivals"
+      },
+      "USERS.ERLY_SEC": {
+        "label_a": "مسموح بتعديل الخروج المبكر في الحضور والانصراف",
+        "label_e": "May edit attendance early leaves"
+      },
+      "USERS.REV1": {
+        "label_a": "مراجع اول",
+        "label_e": "Reviewer 1"
+      },
+      "USERS.REV2": {
+        "label_a": "مراجع ثانى",
+        "label_e": "Reviewer 2"
+      },
+      "USERS.REV3": {
+        "label_a": "مراجع ثالث",
+        "label_e": "Reviewer 3"
+      },
+      "USERS.REV4": {
+        "label_a": "مراجع رابع",
+        "label_e": "Reviewer 4"
+      },
+      "USERS.USERS_MNGR": {
+        "label_a": "مدير المستخدم (User Manager)",
+        "label_e": "User manager"
+      },
+      "USERS.USERS_APPR": {
+        "label_a": "المعتمد (User Appr.)",
+        "label_e": "User approver"
+      },
+      "USERS.EMP_CODE": {
+        "label_a": "رقم الموظف",
+        "label_e": "Employee code"
+      },
+      "USERS.PDF_PATH": {
+        "label_a": "Adobe Path",
+        "label_e": "Adobe path"
+      },
+      "SE_USERS_ROLES.ROLE_ID": {
+        "label_a": "رقم الدور",
+        "label_e": "Role"
+      },
+      "SE_USERS_NOTIFICATION.NOTIF_ID": {
+        "label_a": "رقم التنبيه",
+        "label_e": "Notification"
+      },
+      "SE_USERS_NOTIFICATION.ISDEFAULT": {
+        "label_a": "أظهار",
+        "label_e": "Show"
+      }
+    },
+    "columns": {
+      "USERS.LANG_FLAG": {
+        "static": [
+          [
+            "عربى",
+            "A",
+            "Arabic"
+          ],
+          [
+            "عربى - انجليزى",
+            "B",
+            "Arabic - English"
+          ],
+          [
+            "انجليزى",
+            "E",
+            "English"
+          ]
+        ]
+      },
+      "USERS.MOBILE_USER": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.CHANGE_SALES_PRICE": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.PRINT_INV_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.C_PRINT_INV_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.VN_PAY_AUTH1": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.VN_PAY_AUTH2": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.VN_PAY_AUTH3": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.VN_PAY_AUTH4": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.VN_PAY_AUTH5": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.VN_PAY_AUTH6": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.ALLOW_RP_CHECK_PAY": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.ALLOW_RP_CHECK_PAY_C": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.ALLOW_CLOSE_PR": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.ALLOW_OVER_DUES_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.ALLOW_SALES_ORDER_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.ALLOW_APPROVE": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.ALLOW_APPROVE2": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.ALLOW_APPROVE3": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.OWNER_SALES_ORDER_ONLY": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.HAS_PERMISSION_BONUS": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.CHANGE_CONFG_SALES_PRICE": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.DELETE_AR_ADJESTMENT": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.EDIT_AGRMNT_DATE": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.RT_ALLOW_APPROVE": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.RT_ALLOW_APPROVE2": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.ENABLE_CHANGE_CLASS": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.EDIT_RP_DATE": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.ALLOW_SUPP_DISC": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.INV_PREPARE_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.INV_REV_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.INV_DLVR_LOC_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.INV_DLVR_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.INV_DLVR2_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.INV_CUST_AUTH_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.C_INV_PREPARE_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.C_INV_REV_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.C_INV_DLVR_LOC_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.C_INV_DLVR_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.C_INV_DLVR2_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.C_INV_CUST_AUTH_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.LATE_SEC": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "USERS.ERLY_SEC": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "COPY_RIGHTS",
+      "label_a": "نسخ صلاحيات",
+      "label_e": "Copy privileges",
+      "confirm_a": "سيتم استبدال مجموعات وأنظمة وصلاحيات شاشات وتقارير هذا المستخدم بصلاحيات المستخدم المختار. هل تريد الاستمرار؟",
+      "confirm_e": "The groups, systems, screen and report rights of this user will be replaced by those of the chosen user. Continue?",
+      "params": [
+        {
+          "name": "FROM_USER",
+          "label_a": "من مستخدم",
+          "label_e": "From user",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select users_code || ' - ' || nvl(users_name, users_name_e) d, users_code r from users where users_code <> to_number(:PAGE_USERS_CODE) order by users_code"
+        }
+      ],
+      "call": "app_rules3_se.copy_user_rights(:PAGE_ROWID, :FROM_USER)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "التم نسخ صلاحية المستخدم",
+      "success_e": "Users Previlage Copy Complete",
+      "icon": "fa-copy"
+    },
+    {
+      "name": "ALL_GROUPS",
+      "label_a": "جميع المجموعات",
+      "label_e": "All groups",
+      "call": "app_rules3_se.all_groups(:PAGE_ROWID)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "تمت إضافة المجموعات",
+      "success_e": "Groups added",
+      "icon": "fa-users"
+    },
+    {
+      "name": "ZERO_PASSWORD",
+      "label_a": "تصفير كلمة السر",
+      "label_e": "Zero password",
+      "confirm_a": "هل تريد تصفير كلمة السر لهذا المستخدم؟",
+      "confirm_e": "Reset the password of this user to 0?",
+      "call": "app_rules3_se.zero_password(:PAGE_ROWID)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "تم تصفير كلمة السر",
+      "success_e": "Password reset",
+      "icon": "fa-key"
+    }
+  ]
+}

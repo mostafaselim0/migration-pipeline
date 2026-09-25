@@ -1,0 +1,13 @@
+{
+  "pattern": "AUTO",
+  "notes": "Transport (fixed service) tax percentage per tax type: plain code table; the tax number must be chosen (no automatic number) - see processes/TX_FIXED_SERVICE.md",
+  "rules": {
+    "key_expr": {
+      "TX_TAXES_FIXED_SRV.TAX_CODE": "null"
+    },
+    "add_columns": {
+      "TX_TAXES_FIXED_SRV.TAX_CODE": {"label_a": "رقم الضريبة", "label_e": "Tax no."},
+      "TX_TAXES_FIXED_SRV.TRANSPORT_TAX_PER": {"label_a": "نسبة النقل", "label_e": "Transport tax %"}
+    }
+  }
+}

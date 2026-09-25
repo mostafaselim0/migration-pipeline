@@ -1,0 +1,34 @@
+{
+  "pattern": "PROCESS",
+  "notes": "Legacy AC_DUPENTRY: copies the entry referenced by AC_PERIODICAL_VOC (posted, else daily; own company) into a new AC_DAILY_TRN/_DET entry on the chosen journal and date, numbered with CALC_SERIAL, and updates AC_TRN_CODES.LAST_SERIAL; reproduced in app_proc_gl.create_periodical_entry.",
+  "proc": {
+    "procedure": "app_proc_gl.create_periodical_entry",
+    "description_a": "إنشاء القيد الدورى: اختر القيد الدورى (المعرف فى شاشة تعريف القيود الدورية) ورقم اليومية الجديدة وتاريخ القيد الجديد؛ إذا ترك التاريخ فارغاً يكون تاريخ القيد المنسوخ هو تاريخ القيد الأصلى. يتم نسخ القيد الأصلى بأطرافه (الحسابات، المبالغ، مراكز التكلفة، البيان) كقيد يومى جديد غير مرحل برقم مسلسل جديد على اليومية المختارة، ثم يرحل من شاشة الترحيل. لا يمكن إنشاء القيد فى فترة مقفلة. بيانات فاتورة الضريبة فى الأطراف لا تنسخ. الجدول أدناه يعرض القيود الدورية المعرفة.",
+    "description_e": "Create periodical entry: choose the periodical entry (defined in the periodical entries definition screen), the new journal and the new entry date; when the date is left empty the copy keeps the date of the original entry. The original entry and its lines (accounts, amounts, cost centres, texts) are copied as a new unposted daily entry with a new serial number on the chosen journal, to be posted with the posting screen. The entry cannot be created in a closed period. VAT invoice data on the lines is not copied. The table below lists the defined periodical entries.",
+    "params": [
+      {"name": "DUPENTRY_LIST", "arg": "p_serial", "label_a": "مسمى القيد الدورى", "label_e": "Periodical entry", "type": "number", "required": true,
+       "lov_sql": "select p.serial || ' - ' || decode(:G_LANG, 'en', nvl(p.entry_desc_e, p.entry_desc), p.entry_desc) || ' (' || p.entry_year || '/' || p.entry_type || '/' || p.entry_no || ')' d, p.serial r from ac_periodical_voc p where exists (select 1 from ac_yearly_trn y where y.entry_year = p.entry_year and y.entry_type = p.entry_type and y.entry_no = p.entry_no and y.create_company_code = to_number(:G_COMPANY_CODE)) and app_proc_gl.type_allowed(p.entry_year, p.entry_type, to_number(:G_COMPANY_CODE), to_number(:G_PASSWORD_NUMBER)) = 1 order by p.serial"},
+      {"name": "NEW_TYPE", "arg": "p_new_type", "label_a": "رقم اليومية الجديدة", "label_e": "New journal", "type": "number", "required": true,
+       "lov_sql": "select t.entry_type || ' - ' || max(decode(:G_LANG, 'en', nvl(t.entry_desc_e, t.entry_desc), t.entry_desc)) d, t.entry_type r from ac_trn_codes t where nvl(t.ac_flag, 0) = 0 and app_proc_gl.type_allowed(t.entry_year, t.entry_type, to_number(:G_COMPANY_CODE), to_number(:G_PASSWORD_NUMBER)) = 1 group by t.entry_type order by t.entry_type"},
+      {"name": "NEW_DATE", "arg": "p_new_date", "label_a": "تاريخ القيد الجديد (فارغ = تاريخ القيد الأصلى)", "label_e": "New entry date (empty = original date)", "type": "date", "required": false}
+    ],
+    "fixed_args": {"p_company_code": "to_number(:G_COMPANY_CODE)", "p_user_code": "to_number(:G_USER_CODE)",
+                   "p_password_number": "to_number(:G_PASSWORD_NUMBER)"},
+    "button_a": "إنشاء القيد",
+    "button_e": "Create",
+    "confirm_a": "سيتم إنشاء قيد يومى جديد منسوخ من القيد الدورى المختار. هل تريد الاستمرار؟",
+    "success_a": "تمت العملية.",
+    "preview_title_a": "القيود الدورية المعرفة",
+    "preview_sql": "select p.serial, decode(:G_LANG, 'en', nvl(p.entry_desc_e, p.entry_desc), p.entry_desc) entry_desc, p.entry_year, p.entry_type, p.entry_no, y.entry_date, (select count(*) from ac_yearly_trn_det d where d.entry_year = p.entry_year and d.entry_type = p.entry_type and d.entry_no = p.entry_no) lines, (select nvl(sum(case when d.value > 0 then d.value end), 0) from ac_yearly_trn_det d where d.entry_year = p.entry_year and d.entry_type = p.entry_type and d.entry_no = p.entry_no) debit_total from ac_periodical_voc p join ac_yearly_trn y on y.entry_year = p.entry_year and y.entry_type = p.entry_type and y.entry_no = p.entry_no and y.create_company_code = to_number(:G_COMPANY_CODE) where app_proc_gl.type_allowed(p.entry_year, p.entry_type, to_number(:G_COMPANY_CODE), to_number(:G_PASSWORD_NUMBER)) = 1 order by p.serial",
+    "preview_columns": [
+      {"name": "SERIAL", "label_a": "مسلسل", "type": "NUMBER"},
+      {"name": "ENTRY_DESC", "label_a": "مسمى القيد الدورى", "type": "STRING"},
+      {"name": "ENTRY_YEAR", "label_a": "سنة القيد", "type": "NUMBER"},
+      {"name": "ENTRY_TYPE", "label_a": "نوع القيد", "type": "NUMBER"},
+      {"name": "ENTRY_NO", "label_a": "مسلسل القيد", "type": "NUMBER"},
+      {"name": "ENTRY_DATE", "label_a": "تاريخ القيد الأصلى", "type": "DATE"},
+      {"name": "LINES", "label_a": "عدد الأطراف", "type": "NUMBER"},
+      {"name": "DEBIT_TOTAL", "label_a": "إجمالى المدين", "type": "NUMBER"}
+    ]
+  }
+}

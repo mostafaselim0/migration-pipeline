@@ -1,0 +1,16 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {"table": "ST_TRNS_MAST",
+             "columns": ["TRNS_TYPE_CODE", "TRNS_SERIAL", "INVOICE_NO", "DOC_NO", "TRNS_DATE", "STORE_CODE", "CUSTOMER_CODE", "SALESMAN_CODE",
+                         "PAYMENT_TYPE", "PRINT_FLAG", "PRINT_DATE", "DESC_A"]},
+  "details": [
+    {"table": "ST_TRNS_DET", "join": [["TRNS_TYPE_CODE", "TRNS_TYPE_CODE"], ["TRNS_SERIAL", "TRNS_SERIAL"]],
+     "title_a": "أصناف الفاتورة", "title_e": "Invoice lines"}
+  ],
+  "where": "TRNS_TYPE_CODE IN (SELECT TRNS_TYPE_CODE FROM ST_TRNS_TYPE WHERE TRNS_TYPE = 2 AND EFFECT = 2) AND NVL(DELETE_FLAG, 0) = 0 AND (:G_PASSWORD_NUMBER = 0 OR TRNS_TYPE_CODE IN (SELECT TRNS_TYPE_CODE FROM ST_TRNSTYPE_PASSWORD WHERE FLAG = 1 AND PASSWORD_NUMBER = :G_PASSWORD_NUMBER)) AND (:G_PASSWORD_NUMBER = 0 OR CUSTOMER_CODE IN (SELECT CUSTOMER_CODE FROM AR_CUST_PASSWORD WHERE PASSWORD_NUMBER = :G_PASSWORD_NUMBER)) AND (:G_PASSWORD_NUMBER = 0 OR STORE_CODE IN (SELECT STORE_CODE FROM ST_STORE_PASSWORD WHERE FLAG = 1 AND PASSWORD_NUMBER = :G_PASSWORD_NUMBER))",
+  "order_by": "TRNS_DATE DESC, TRNS_TYPE_CODE, TRNS_SERIAL",
+  "insert": false,
+  "update": false,
+  "delete": false,
+  "notes": "print sales invoices (ST_ISSUE_IO_PRINT.fmx): read-only list of the sales invoices (types TRNS_TYPE 2 / EFFECT 2, not deleted, type / customer / store permissions of the block WHERE) with print flag and print date; the legacy day / store / printed-not printed filters are the list filters; the invoice prints with report ST_CUSTOMER_INVOICE (P_TRNS_TYPE_CODE, P_TRNS_SERIAL, print right USERS.PRINT_INV_FLAG) - see app/legacy/processes/ST_ISSUE_IO_PRINT.md"
+}

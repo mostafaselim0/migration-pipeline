@@ -1,0 +1,18 @@
+{
+  "pattern": "AUTO",
+  "notes": "Purchasing representatives / supplier responsibles: code typed by the user (no legacy numbering), code > 0 (APP_RULES3_VN).",
+  "rules": {
+    "key_expr": {
+      "VN_RESP.CODE": "app_rules3_vn.need_num('يجب إدخال رقم المسئول', 'Enter the responsible code')"
+    },
+    "row_rules": {
+      "VN_RESP": "app_rules3_vn.positive_code(:new.code, 'رقم المسئول يجب ان يكون اكبر من الصفر', 'The responsible code should be over than zero');"
+    },
+    "add_columns": {
+      "VN_RESP.CODE": {
+        "label_a": "رقم المسئول",
+        "label_e": "Responsible code"
+      }
+    }
+  }
+}

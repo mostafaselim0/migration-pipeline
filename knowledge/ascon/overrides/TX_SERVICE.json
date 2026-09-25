@@ -1,0 +1,91 @@
+{
+  "pattern": "GRID",
+  "master": {
+    "table": "TX_TAXES_SERVICES"
+  },
+  "details": [],
+  "where": null,
+  "order_by": "TAX_CODE, SERVICE_CODE",
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Tax obligation per service (TX_TAXES_SERVICES: tax type, service, percent > 0), same shape as the other TX_* obligation grids; service must exist, no automatic service code, range button (تطبيق) - APP_RULES3_TX, see processes/TX_SERVICE.md",
+  "rules": {
+    "key_expr": {
+      "TX_TAXES_SERVICES.SERVICE_CODE": "null"
+    },
+    "row_rules": {
+      "TX_TAXES_SERVICES": "app_rules3_tx.oblig_row('SRV', inserting, :new.service_code, null, :old.tax_per, :new.tax_per);"
+    },
+    "add_columns": {
+      "TX_TAXES_SERVICES.TAX_CODE": {
+        "label_a": "رقم الضريبة",
+        "label_e": "Tax no."
+      },
+      "TX_TAXES_SERVICES.SERVICE_CODE": {
+        "label_a": "رقم الخدمة",
+        "label_e": "Service"
+      },
+      "TX_TAXES_SERVICES.TAX_PER": {
+        "label_a": "النسبة",
+        "label_e": "Percentage"
+      }
+    },
+    "columns": {
+      "TX_TAXES_SERVICES.SERVICE_CODE": {
+        "lov": "select service_code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, service_code r from st_pd_services order by 1",
+        "widget": "SELECT"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "APPLY",
+      "label_a": "تطبيق",
+      "label_e": "Apply",
+      "confirm_a": "سيتم حذف الخدمات المحددة لهذه الضريبة وإعادة إنشائها. هل تريد الاستمرار؟",
+      "confirm_e": "The services of the range are replaced for this tax. Continue?",
+      "condition": "app_sec.can_page(:APP_PAGE_ID, 'I')",
+      "params": [
+        {
+          "name": "TAX",
+          "label_a": "رقم الضريبة",
+          "label_e": "Tax no.",
+          "type": "number",
+          "required": true,
+          "default": "select min(tax_code) from tx_taxes_types",
+          "default_type": "SQL_QUERY",
+          "lov_sql": "select tax_code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, tax_code r from tx_taxes_types order by tax_code"
+        },
+        {
+          "name": "FROM_SRV",
+          "label_a": "من خدمة",
+          "label_e": "From service",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select service_code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, service_code r from st_pd_services order by service_code"
+        },
+        {
+          "name": "TO_SRV",
+          "label_a": "إلى خدمة",
+          "label_e": "To service",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select service_code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, service_code r from st_pd_services order by service_code"
+        },
+        {
+          "name": "PER",
+          "label_a": "النسبة",
+          "label_e": "Percentage",
+          "type": "number",
+          "required": true
+        }
+      ],
+      "call": "app_rules3_tx.apply_services(:TAX, :FROM_SRV, :TO_SRV, :PER)",
+      "message": "app_rules3_tx.last_message",
+      "success_a": "تم التطبيق",
+      "success_e": "Applied",
+      "icon": "fa-check"
+    }
+  ]
+}

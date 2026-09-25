@@ -1,0 +1,41 @@
+{
+  "pattern": "PROCESS",
+  "notes": "Redistribute cost on store transfers: the two cursors and two UPDATE statements of the compiled ST_DIST_COST_N.fmx, run day by day in app_proc_st.dist_transfer_cost; the ST_TRNS_DET_C_UP trigger rebuilds ST_TRNS_DET_COST and the following costs.",
+  "proc": {
+    "procedure": "app_proc_st.dist_transfer_cost",
+    "description_a": "إعادة توزيع التكلفة على التحويلات: لكل يوم في الفترة تُعاد تكلفة أصناف حركات التحويل الصادر إلى متوسط التكلفة في لحظة الحركة، ثم تنقل نفس التكلفة إلى أصناف حركة الاستلام المقابلة في المخزن المحول إليه (سعر الوحدة = التكلفة × معامل الوحدة). يعاد حساب تكاليف الحركات التالية تلقائياً. الجدول أدناه يعرض حركات التحويل في الفترة وتكلفة الصادر والوارد.",
+    "description_e": "Redistribute cost on transfers: for each day of the period the lines of the transfer-out transactions get the average cost at the time of the transaction, then the matching lines of the transfer-in transaction in the destination store get the same cost (unit price = cost x unit factor). The costs of the following transactions are recalculated automatically. The table lists the transfers of the period with the out and in costs.",
+    "params": [
+      {"name": "FROM_DATE", "arg": "p_from_date", "label_a": "من تاريخ", "label_e": "From date", "type": "date", "required": true,
+       "default": "to_char(trunc(sysdate, 'MM'), 'DD/MM/YYYY')", "default_type": "EXPRESSION"},
+      {"name": "TO_DATE", "arg": "p_to_date", "label_a": "الى تاريخ", "label_e": "To date", "type": "date", "required": true,
+       "default": "to_char(sysdate, 'DD/MM/YYYY')", "default_type": "EXPRESSION"}
+    ],
+    "fixed_args": {"p_company_code": "to_number(:G_COMPANY_CODE)", "p_user_code": "to_number(:G_USER_CODE)",
+                   "p_password_number": "to_number(:G_PASSWORD_NUMBER)"},
+    "button_a": "تنفيذ",
+    "button_e": "Execute",
+    "confirm_a": "سيتم تعديل تكلفة أصناف حركات التحويل في الفترة المحددة. هل تريد الاستمرار؟",
+    "success_a": "تم الانتهاء من التوزيع",
+    "preview_title_a": "حركات التحويل في الفترة",
+    "preview_sql": "select om.trns_date, om.trns_type_code, om.trns_serial, om.trnsfer_serial, om.store_code from_store, om.trnsfer_to_store to_store, o.item_serial, o.group_code, o.item_code, o.item_confg_id, o.basic_qty, round(o.unit_cost, 4) out_cost, im.trns_type_code in_type, im.trns_serial in_serial, round(i.unit_cost, 4) in_cost, case when i.item_serial is null then 'لا يوجد استلام' when round(nvl(i.unit_cost, 0), 4) != round(nvl(o.unit_cost, 0), 4) then 'مختلف' end cost_status from st_trns_mast om join st_trns_det o on o.trns_type_code = om.trns_type_code and o.trns_serial = om.trns_serial left join st_trns_mast im on im.trnsfer_serial = om.trnsfer_serial and im.store_code = om.trnsfer_to_store and im.trnsfer_from_store = om.store_code and im.trns_type_code in (select trns_type_code from st_trns_type where effect = 6) left join st_trns_det i on i.trns_type_code = im.trns_type_code and i.trns_serial = im.trns_serial and i.item_serial = o.item_serial and i.group_code = o.group_code and i.item_code = o.item_code and i.item_confg_id = o.item_confg_id and i.basic_qty = o.basic_qty where om.trnsfer_serial is not null and om.trnsfer_from_store is not null and om.trns_type_code in (select trns_type_code from st_trns_type where effect = 5) and om.trns_date between nvl(to_date(v('P' || :APP_PAGE_ID || '_FROM_DATE'), 'DD/MM/YYYY'), trunc(sysdate, 'MM')) and nvl(to_date(v('P' || :APP_PAGE_ID || '_TO_DATE'), 'DD/MM/YYYY'), sysdate) order by om.trns_date, om.trns_type_code, om.trns_serial, o.item_serial",
+    "preview_columns": [
+      {"name": "TRNS_DATE", "label_a": "التاريخ", "type": "DATE"},
+      {"name": "TRNS_TYPE_CODE", "label_a": "حركة الصادر", "type": "NUMBER"},
+      {"name": "TRNS_SERIAL", "label_a": "مسلسل الصادر", "type": "NUMBER"},
+      {"name": "TRNSFER_SERIAL", "label_a": "رقم التحويل", "type": "NUMBER"},
+      {"name": "FROM_STORE", "label_a": "من مخزن", "type": "NUMBER"},
+      {"name": "TO_STORE", "label_a": "إلى مخزن", "type": "NUMBER"},
+      {"name": "ITEM_SERIAL", "label_a": "مسلسل الصنف", "type": "NUMBER"},
+      {"name": "GROUP_CODE", "label_a": "المجموعة", "type": "NUMBER"},
+      {"name": "ITEM_CODE", "label_a": "الصنف", "type": "STRING"},
+      {"name": "ITEM_CONFG_ID", "label_a": "الشحنة", "type": "NUMBER"},
+      {"name": "BASIC_QTY", "label_a": "الكمية", "type": "NUMBER"},
+      {"name": "OUT_COST", "label_a": "تكلفة الصادر", "type": "NUMBER"},
+      {"name": "IN_TYPE", "label_a": "حركة الاستلام", "type": "NUMBER"},
+      {"name": "IN_SERIAL", "label_a": "مسلسل الاستلام", "type": "NUMBER"},
+      {"name": "IN_COST", "label_a": "تكلفة الاستلام", "type": "NUMBER"},
+      {"name": "COST_STATUS", "label_a": "الحالة", "type": "STRING"}
+    ]
+  }
+}

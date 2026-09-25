@@ -1,0 +1,35 @@
+{
+ "pattern": "PROCESS",
+ "notes": "Replace the customer of unposted sales documents: the generated form on the CUSTOMER file was wrong; the legacy screen lists the old customer's unposted documents of one kind and moves them with the DB function ST_REPLACE_SALES_CUST (linked quotation / order / invoice moved together, old customer and salesman kept, new customer's salesman) - app_rules3_sa.replace_customer",
+ "proc": {
+  "procedure": "app_rules3_sa.replace_customer",
+  "description_a": "إستبدال عميل فاتورة مبيعات غير مرحلة: اختر العميل الحالى والعميل الجديد ونوع المستندات (فاتورة مبيعات، أوامر بيع، عروض أسعار، مرتجع مبيعات بدون فواتير). الجدول أدناه يعرض مستندات العميل الحالى غير المرحلة من هذا النوع (اضغط بحث بعد اختيار العميل والنوع). يتم نقل كل المستندات المعروضة، أو المستند المختار فقط، إلى العميل الجديد مع المستندات المرتبطة بها (عرض السعر وأمر البيع والفاتورة) ويحفظ العميل والمندوب القديمان ويصبح المندوب هو آخر مندوب للعميل الجديد.",
+  "description_e": "Replace the customer of unposted sales documents: choose the current and the new customer and the kind of documents (sales invoices, sales orders, quotations, sales returns without invoice). The table below lists the current customer's unposted documents of that kind (press search after choosing). All listed documents, or only the chosen one, move to the new customer together with their linked documents (quotation, order, invoice); the old customer and salesman are kept and the salesman becomes the new customer's last salesman.",
+  "params": [
+   {"name": "OLD_CUST", "arg": "p_old", "label_a": "العميل", "label_e": "Customer", "type": "number", "required": true,
+    "lov_sql": "select nvl(to_char(old_code), '-') || ' / ' || code || ' - ' || decode(:G_LANG, 'en', nvl(name_e, name_a), name_a) d, code r from customer where nvl(customer_status, 0) = 1 order by code"},
+   {"name": "DOC_KIND", "arg": "p_kind", "label_a": "نوع المستندات", "label_e": "Kind of documents", "type": "number", "required": true, "default": "1",
+    "lov_sql": "select decode(:G_LANG, 'en', 'Sales invoices', 'فاتورة مبيعات') d, 1 r from dual union all select decode(:G_LANG, 'en', 'Sales orders', 'أوامر بيع'), 2 from dual union all select decode(:G_LANG, 'en', 'Quotations', 'عروض أسعار'), 3 from dual union all select decode(:G_LANG, 'en', 'Sales returns without invoice', 'مرتجع مبيعات بدون فواتير'), 4 from dual"},
+   {"name": "NEW_CUST", "arg": "p_new", "label_a": "إلى عميل", "label_e": "To customer", "type": "number", "required": true,
+    "lov_sql": "select nvl(to_char(old_code), '-') || ' / ' || code || ' - ' || decode(:G_LANG, 'en', nvl(name_e, name_a), name_a) d, code r from customer where nvl(customer_status, 0) = 1 order by code"},
+   {"name": "ONE_DOC", "arg": "p_doc", "label_a": "مستند واحد فقط (رقم الحركة/المسلسل، فارغ = كل المستندات المعروضة)", "label_e": "One document only (type/serial, empty = all listed documents)", "type": "text", "required": false}
+  ],
+  "button_a": "إستبدال العميل",
+  "button_e": "Replace customer",
+  "confirm_a": "سيتم نقل المستندات المعروضة إلى العميل الجديد. هل تريد الاستمرار؟",
+  "success_a": "تم النقل بنجاح",
+  "preview_title_a": "مستندات العميل غير المرحلة",
+  "preview_sql": "select m.trns_type_code || '/' || m.trns_serial doc, m.doc_no, m.trns_type_code, decode(:G_LANG, 'en', nvl(t.desc_e, t.desc_a), t.desc_a) type_desc, m.trns_serial, m.trns_date, m.desc_a descr_a, m.desc_e descr_e, m.customer_code from st_trns_mast m, st_trns_type t where to_number(:P60180_DOC_KIND) = 1 and m.trns_type_code = t.trns_type_code and t.effect = 2 and t.trns_type = 2 and nvl(m.delete_flag, 0) = 0 and nvl(m.cust_post_flag, 0) = 0 and nvl(m.post_flag, 0) = 0 and m.customer_code = to_number(:P60180_OLD_CUST) and m.old_customer_code is null and (m.trns_type_code, m.trns_serial) not in (select ret_trns_type_code, ret_trns_serial from st_trns_mast where ret_trns_type_code is not null and ret_trns_serial is not null and delete_flag = 0) union all select o.trns_type_code || '/' || o.trns_serial, o.doc_no, o.trns_type_code, decode(:G_LANG, 'en', nvl(t.desc_e, t.desc_a), t.desc_a), o.trns_serial, o.order_date, o.desc_a, o.desc_e, o.customer_code from st_sales_order o, st_trns_type t where to_number(:P60180_DOC_KIND) = 2 and o.trns_type_code = t.trns_type_code and o.sl_trns_type_code is null and o.sl_trns_serial is null and o.doc_no is not null and o.customer_code = to_number(:P60180_OLD_CUST) and o.old_customer_code is null and o.delete_date is null union all select q.trns_type_code || '/' || q.trns_serial, q.doc_no, q.trns_type_code, decode(:G_LANG, 'en', nvl(t.desc_e, t.desc_a), t.desc_a), q.trns_serial, q.trns_date, q.desc_a, q.desc_e, q.customer_code from st_proposal_mast q, st_trns_type t where to_number(:P60180_DOC_KIND) = 3 and q.trns_type_code = t.trns_type_code and q.customer_code = to_number(:P60180_OLD_CUST) and q.old_customer_code is null and nvl(q.delete_flag, 0) = 0 union all select m.trns_type_code || '/' || m.trns_serial, m.doc_no, m.trns_type_code, decode(:G_LANG, 'en', nvl(t.desc_e, t.desc_a), t.desc_a), m.trns_serial, m.trns_date, m.desc_a, m.desc_e, m.customer_code from st_trns_mast m, st_trns_type t where to_number(:P60180_DOC_KIND) = 4 and m.trns_type_code = t.trns_type_code and t.effect = 4 and t.trns_type = 4 and m.ret_trns_type_code is null and nvl(m.delete_flag, 0) = 0 and nvl(m.cust_post_flag, 0) = 0 and nvl(m.post_flag, 0) = 0 and m.customer_code = to_number(:P60180_OLD_CUST) and m.old_customer_code is null",
+  "preview_columns": [
+   {"name": "DOC", "label_a": "رقم الحركة/المسلسل", "type": "STRING"},
+   {"name": "DOC_NO", "label_a": "رقم المستند", "type": "NUMBER"},
+   {"name": "TRNS_TYPE_CODE", "label_a": "رقم الحركة", "type": "NUMBER"},
+   {"name": "TYPE_DESC", "label_a": "الحركة", "type": "STRING"},
+   {"name": "TRNS_SERIAL", "label_a": "مسلسل", "type": "NUMBER"},
+   {"name": "TRNS_DATE", "label_a": "تاريخ الحركة", "type": "DATE"},
+   {"name": "DESCR_A", "label_a": "البيان", "type": "STRING"},
+   {"name": "DESCR_E", "label_a": "البيان لاتينى", "type": "STRING"},
+   {"name": "CUSTOMER_CODE", "label_a": "العميل", "type": "NUMBER"}
+  ]
+ }
+}

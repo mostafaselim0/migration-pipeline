@@ -1,0 +1,430 @@
+{
+ "pattern": "MASTER_DETAIL",
+ "notes": "incoming lots: generated screen blocked header update/delete (the .fmb blocks are opened at runtime by DEF_USR_SEC); same columns as the generated screen, items grid first; legacy rules in APP_RULES_PR Wave 3b: supply-kind radio group (توريد مواد / مواد وخدمات / خدمات / اصول), header date / document / order fixed after insert (.fmb), posted and percent check boxes, legacy lot-type / store / supplier / unit / account / cost-centre lists, item / service / asset names.",
+ "master": {
+  "table": "PR_INCOME_LOT",
+  "columns": [
+   "TRNS_TYPE_CODE",
+   "ST_SRV_ASST_FLAG",
+   "TRNS_SERIAL",
+   "ARRIVAL_DATE",
+   "DOC_NO",
+   "STORE_CODE",
+   "SUPPLIER_CODE",
+   "ORDER_TRNS_TYPE_CODE",
+   "ORDER_TRNS_SERIAL",
+   "SUPPLIER_REF",
+   "CHECK_DATE",
+   "DESC_A",
+   "DESC_E",
+   "LOT_SERIAL",
+   "CURRENCY_CODE",
+   "CURRENCY_RATE",
+   "RESP_CODE",
+   "D_CODE",
+   "ATM_DESC",
+   "FREIGHT_VAL",
+   "POST_FLAG",
+   "PU_TRNS_TYPE_CODE",
+   "PU_TRNS_SERIAL",
+   "VN_TRNS_ID",
+   "VN_TRNS_SERIAL",
+   "ENTRY_NO",
+   "ENTRY_YEAR",
+   "ENTRY_TYPE",
+   "TAX_VALUE1",
+   "TAX_VALUE2"
+  ]
+ },
+ "details": [
+  {
+   "table": "PR_INCOME_LOT_DET",
+   "join": [
+    [
+     "TRNS_TYPE_CODE",
+     "TRNS_TYPE_CODE"
+    ],
+    [
+     "TRNS_SERIAL",
+     "TRNS_SERIAL"
+    ]
+   ],
+   "title_a": "أصناف الرسالة",
+   "title_e": "Items",
+   "columns": [
+    "SERIAL",
+    "GROUP_CODE",
+    "ORDER_TRNS_TYPE_CODE_DET",
+    "ORDER_TRNS_SERIAL_DET",
+    "ITEM_CODE",
+    "UNIT_CODE",
+    "BONUS",
+    "EXTRA_BONUS",
+    "RECEIVED_QUANTITY",
+    "INCOME_QUANTITY",
+    "INCOME_BONUS",
+    "INCOME_EXTRA_BONUS",
+    "VN_PRICE",
+    "DISC1_RATIO",
+    "DISC1_VALUE",
+    "DISC2_RATIO",
+    "DISC2_VALUE",
+    "DISC3_RATIO",
+    "DISC3_VALUE",
+    "SUPP_DISC_RATIO",
+    "SUPP_DISC_VALUE",
+    "EXPIRE_DATE",
+    "SALES_PRICE",
+    "SALES_DISC_RATIO",
+    "LOT_NUMBER",
+    "PRODUCTION_DATE",
+    "TAX_VALUE1",
+    "SUPP_QTY",
+    "NOTES",
+    "TAX_VALUE2"
+   ]
+  },
+  {
+   "table": "PR_INCOME_DET_EXPENS",
+   "join": [
+    [
+     "TRNS_TYPE_CODE",
+     "TRNS_TYPE_CODE"
+    ],
+    [
+     "TRNS_SERIAL",
+     "TRNS_SERIAL"
+    ]
+   ],
+   "title_a": "مصاريف الموردين",
+   "title_e": "Supplier expenses",
+   "columns": [
+    "SUPPLIER_CODE",
+    "DOC_NO",
+    "FREIGHT_VAL",
+    "CURRENCY_CODE",
+    "CURRENCY_RATE"
+   ]
+  },
+  {
+   "table": "PR_INCOME_LOT_SRVC",
+   "join": [
+    [
+     "TRNS_TYPE_CODE",
+     "TRNS_TYPE_CODE"
+    ],
+    [
+     "TRNS_SERIAL",
+     "TRNS_SERIAL"
+    ]
+   ],
+   "title_a": "الخدمات",
+   "title_e": "Services",
+   "columns": [
+    "SERVICE_CODE",
+    "UNIT_CODE_SRVC",
+    "UNIT_COST",
+    "RECEIVED_QUANTITY_SRVC",
+    "INCOME_QUANTITY_SRVC",
+    "PRCN_FLAG"
+   ]
+  },
+  {
+   "table": "PR_INCOME_LOT_ASST",
+   "join": [
+    [
+     "TRNS_TYPE_CODE",
+     "TRNS_TYPE_CODE"
+    ],
+    [
+     "TRNS_SERIAL",
+     "TRNS_SERIAL"
+    ]
+   ],
+   "title_a": "الأصول",
+   "title_e": "Assets",
+   "columns": [
+    "CTGRY_CD_ASST",
+    "RECEIVED_QUANTITY_ASST",
+    "INCOME_QUANTITY_ASST",
+    "UNIT_COST"
+   ]
+  },
+  {
+   "table": "AS_ASSET_ACCT_TOT",
+   "join": [
+    [
+     "TRNS_TYPE_CODE",
+     "TRNS_TYPE_CODE"
+    ],
+    [
+     "TRNS_SERIAL",
+     "TRNS_SERIAL"
+    ]
+   ],
+   "title_a": "التوجيه المحاسبي للأصول",
+   "title_e": "Asset accounts",
+   "columns": [
+    "ASSET_ACCT",
+    "COST_CODE",
+    "COST_CODE2",
+    "VALUE",
+    "POST_DESCRIPTION"
+   ]
+  }
+ ],
+ "insert": true,
+ "update": true,
+ "delete": true,
+ "rules": {
+  "where": "NVL(ST_SRV_ASST_FLAG, 0) != 4 AND ((SUPPLIER_CODE >= (SELECT FROM_SUPPLIER_CODE FROM VN_SUPPLIER_PASSWORD WHERE PASSWORD_NUMBER = :G_PASSWORD_NUMBER) AND SUPPLIER_CODE <= (SELECT TO_SUPPLIER_CODE FROM VN_SUPPLIER_PASSWORD WHERE PASSWORD_NUMBER = :G_PASSWORD_NUMBER)) OR :G_PASSWORD_NUMBER = 0)",
+  "defaults": {
+   "PR_INCOME_LOT.TRNS_TYPE_CODE": {
+    "type": "EXPRESSION",
+    "value": "app_rules_pr.default_type('LOT')"
+   },
+   "PR_INCOME_LOT.STORE_CODE": {
+    "type": "EXPRESSION",
+    "value": "app_rules_pr.type_store(app_rules_pr.default_type('LOT'))"
+   },
+   "PR_INCOME_LOT.ST_SRV_ASST_FLAG": {
+    "type": "STATIC",
+    "value": "1"
+   }
+  },
+  "readonly": [
+   "PR_INCOME_LOT.PU_TRNS_TYPE_CODE",
+   "PR_INCOME_LOT.PU_TRNS_SERIAL",
+   "PR_INCOME_LOT.VN_TRNS_ID",
+   "PR_INCOME_LOT.VN_TRNS_SERIAL",
+   "PR_INCOME_LOT.POST_FLAG",
+   "PR_INCOME_LOT.LOT_SERIAL",
+   "PR_INCOME_LOT.ENTRY_NO",
+   "PR_INCOME_LOT.ENTRY_YEAR",
+   "PR_INCOME_LOT.ENTRY_TYPE",
+   "PR_INCOME_LOT_DET.BONUS",
+   "PR_INCOME_LOT_DET.EXTRA_BONUS",
+   "PR_INCOME_LOT_DET.RECEIVED_QUANTITY",
+   "PR_INCOME_LOT_SRVC.RECEIVED_QUANTITY_SRVC",
+   "PR_INCOME_LOT_ASST.RECEIVED_QUANTITY_ASST"
+  ],
+  "optional": [
+   "PR_INCOME_LOT_DET.GROUP_CODE"
+  ],
+  "row_rules": {
+   "PR_INCOME_LOT": "if app_rules_pr.bypass = 0 then  -- rows written by the APP_ACT_PR buttons: legacy values kept\nif inserting then\n  -- PR_INCOME_LOT PRE-INSERT / WHEN-CREATE-RECORD / TRNS_TYPE_CODE and SUPPLIER_CODE WVI\n  :new.st_srv_asst_flag := nvl(:new.st_srv_asst_flag, 1);\n  :new.post_flag := nvl(:new.post_flag, 0);\n  :new.lot_serial := nvl(:new.lot_serial, app_rules_pr.next_lot_serial(:new.trns_type_code, :new.trns_serial));\n  :new.doc_no := nvl(:new.doc_no, app_rules_pr.next_lot_doc_no);\n  :new.store_code := nvl(:new.store_code, app_rules_pr.type_store(:new.trns_type_code));\n  if :new.supplier_code is not null and nvl(:new.currency_code, 1) = 1 and app_rules_pr.supplier_currency(:new.supplier_code) <> 1 then\n    :new.currency_code := app_rules_pr.supplier_currency(:new.supplier_code);\n    :new.currency_rate := app_rules_pr.currency_rate(:new.currency_code, :new.arrival_date);\n  end if;\n  :new.currency_code := nvl(:new.currency_code, 1);\n  :new.currency_rate := nvl(:new.currency_rate, 1);\nend if;\nend if;",
+   "PR_INCOME_LOT_DET": "if app_rules_pr.bypass = 0 then  -- rows written by the APP_ACT_PR buttons: legacy values kept\n-- PR_INCOME_LOT_DET PRE-INSERT / PRE-UPDATE / WHEN-CREATE-RECORD\napp_rules_pr.lot_line_guard(:new.trns_type_code, :new.trns_serial);\nif :new.item_code is not null then\n  :new.group_code := nvl(:new.group_code, app_rules_pr.item_group(:new.item_code));\n  :new.unit_code := nvl(:new.unit_code, app_rules_pr.basic_unit(:new.group_code, :new.item_code));\nend if;\nif inserting then\n  :new.order_trns_type_code_det := nvl(:new.order_trns_type_code_det, app_rules_pr.lot_value(:new.trns_type_code, :new.trns_serial, 'ORDER_TYPE'));\n  :new.order_trns_serial_det := nvl(:new.order_trns_serial_det, app_rules_pr.lot_value(:new.trns_type_code, :new.trns_serial, 'ORDER_SERIAL'));\n  if app_rules_pr.lot_value(:new.trns_type_code, :new.trns_serial, 'ORDER_TYPE') is not null\n     and (app_rules_pr.chg(:new.order_trns_type_code_det, app_rules_pr.lot_value(:new.trns_type_code, :new.trns_serial, 'ORDER_TYPE')) = 1\n          or app_rules_pr.chg(:new.order_trns_serial_det, app_rules_pr.lot_value(:new.trns_type_code, :new.trns_serial, 'ORDER_SERIAL')) = 1) then\n    raise_application_error(-20139, 'رقم أمر الشراء في السطر يختلف عن أمر الشراء في رأس الرسالة');\n  end if;\n  if :new.order_trns_type_code_det is not null and app_rules_pr.order_date(:new.order_trns_type_code_det, :new.order_trns_serial_det) is null then\n    raise_application_error(-20139, 'رقم أمر الشراء غير موجود');\n  end if;\n  if :new.production_date is null or :new.sales_price is null or :new.sales_disc_ratio is null or :new.lot_number is null\n     or :new.expire_date is null or :new.unit_code is null then\n    raise_application_error(-20121, 'يجب إدخال محددات الشحنات: رقم التشغيلة وتاريخ الصلاحية وتاريخ الانتاج وسعر البيع ونسبة خصم البيع - الصنف ' || :new.item_code);\n  end if;\n  :new.arrival_date := nvl(:new.arrival_date, app_rules_pr.lot_arrival(:new.trns_type_code, :new.trns_serial));\n  :new.store_code := nvl(:new.store_code, app_rules_pr.lot_value(:new.trns_type_code, :new.trns_serial, 'STORE'));\nend if;\nif nvl(:new.income_bonus, 0) < 0 then\n  raise_application_error(-20139, 'الكمية المجانية لا بد أن يكون أكبر او يساوى الصفر');\nend if;\nif (inserting or app_rules_pr.chg(:new.income_quantity, :old.income_quantity) + app_rules_pr.chg(:new.income_bonus, :old.income_bonus) > 0)\n   and nvl(:new.income_quantity, 0) + nvl(:new.income_bonus, 0) <= 0 then\n  raise_application_error(-20139, 'يجب إدخال الكمية المستلمة - الصنف ' || :new.item_code);\nend if;\napp_rules_pr.disc_chain(inserting, :new.vn_price, :old.vn_price,\n                        :new.disc1_ratio, :old.disc1_ratio, :new.disc1_value, :old.disc1_value,\n                        :new.disc2_ratio, :old.disc2_ratio, :new.disc2_value, :old.disc2_value,\n                        :new.disc3_ratio, :old.disc3_ratio, :new.disc3_value, :old.disc3_value);\n:new.income_basic_qty := (nvl(:new.income_quantity, 0) + nvl(:new.income_bonus, 0))\n                         * app_rules_pr.unit_factor(:new.group_code, :new.item_code, :new.unit_code);\nend if;",
+   "PR_INCOME_LOT_SRVC": "if app_rules_pr.bypass = 0 then  -- rows written by the APP_ACT_PR buttons: legacy values kept\n-- detail of an incoming lot: read-only once the lot is transferred to the stores\napp_rules_pr.lot_line_guard(:new.trns_type_code, :new.trns_serial);\nend if;",
+   "PR_INCOME_LOT_ASST": "if app_rules_pr.bypass = 0 then  -- rows written by the APP_ACT_PR buttons: legacy values kept\n-- detail of an incoming lot: read-only once the lot is transferred to the stores\napp_rules_pr.lot_line_guard(:new.trns_type_code, :new.trns_serial);\nend if;",
+   "PR_INCOME_DET_EXPENS": "if app_rules_pr.bypass = 0 then  -- rows written by the APP_ACT_PR buttons: legacy values kept\n-- detail of an incoming lot: read-only once the lot is transferred to the stores\napp_rules_pr.lot_line_guard(:new.trns_type_code, :new.trns_serial);\nend if;",
+   "AS_ASSET_ACCT_TOT": "if app_rules_pr.bypass = 0 then  -- rows written by the APP_ACT_PR buttons: legacy values kept\n-- detail of an incoming lot: read-only once the lot is transferred to the stores\napp_rules_pr.lot_line_guard(:new.trns_type_code, :new.trns_serial);\nend if;"
+  },
+  "validations": [
+   {
+    "name": "legacy header checks",
+    "plsql": "return app_rules_pr.check_lot_header(:PAGE_ROWID, :PAGE_TRNS_TYPE_CODE, :PAGE_ST_SRV_ASST_FLAG, :PAGE_ARRIVAL_DATE, :PAGE_STORE_CODE, :PAGE_SUPPLIER_CODE, :PAGE_CURRENCY_CODE, :PAGE_CURRENCY_RATE, :PAGE_ORDER_TRNS_TYPE_CODE, :PAGE_ORDER_TRNS_SERIAL);",
+    "when": "CREATE,SAVE"
+   },
+   {
+    "name": "lot transferred to the stores is read-only",
+    "plsql": "return app_rules_pr.check_lot_locked(:PAGE_ROWID);",
+    "when": "SAVE"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "lines required, supplier expenses <= lot freight",
+    "plsql": "app_rules_pr.lot_after_save(:PAGE_ROWID, :REQUEST);",
+    "when": "CREATE,SAVE"
+   },
+   {
+    "name": "delete: refuse posted lots, remove details",
+    "plsql": "app_rules_pr.lot_after_delete(:PAGE_ROWID, :PAGE_TRNS_TYPE_CODE, :PAGE_TRNS_SERIAL);",
+    "when": "DELETE"
+   }
+  ],
+  "columns": {
+   "PR_INCOME_LOT.ST_SRV_ASST_FLAG": {
+    "widget": "RADIO",
+    "readonly_after_insert": true,
+    "label_a": "نوع التوريد",
+    "label_e": "Supply kind",
+    "static": [
+     [
+      "توريد مواد",
+      "1",
+      "Materials"
+     ],
+     [
+      "توريد مواد وخدمات",
+      "2",
+      "Materials and services"
+     ],
+     [
+      "توريد خدمات",
+      "3",
+      "Services"
+     ]
+    ]
+   },
+   "PR_INCOME_LOT.ARRIVAL_DATE": {
+    "readonly_after_insert": true
+   },
+   "PR_INCOME_LOT.DOC_NO": {
+    "readonly_after_insert": true
+   },
+   "PR_INCOME_LOT.ORDER_TRNS_TYPE_CODE": {
+    "readonly_after_insert": true
+   },
+   "PR_INCOME_LOT.POST_FLAG": {
+    "widget": "CHECK",
+    "values": [
+     "1",
+     "0"
+    ]
+   },
+   "PR_INCOME_LOT_SRVC.PRCN_FLAG": {
+    "widget": "CHECK",
+    "values": [
+     "1",
+     "0"
+    ],
+    "default": {
+     "type": "STATIC",
+     "value": "0"
+    }
+   },
+   "PR_INCOME_LOT.TRNS_TYPE_CODE": {
+    "widget": "SELECT",
+    "lov": "select trns_type_code || ' - ' || desc_a d, trns_type_code r from st_trns_type where nvl(effect, 0) = 7 and nvl(trns_type, 0) = 15 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or trns_type_code in (select tp.trns_type_code from st_trnstype_password tp where tp.flag = 1 and tp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2"
+   },
+   "PR_INCOME_LOT.STORE_CODE": {
+    "widget": "SELECT",
+    "lov": "select store_code || ' - ' || name_a d, store_code r from st_store where store_status = 1 and nvl(stop_flag, 0) = 0 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or store_code in (select sp.store_code from st_store_password sp where sp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2"
+   },
+   "PR_INCOME_LOT.SUPPLIER_CODE": {
+    "widget": "POPUP",
+    "lov": "select s.code || ' - ' || s.name_a d, s.code r from supplier s where nvl(s.stopflag, 0) = 0 and nvl(s.supplier_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (s.code >= (select max(from_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)) and s.code <= (select max(to_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)))) order by 2"
+   },
+   "PR_INCOME_DET_EXPENS.SUPPLIER_CODE": {
+    "widget": "POPUP",
+    "lov": "select code || ' - ' || name_a d, code r from supplier where (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (code >= (select max(from_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)) and code <= (select max(to_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)))) order by code"
+   },
+   "PR_INCOME_LOT_DET.UNIT_CODE": {
+    "widget": "SELECT",
+    "cascade": [
+     "ITEM_CODE",
+     "GROUP_CODE"
+    ],
+    "lov": "select u.unit_code || ' - ' || u.name_a || decode(iu.basic_unit, 1, ' (وحدة أساسية)', '') d, u.unit_code r from st_item_unit iu, st_unit u where iu.item_code = :PAGE_ITEM_CODE and (iu.group_code = :PAGE_GROUP_CODE or :PAGE_GROUP_CODE is null) and iu.unit_code = u.unit_code order by 2"
+   },
+   "AS_ASSET_ACCT_TOT.ASSET_ACCT": {
+    "widget": "POPUP",
+    "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or account_number in (select p.account_number from ac_password_master p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by account_number"
+   },
+   "AS_ASSET_ACCT_TOT.COST_CODE": {
+    "widget": "SELECT",
+    "lov": "select cost_code || ' - ' || cost_desc d, cost_code r from ac_cost_centers where nvl(cost_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or cost_code in (select p.cost_code from ac_password_cost1 p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by 2"
+   }
+  },
+  "computed": {
+   "PR_INCOME_LOT_DET.ITEM_NAME_A": {
+    "sql": "(select max(nvl(i.name_a, i.name_e)) from st_item i where i.item_code = t.item_code and i.item_group_code = t.group_code)",
+    "label_a": "إسم الصنف",
+    "label_e": "Item Name"
+   },
+   "PR_INCOME_LOT_SRVC.SERVICE_NAME": {
+    "sql": "(select max(s.name_a) from st_pu_services s where s.service_code = t.service_code)",
+    "label_a": "اسم الخدمة",
+    "label_e": "Service name"
+   },
+   "PR_INCOME_LOT_ASST.DESC_A_ASCT": {
+    "sql": "(select max(c.desc_a_asct) from as_ctgry c where c.ctgry_cd_asct = t.ctgry_cd_asst)",
+    "label_a": "اسم نوع الاصل",
+    "label_e": "Asset type name"
+   }
+  }
+ },
+ "columns": [
+  "TRNS_TYPE_CODE",
+  "ST_SRV_ASST_FLAG",
+  "TRNS_SERIAL",
+  "ARRIVAL_DATE",
+  "DOC_NO",
+  "STORE_CODE",
+  "SUPPLIER_CODE",
+  "ORDER_TRNS_TYPE_CODE",
+  "ORDER_TRNS_SERIAL",
+  "SUPPLIER_REF",
+  "CHECK_DATE",
+  "DESC_A",
+  "DESC_E",
+  "LOT_SERIAL",
+  "CURRENCY_CODE",
+  "CURRENCY_RATE",
+  "RESP_CODE",
+  "D_CODE",
+  "ATM_DESC",
+  "FREIGHT_VAL",
+  "POST_FLAG",
+  "PU_TRNS_TYPE_CODE",
+  "PU_TRNS_SERIAL",
+  "VN_TRNS_ID",
+  "VN_TRNS_SERIAL",
+  "ENTRY_NO",
+  "ENTRY_YEAR",
+  "ENTRY_TYPE",
+  "TAX_VALUE1",
+  "TAX_VALUE2"
+ ],
+ "actions": [
+  {
+   "name": "TO_STORES",
+   "label_a": "ترحيل الرسالة الى المخازن",
+   "label_e": "Post Lot to St",
+   "confirm_a": "سيتم عمل فاتورة المشتريات (حركة الوارد) لهذه الرسالة. هل تريد الاستمرار؟",
+   "confirm_e": "The purchase invoice (incoming transaction) of the lot will be created. Continue?",
+   "condition": "app_act_pr.lot_can(:PAGE_ROWID, 'TRANSFER') = 'Y'",
+   "params": [
+    {
+     "name": "TRNS_DATE2",
+     "label_a": "تاريخ الحركة",
+     "label_e": "Trns Date",
+     "type": "date",
+     "required": true
+    }
+   ],
+   "call": "app_act_pr.lot_to_stores(:PAGE_ROWID, :TRNS_DATE2)",
+   "message": "app_act_pr.last_message",
+   "success_a": "تم عمل حركة وارد لهذة الرسالة",
+   "success_e": "An incoming trans. has been made for this lot",
+   "icon": "fa-sign-in"
+  },
+  {
+   "name": "UNPOST",
+   "label_a": "إلغاء ترحيل الرسالة",
+   "label_e": "Cancel lot posting",
+   "confirm_a": "سيتم حذف حركة الوارد (فاتورة المشتريات) لهذه الرسالة. هل تريد الاستمرار؟",
+   "confirm_e": "The incoming transaction of the lot will be deleted. Continue?",
+   "condition": "app_act_pr.lot_can(:PAGE_ROWID, 'UNPOST') = 'Y'",
+   "call": "app_act_pr.lot_unpost(:PAGE_ROWID)",
+   "message": "app_act_pr.last_message",
+   "success_a": "تم إلغاء حركة الوارد لهذة الرسالة",
+   "success_e": "The incoming trans. has been Deleted for this lot",
+   "icon": "fa-undo"
+  },
+  {
+   "name": "IMPORT",
+   "label_a": "انزال اصناف امر الشراء",
+   "label_e": "Down Items Of P.O",
+   "confirm_a": "سيتم انزال جميع اصناف أمر الشراء يجب مراجعه الكميات قبل الحفظ",
+   "confirm_e": "All purchese order item will drag...check recive quantity",
+   "condition": "app_act_pr.lot_can(:PAGE_ROWID, 'IMPORT') = 'Y'",
+   "call": "app_act_pr.lot_import_items(:PAGE_ROWID)",
+   "message": "app_act_pr.last_message",
+   "success_a": "تم انزال اصناف امر الشراء",
+   "success_e": "Items of the purchase order added",
+   "icon": "fa-download"
+  }
+ ]
+}

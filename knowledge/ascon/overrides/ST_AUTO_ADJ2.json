@@ -1,0 +1,42 @@
+{
+ "pattern": "PROCESS",
+ "notes": "revaluation stocktaking adjustment (ST_AUTO_ADJ2.fmx): the lines of a revaluation count (ST_STOCK_TAKING_TEMP / _DET of the store, date and serial) not yet adjusted; 'عمل التسوية' issues the book balance with the automatic issue adjustment type (or receives a negative balance) and receives the counted quantity at the count cost with the receipt type, dated on the count date and linked by SERIAL_TAKING_TEMP; lines whose issue would make a later transaction negative go to ST_AUTO_ADJ_ERR2 (error column = 1); optional group / item",
+ "proc": {
+  "procedure": "app_rules3_st.auto_adjust2",
+  "description_a": "تسوية إعادة تقييم تكلفة المخزون آلياً: اختر المخزن وتاريخ الجرد ومسلسل الجرد (بيانات شاشة إعادة التقييم) وحركتي الصادر والوارد للتسوية الآلية. يعرض الجدول أصناف الجرد التي لم تسوى بعد مع الرصيد الدفتري في تاريخ الجرد وكمية الجرد وتكلفة الجرد. عند التنفيذ يصرف الرصيد الدفتري بحركة الصادر (أو يستلم الرصيد السالب) ثم تستلم كمية الجرد بتكلفة الجرد بحركة الوارد. الصنف الذي يؤدي صرفه إلى رصيد سالب في حركة تالية لا يسوى ويظهر بعلامة خطأ.",
+  "description_e": "Revaluation stocktaking adjustment: choose the store, the count date and serial (revaluation count) and the automatic issue / receipt adjustment types. The table lists the counted lines not adjusted yet with the book balance at the count date, the counted quantity and the count cost. Execute issues the book balance (or receives a negative balance) and receives the counted quantity at the count cost. Lines whose issue would make a later transaction negative are not adjusted and are flagged as errors.",
+  "params": [
+   {"name": "STORE_CODE", "arg": "p_store", "label_a": "رقم المخزن", "label_e": "Store", "type": "number", "required": true,
+    "lov_sql": "select s.store_code || ' - ' || decode(:G_LANG, 'en', nvl(s.name_e, s.name_a), s.name_a) d, s.store_code r from st_store s where s.store_status = 1 and nvl(s.stop_flag, 0) = 0 and (:G_PASSWORD_NUMBER = 0 or s.store_code in (select sp.store_code from st_store_password sp where sp.password_number = :G_PASSWORD_NUMBER)) order by s.store_code"},
+   {"name": "TAKING_DATE", "arg": "p_taking_date", "label_a": "تاريخ الجرد", "label_e": "Count date", "type": "date", "required": true},
+   {"name": "SERIAL", "arg": "p_serial", "label_a": "مسلسل الجرد", "label_e": "Count serial", "type": "number", "required": true,
+    "lov_sql": "select t.serial || ' - ' || to_char(t.st_taking_date, 'DD/MM/YYYY') || ' - ' || t.store_code || ' - ' || t.desc_a d, t.serial r from st_stock_taking_temp t order by t.st_taking_date desc, t.store_code, t.serial"},
+   {"name": "ISSUE_TYPE", "arg": "p_issue_type", "label_a": "حركة الصادر للتسوية الأليه", "label_e": "Issue adjustment type", "type": "number", "required": true,
+    "lov_sql": "select t.trns_type_code || ' - ' || decode(:G_LANG, 'en', nvl(t.desc_e, t.desc_a), t.desc_a) d, t.trns_type_code r from st_trns_type t where t.effect = 2 and t.trns_type = 7 and (:G_PASSWORD_NUMBER = 0 or t.trns_type_code in (select tp.trns_type_code from st_trnstype_password tp where tp.password_number = :G_PASSWORD_NUMBER)) order by t.trns_type_code"},
+   {"name": "REC_TYPE", "arg": "p_rec_type", "label_a": "حركة الوارد للتسوية الأليه", "label_e": "Receipt adjustment type", "type": "number", "required": true,
+    "lov_sql": "select t.trns_type_code || ' - ' || decode(:G_LANG, 'en', nvl(t.desc_e, t.desc_a), t.desc_a) d, t.trns_type_code r from st_trns_type t where t.effect = 1 and t.trns_type = 7 and (:G_PASSWORD_NUMBER = 0 or t.trns_type_code in (select tp.trns_type_code from st_trnstype_password tp where tp.password_number = :G_PASSWORD_NUMBER)) order by t.trns_type_code"},
+   {"name": "GROUP_CODE", "arg": "p_group", "label_a": "المجموعة (اختياري)", "label_e": "Group (optional)", "type": "number", "required": false},
+   {"name": "ITEM_CODE", "arg": "p_item", "label_a": "الصنف (اختياري)", "label_e": "Item (optional)", "type": "text", "required": false}
+  ],
+  "button_a": "عمل التسوية",
+  "button_e": "Make adjustment",
+  "confirm_a": "سيتم إنشاء حركات صادر ووارد التسوية الآلية لأصناف الجرد المعروضة. هل تريد الاستمرار؟",
+  "success_a": "تمت التسوية الآلية - الأصناف التي لم تسوى تظهر في الجدول بعلامة خطأ",
+  "preview_title_a": "أصناف الجرد التي لم تسوى",
+  "preview_sql": "select l.group_code, l.item_code, l.item_name, l.item_confg_id, l.lot_number, l.expire_date, l.unit_name, l.book_qty, l.taking_qty, l.taking_qty - l.book_qty diff_qty, round(l.unit_cost, 4) unit_cost, l.adj_error from table(app_rules3_st.auto_adj2_lines(to_number(v('P' || :APP_PAGE_ID || '_STORE_CODE')), to_date(v('P' || :APP_PAGE_ID || '_TAKING_DATE'), 'DD/MM/YYYY'), to_number(v('P' || :APP_PAGE_ID || '_SERIAL')))) l where (:G_PASSWORD_NUMBER = 0 or l.group_code in (select gp.item_group_code from st_all_group_password gp where gp.password_number = :G_PASSWORD_NUMBER)) order by l.group_code, l.item_code, l.item_confg_id",
+  "preview_columns": [
+   {"name": "GROUP_CODE", "label_a": "رقم المجموعة", "type": "NUMBER"},
+   {"name": "ITEM_CODE", "label_a": "رقم الصنف", "type": "STRING"},
+   {"name": "ITEM_NAME", "label_a": "اســـم الصنـــــف", "type": "STRING"},
+   {"name": "ITEM_CONFG_ID", "label_a": "رقم الشحنة", "type": "NUMBER"},
+   {"name": "LOT_NUMBER", "label_a": "رقم التشغيلة", "type": "STRING"},
+   {"name": "EXPIRE_DATE", "label_a": "تاريخ الصلاحيه", "type": "DATE"},
+   {"name": "UNIT_NAME", "label_a": "اسم الوحدة", "type": "STRING"},
+   {"name": "BOOK_QTY", "label_a": "الرصيد الدفتري", "type": "NUMBER"},
+   {"name": "TAKING_QTY", "label_a": "كمية الجرد", "type": "NUMBER"},
+   {"name": "DIFF_QTY", "label_a": "الفرق", "type": "NUMBER"},
+   {"name": "UNIT_COST", "label_a": "تكلفة", "type": "NUMBER"},
+   {"name": "ADJ_ERROR", "label_a": "خطأ تسوية", "type": "NUMBER"}
+  ]
+ }
+}

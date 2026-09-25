@@ -1,0 +1,20 @@
+{
+  "pattern": "AUTO",
+  "notes": "List of the posted entries that the periodical-entry process (AC_DUPENTRY) copies: entries of the session company only, legacy serial NVL(MAX(NVL(SERIAL,1)),1)+1, entry must be a posted entry of an allowed journal, no duplicates, description taken from the entry (APP_RULES3_GL, see processes/AC_DUPENTRY_DEF.md)",
+  "rules": {
+    "where": "((ENTRY_YEAR, ENTRY_TYPE, ENTRY_NO) in (select entry_year, entry_type, entry_no from ac_yearly_trn where create_company_code = to_number(:G_COMPANY_CODE)) or (ENTRY_YEAR, ENTRY_TYPE, ENTRY_NO) in (select entry_year, entry_type, entry_no from ac_daily_trn where create_company_code = to_number(:G_COMPANY_CODE)))",
+    "key_expr": {
+      "AC_PERIODICAL_VOC.SERIAL": "app_rules3_gl.next_periodical_serial"
+    },
+    "row_rules": {
+      "AC_PERIODICAL_VOC": "app_rules3_gl.periodical_row(inserting, :old.entry_year, :old.entry_type, :old.entry_no, :new.entry_year, :new.entry_type, :new.entry_no, :new.entry_desc, :new.entry_desc_e);"
+    },
+    "computed": {
+      "AC_PERIODICAL_VOC.TYPE_ENTRY_DESC": {
+        "sql": "(select max(case when app_sec.lang = 'en' then nvl(c.entry_desc_e, c.entry_desc) else c.entry_desc end) from ac_trn_codes c where c.entry_year = t.entry_year and c.entry_type = t.entry_type)",
+        "label_a": "اسم نوع الحركة",
+        "label_e": "Entry type name"
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+ "pattern": "AUTO",
+ "notes": "Return reason codes (RET_INV_CODES): number max + 1 (generated key, legacy NVL(MAX)+1), no duplicate (APP_RULES3_SA). Wave 3b: the wrong automatic list COMPLAINT_CODES (empty table) removed from COMPLAINT_CODE.",
+ "rules": {
+  "row_rules": {
+   "RET_INV_CODES": "-- legacy PRE-INSERT: no duplicate number (numbering max + 1 by the generated key)\napp_rules3_sa.ret_code_row(inserting, :new.complaint_code);"
+  },
+  "add_columns": {
+   "RET_INV_CODES.COMPLAINT_NAME": {
+    "label_a": "بيان السبب عربي",
+    "label_e": "Reason (Arabic)"
+   },
+   "RET_INV_CODES.COMPLAINT_NAME_E": {
+    "label_a": "بيان السبب انجليزي",
+    "label_e": "Reason (English)"
+   }
+  },
+  "columns": {
+   "RET_INV_CODES.COMPLAINT_CODE": {
+    "lov": null,
+    "label_a": "رقم السبب",
+    "label_e": "Reason No"
+   }
+  }
+ }
+}

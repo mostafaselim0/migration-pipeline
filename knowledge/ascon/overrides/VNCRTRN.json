@@ -1,0 +1,275 @@
+{
+ "pattern": "MASTER_DETAIL",
+ "notes": "Supplier credit transactions (manual invoices/settlements, VN_TRNSTYPE EFFECT 1). Screen corrected: invoice lines with INV_VALUE/VAT (legacy line-level GET_TAX_VALUE), VN_SUBSUBTRNS/VN_SUBTRNS_COST grids dropped (children of VN_SUBTRNS, unused). Wave 3b: legacy LOVs (credit types, suppliers, payment types of the supplier as a cascading list, cost centres, accounts), type fixed after insert, stop-payment check box on the invoice lines.",
+ "master": {
+  "table": "VN_MAINTRNS",
+  "columns": [
+   "TRNS_ID",
+   "TRNS_SERIAL",
+   "TRNS_DATE",
+   "SUPPLIER_ID",
+   "DOC_NO",
+   "RESP_CODE",
+   "CURRENCY_CODE",
+   "CURRENCY_RATE",
+   "PAY_TYPE_CODE",
+   "TOTAL_VALUE",
+   "DESCRIPTION_A",
+   "DESCRIPTION_E",
+   "LOT_NO",
+   "COST_NO",
+   "COST_NO2",
+   "SUPPLIER_ACCOUNT",
+   "TRNS_ACCOUNT",
+   "POST_FLAG",
+   "PAY_FLAG",
+   "ACC_NO",
+   "ACC_DATE",
+   "LINK_FLAG"
+  ]
+ },
+ "details": [
+  {
+   "table": "VN_SUBTRNS",
+   "join": [
+    [
+     "TRNS_ID",
+     "TRNS_ID"
+    ],
+    [
+     "TRNS_SERIAL",
+     "TRNS_SERIAL"
+    ]
+   ],
+   "title_a": "تفاصيل الفواتير",
+   "title_e": "Invoices",
+   "columns": [
+    "BILL_SEQ",
+    "BILL_ID1",
+    "BILL_ID2",
+    "INV_DATE",
+    "DUE_DATE",
+    "INV_VALUE",
+    "TAX_VALUE1",
+    "TAX_VALUE2",
+    "TOTAL_VALUE",
+    "STOP_FLAG",
+    "PAY_TYPE_CODE"
+   ]
+  },
+  {
+   "table": "VN_MAINTRNS_ACC",
+   "join": [
+    [
+     "TRNS_ID",
+     "TRNS_ID"
+    ],
+    [
+     "TRNS_SERIAL",
+     "TRNS_SERIAL"
+    ]
+   ],
+   "title_a": "حسابات مدينة اخرى",
+   "title_e": "Other Debit Accounts",
+   "columns": [
+    "ACC_SER",
+    "ACC_NUMBER",
+    "COST_CENTER",
+    "COST_CENTER2",
+    "ACC_VAL",
+    "ACC_MEMO"
+   ]
+  },
+  {
+   "table": "VN_MAINTRNS_SUPP_ACC",
+   "join": [
+    [
+     "TRNS_ID",
+     "TRNS_ID"
+    ],
+    [
+     "TRNS_SERIAL",
+     "TRNS_SERIAL"
+    ]
+   ],
+   "title_a": "حسابات دائنة اخرى",
+   "title_e": "Other Credit Accounts",
+   "columns": [
+    "ACC_SER",
+    "ACC_NUMBER",
+    "COST_CENTER",
+    "COST_CENTER2",
+    "ACC_VAL",
+    "ACC_MEMO"
+   ]
+  }
+ ],
+ "insert": true,
+ "update": true,
+ "delete": true,
+ "rules": {
+  "where": "TRNS_ID IN (SELECT ID FROM VN_TRNSTYPE WHERE EFFECT = 1 AND TRNS_TYPE <> 5 AND NVL(SUM_TRNS, 0) = 0) AND NVL(LINK_FLAG, 0) = 0 AND SERIAL IS NULL AND (:G_PASSWORD_NUMBER = 0 OR TRNS_ID IN (SELECT TRNS_ID FROM VN_TRNSTYPE_PASSWORD WHERE FLAG = 1 AND PASSWORD_NUMBER = :G_PASSWORD_NUMBER)) AND (:G_PASSWORD_NUMBER = 0 OR (SUPPLIER_ID >= (SELECT FROM_SUPPLIER_CODE FROM VN_SUPPLIER_PASSWORD WHERE PASSWORD_NUMBER = :G_PASSWORD_NUMBER) AND SUPPLIER_ID <= (SELECT TO_SUPPLIER_CODE FROM VN_SUPPLIER_PASSWORD WHERE PASSWORD_NUMBER = :G_PASSWORD_NUMBER)))",
+  "key_expr": {
+   "VN_MAINTRNS.TRNS_SERIAL": "app_rules_vn.next_trns_serial(:new.trns_id)"
+  },
+  "row_rules": {
+   "VN_MAINTRNS": "if inserting then\n  :new.alt_key := :new.trns_id || '-' || :new.trns_serial;\nend if;\nif nvl(:new.link_flag, 0) = 0 and :new.post_system is null then\n  if inserting then\n    :new.pay_method := nvl(:new.pay_method, 5);\n    :new.bill_pay_method := nvl(:new.bill_pay_method, 1);\n    :new.pay_type_code := nvl(:new.pay_type_code, app_rules_vn.default_pay_type);\n    :new.resp_code := nvl(:new.resp_code, app_rules_vn.supplier_resp(:new.supplier_id));\n    :new.description_e := app_rules_vn.payment_desc_e(:new.trns_id, :new.description_e, :new.doc_no, :new.pay_method, :new.acc_post_date);\n  end if;\n  if :new.inv_value is not null and (inserting\n     or app_rules_vn.differs(:new.inv_value, :old.inv_value) = 1 or app_rules_vn.differs(:new.tax_value2, :old.tax_value2) = 1\n     or app_rules_vn.differs(:new.supplier_id, :old.supplier_id) = 1 or app_rules_vn.differs(:new.trns_date, :old.trns_date) = 1) then\n    app_rules_vn.calc_tax(:new.trns_id, :new.supplier_id, :new.trns_date, :new.inv_value, :new.tax_code1, :new.tax_value1);\n    :new.total_value := app_rules_vn.total_with_tax(:new.trns_id, :new.supplier_id, :new.inv_value, :new.tax_value1, :new.tax_value2);\n  end if;\nend if;",
+   "VN_MAINTRNS_ACC": "app_rules_vn.acc_line(:new.acc_number, :new.acc_val, :new.cost_center, :new.cost_center2);",
+   "VN_MAINTRNS_SUPP_ACC": "app_rules_vn.acc_line(:new.acc_number, :new.acc_val, :new.cost_center, :new.cost_center2);\nif inserting then\n  :new.acc_memo := app_rules_vn.supp_acc_memo(:new.trns_id, :new.trns_serial, :new.acc_memo);\nend if;"
+  },
+  "defaults": {
+   "VN_MAINTRNS.TRNS_ID": {
+    "type": "SQL_QUERY",
+    "value": "select app_rules_vn.default_trns_id('VNCRTRN') from dual"
+   },
+   "VN_MAINTRNS.PAY_TYPE_CODE": {
+    "type": "SQL_QUERY",
+    "value": "select app_rules_vn.default_pay_type from dual"
+   }
+  },
+  "readonly": [
+   "VN_MAINTRNS.TRNS_SERIAL",
+   "VN_MAINTRNS.POST_FLAG",
+   "VN_MAINTRNS.PAY_FLAG",
+   "VN_MAINTRNS.ACC_NO",
+   "VN_MAINTRNS.ACC_DATE",
+   "VN_MAINTRNS.TOTAL_VALUE",
+   "VN_SUBTRNS.TAX_VALUE1",
+   "VN_SUBTRNS.TOTAL_VALUE"
+  ],
+  "hidden": [
+   "VN_MAINTRNS.LINK_FLAG",
+   "VN_SUBTRNS.BILL_SEQ",
+   "VN_SUBTRNS.PAY_TYPE_CODE",
+   "VN_MAINTRNS_ACC.ACC_SER",
+   "VN_MAINTRNS_SUPP_ACC.ACC_SER"
+  ],
+  "validations": [
+   {
+    "name": "VNCRTRN legacy header rules",
+    "plsql": "return app_rules_vn.check_header('VNCRTRN', :REQUEST, :PAGE_ROWID, :PAGE_TRNS_ID, :PAGE_SUPPLIER_ID, :PAGE_TRNS_DATE, null, :PAGE_DOC_NO, :PAGE_CURRENCY_CODE, :PAGE_CURRENCY_RATE);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "VNCRTRN invoice lines, totals, GL link",
+    "plsql": "app_rules_vn.after_save('VNCRTRN', :PAGE_ROWID, :REQUEST);",
+    "when": "CREATE,SAVE"
+   },
+   {
+    "name": "VNCRTRN delete rules",
+    "plsql": "app_rules_vn.on_delete('VNCRTRN', :PAGE_TRNS_ID, :PAGE_TRNS_SERIAL, :PAGE_POST_FLAG, :PAGE_PAY_FLAG, :PAGE_LINK_FLAG);",
+    "when": "DELETE"
+   }
+  ],
+  "warnings": [
+   {
+    "name": "DOC_NO_ASK",
+    "plsql": "return app_act_pr.vn_doc_warning(:PAGE_ROWID, :PAGE_TRNS_ID, :PAGE_DOC_NO);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "info": [
+   {
+    "name": "BAL",
+    "label_a": "رصيد المورد",
+    "label_e": "Supplier balance",
+    "sql": "select app_act_pr.vn_supplier_balance(:PAGE_SUPPLIER_ID) from dual"
+   },
+   {
+    "name": "PAYMENTS",
+    "label_a": "سدادات الفواتير",
+    "label_e": "Payments of the invoices",
+    "sql": "select app_act_pr.vn_invoice_payments(:PAGE_ROWID) from dual"
+   }
+  ],
+  "columns": {
+   "VN_MAINTRNS.TRNS_ID": {
+    "widget": "SELECT",
+    "readonly_after_insert": true,
+    "lov": "select id || ' - ' || description_a d, id r from vn_trnstype where effect = 1 and trns_type <> 5 and nvl(sum_trns, 0) = 0 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or id in (select trns_id from vn_trnstype_password where flag = 1 and password_number = to_number(:G_PASSWORD_NUMBER))) order by id"
+   },
+   "VN_MAINTRNS.SUPPLIER_ID": {
+    "widget": "POPUP",
+    "lov": "select s.code || ' - ' || s.name_a d, s.code r from supplier s where nvl(s.stopflag, 0) = 0 and nvl(s.supplier_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (s.code >= (select max(from_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)) and s.code <= (select max(to_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)))) order by 2"
+   },
+   "VN_MAINTRNS.PAY_TYPE_CODE": {
+    "widget": "SELECT",
+    "cascade": "SUPPLIER_ID",
+    "lov": "select lc.settel_type_code || ' - ' || lc.settel_type_desc d, lc.settel_type_code r from lc_settel_type lc, vn_pay_methode_acc ac where lc.settel_type_code = ac.settel_type_code and ac.supplier_code = :PAGE_SUPPLIER_ID order by 2"
+   },
+   "VN_MAINTRNS.COST_NO": {
+    "widget": "SELECT",
+    "lov": "select cost_code || ' - ' || cost_desc d, cost_code r from ac_cost_centers where nvl(cost_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or cost_code in (select p.cost_code from ac_password_cost1 p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by 2"
+   },
+   "VN_MAINTRNS.COST_NO2": {
+    "widget": "SELECT",
+    "lov": "select cost_code || ' - ' || cost_desc d, cost_code r from ac_cost_centers2 where nvl(cost_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or cost_code in (select p.cost_code from ac_password_cost2 p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by 2"
+   },
+   "VN_MAINTRNS.TRNS_ACCOUNT": {
+    "widget": "POPUP",
+    "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or account_number in (select p.account_number from ac_password_master p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by account_number"
+   },
+   "VN_SUBTRNS.STOP_FLAG": {
+    "widget": "CHECK",
+    "values": [
+     "1",
+     "0"
+    ]
+   },
+   "VN_MAINTRNS_ACC.ACC_NUMBER": {
+    "widget": "POPUP",
+    "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or account_number in (select p.account_number from ac_password_master p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by account_number"
+   },
+   "VN_MAINTRNS_ACC.COST_CENTER": {
+    "widget": "SELECT",
+    "lov": "select cost_code || ' - ' || cost_desc d, cost_code r from ac_cost_centers where nvl(cost_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or cost_code in (select p.cost_code from ac_password_cost1 p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by 2"
+   },
+   "VN_MAINTRNS_ACC.COST_CENTER2": {
+    "widget": "SELECT",
+    "lov": "select cost_code || ' - ' || cost_desc d, cost_code r from ac_cost_centers2 where nvl(cost_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or cost_code in (select p.cost_code from ac_password_cost2 p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by 2"
+   },
+   "VN_MAINTRNS_SUPP_ACC.ACC_NUMBER": {
+    "widget": "POPUP",
+    "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or account_number in (select p.account_number from ac_password_master p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by account_number"
+   },
+   "VN_MAINTRNS_SUPP_ACC.COST_CENTER": {
+    "widget": "SELECT",
+    "lov": "select cost_code || ' - ' || cost_desc d, cost_code r from ac_cost_centers where nvl(cost_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or cost_code in (select p.cost_code from ac_password_cost1 p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by 2"
+   },
+   "VN_MAINTRNS_SUPP_ACC.COST_CENTER2": {
+    "widget": "SELECT",
+    "lov": "select cost_code || ' - ' || cost_desc d, cost_code r from ac_cost_centers2 where nvl(cost_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or cost_code in (select p.cost_code from ac_password_cost2 p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by 2"
+   }
+  }
+ },
+ "actions": [
+  {
+   "name": "POST",
+   "label_a": "الترحيل للحسابات العامة",
+   "label_e": "Posting to GL",
+   "confirm_a": "سيتم ترحيل الحركة الحالية للحسابات العامة (قيد للحركة). هل تريد الاستمرار؟",
+   "confirm_e": "The transaction will be posted to the GL. Continue?",
+   "condition": "app_act_pr.vn_can(:PAGE_ROWID, 'POST') = 'Y'",
+   "call": "app_act_pr.vn_post(:PAGE_ROWID)",
+   "message": "app_act_pr.last_message",
+   "success_a": "تمت عملية الترحيل",
+   "success_e": "Posting completed",
+   "icon": "fa-share-square-o"
+  },
+  {
+   "name": "UNPOST",
+   "label_a": "إلغاء الترحيل للحسابات العامة",
+   "label_e": "Cancel Posting to GL",
+   "confirm_a": "سيتم حذف قيد الحسابات الخاص بالحركة الحالية. هل تريد الاستمرار؟",
+   "confirm_e": "The GL voucher of the transaction will be deleted. Continue?",
+   "condition": "app_act_pr.vn_can(:PAGE_ROWID, 'UNPOST') = 'Y'",
+   "call": "app_act_pr.vn_unpost(:PAGE_ROWID)",
+   "message": "app_act_pr.last_message",
+   "success_a": "تمت عملية إلغاء الترحيل",
+   "success_e": "Cancel posting completed",
+   "icon": "fa-undo"
+  }
+ ]
+}

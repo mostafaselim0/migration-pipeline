@@ -1,0 +1,9 @@
+{
+ "pattern": "AUTO",
+ "notes": "Shipment terms (ST_TERM_SHIP): number max + 1 (generated key, legacy NVL(MAX)+1), no duplicate, delete refused while a purchase order uses the term (APP_RULES3_PR)",
+ "rules": {
+  "row_rules": {
+   "ST_TERM_SHIP": "-- legacy PRE-INSERT: no duplicate number (numbering max + 1 by the generated key; delete check: trigger APP_R3_ST_TERM_SHIP_BD)\napp_rules3_pr.term_ship_row(inserting, :new.term_ship_code);"
+  }
+ }
+}

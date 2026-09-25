@@ -1,0 +1,9 @@
+{
+ "pattern": "AUTO",
+ "notes": "active materials: serial max+1 (generated key), > 0, Arabic or English name, duplicate code; delete refused while items use the material (APP_RULES3_ST_MATERIAL_BD)",
+ "rules": {
+  "row_rules": {
+   "ST_ACTIVE_MATERIAL": "app_rules3_st.class_row('ST_ACTIVE_MATERIAL', inserting, :new.serial, :new.name_a, :new.name_e);"
+  }
+ }
+}

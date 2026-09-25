@@ -1,0 +1,62 @@
+{
+  "pattern": "AUTO",
+  "notes": "Supplier opening balances (debit and credit menu entries, AP types with TRNS_TYPE 5): header checks, line checks and derivations, generated supplier transaction (VN_MAINTRNS, + VN_SUBTRNS invoice line for a credit balance) and supplier balance fields per line, delete / change rules (APP_RULES3_VN).",
+  "rules": {
+    "where": "TRNS_ID in (select ID from VN_TRNSTYPE where TRNS_TYPE = 5) and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or TRNS_ID in (select TRNS_ID from VN_TRNSTYPE_PASSWORD where FLAG = 1 and PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)))",
+    "defaults": {
+      "VN_MAINTRNS_OP.TRNS_ID": {
+        "type": "SQL_QUERY",
+        "value": "select app_rules3_vn.op_default_type from dual"
+      }
+    },
+    "row_rules": {
+      "VN_MAINTRNS_OP": "if app_rules3_vn.is_form('VNTRN_OP') then app_rules3_vn.op_mast_row(inserting, :new.trns_id, :new.trns_serial, :new.trns_date, :new.doc_no, :new.description_a, :new.description_e, :old.trns_id, :old.trns_serial); end if;",
+      "VN_SUBTRNS_OP": "if app_rules3_vn.is_form('VNTRN_OP') then app_rules3_vn.op_line_row(inserting, :new.trns_id, :new.trns_serial, :new.bill_seq, :new.supplier_id, :new.bill_id1, :new.bill_id2, :new.total_value, :new.currency_code, :new.currency_rate, :new.sales_man, :new.pay_type_code, :new.r_trns_serial, :old.supplier_id, :old.bill_id1, :old.bill_id2, :old.total_value, :old.currency_code, :old.currency_rate, :old.pay_type_code, :old.r_trns_serial); end if;"
+    },
+    "after_save": [
+      {
+        "name": "يجب ادخال تفاصيل سداد",
+        "plsql": "begin\n  app_rules3_vn.op_after_save(:PAGE_ROWID);\nend;",
+        "when": "SAVE"
+      }
+    ],
+    "readonly": [
+      "VN_MAINTRNS_OP.TRNS_SERIAL",
+      "VN_SUBTRNS_OP.R_TRNS_SERIAL"
+    ],
+    "add_columns": {
+      "VN_SUBTRNS_OP.BILL_ID1": {
+        "label_a": "رقــــــم الفاتــــورة",
+        "label_e": "Invoice no."
+      },
+      "VN_SUBTRNS_OP.PAY_TYPE_CODE": {
+        "label_a": "رقم الدفعة",
+        "label_e": "Payment type"
+      },
+      "VN_SUBTRNS_OP.R_TRNS_SERIAL": {
+        "label_a": "مسلسل حركة المورد",
+        "label_e": "Supplier transaction serial"
+      }
+    },
+    "info": [
+      {
+        "name": "TOT",
+        "label_a": "الاجمالي (العملة)",
+        "label_e": "Total (currency)",
+        "sql": "select to_char(sum(total_value), 'FM999G999G999G990D00') from vn_subtrns_op where trns_id = to_number(:PAGE_TRNS_ID) and trns_serial = to_number(:PAGE_TRNS_SERIAL)"
+      },
+      {
+        "name": "TOTR",
+        "label_a": "الاجمالي (الريال)",
+        "label_e": "Total (local currency)",
+        "sql": "select to_char(sum(total_value * nvl(currency_rate, 1)), 'FM999G999G999G990D00') from vn_subtrns_op where trns_id = to_number(:PAGE_TRNS_ID) and trns_serial = to_number(:PAGE_TRNS_SERIAL)"
+      },
+      {
+        "name": "EFF",
+        "label_a": "التأثير",
+        "label_e": "Effect",
+        "sql": "select max(case effect when 0 then app_rules3_vn.msg('مدين', 'Debit') when 1 then app_rules3_vn.msg('دائن', 'Credit') end) from vn_trnstype where id = to_number(:PAGE_TRNS_ID)"
+      }
+    ]
+  }
+}

@@ -1,0 +1,56 @@
+{
+ "pattern": "AUTO",
+ "notes": "store locations: transaction stores (STORE_STATUS = 1) with the store rules of st_store_locations.fmx (same as ST_STORE, no ACCOUNT_NUMBER1 propagation, stop date on the sub-stores), locations and the items placed in them (item exists, group from the item, order required, known location); a location holding items / the store with its locations cannot be deleted; total cost panel",
+ "rules": {
+  "where": "STORE_STATUS = 1 and app_rules3_st.store_allowed(STORE_CODE) = 1",
+  "key_expr": {
+   "ST_STORE.STORE_CODE": "app_rules3_st.code_required(1)"
+  },
+  "row_rules": {
+   "ST_STORE": "app_rules3_st.store_row(inserting, updating, :new.store_code, :new.store_level, :new.store_status, :new.stop_flag, :new.stop_date, :new.stop_reason, :new.account_number1, :new.account_number2, :new.account_number3, :new.account_number4, :new.cost_code, :new.cost_code2, :old.account_number1, :old.account_number2, :old.account_number3, :old.account_number4, :old.cost_code, :old.cost_code2, :old.stop_flag);",
+   "ST_ITEM_STORE_LOCATIONS": "app_rules3_st.item_loc_row(:new.store_code, :new.group_code, :new.item_code, :new.location_label, :new.serial);"
+  },
+  "validations": [
+   {
+    "name": "رقم المخزن: الهيكل والمخزن الرئيسي والتكرار",
+    "plsql": "return app_rules3_st.val_store(:PAGE_ROWID, :REQUEST, :PAGE_STORE_CODE);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "المخزن الرئيسي ونقل الحسابات والإيقاف إلى المخازن الفرعية",
+    "plsql": "app_rules3_st.store_after(:PAGE_ROWID, :REQUEST);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "info": [
+   {"name": "TOTAL_COST", "label_a": "تكلفة كلية", "label_e": "Total cost",
+    "sql": "select to_char(app_rules3_st.store_total_cost(to_number(:PAGE_STORE_CODE)), 'FM999G999G999G990D00') from dual"}
+  ],
+  "add_columns": {
+   "ST_STORE.STORE_LEVEL": {"label_a": "مستوى المخزن", "label_e": "Store level"},
+   "ST_STORE.STORE_STATUS": {"label_a": "مخزن حركات (1) / تصنيف (0)", "label_e": "Leaf store (1) / parent store (0)"}
+  },
+  "readonly": ["ST_STORE.STORE_LEVEL", "ST_STORE.STORE_STATUS"],
+  "optional": ["ST_ITEM_STORE_LOCATIONS.GROUP_CODE"],
+  "columns": {
+   "ST_STORE.STORE_CODE": {"readonly_after_insert": true, "required": true},
+   "ST_STORE.DEAL_TYPE": {"static": [["جملة", "1", "Wholesale"], ["مفرق", "2", "Retail"], ["تكلفة", "3", "Cost"]]},
+   "ST_STORE.STORE_STATUS": {"static": [["مخزن حركــات", "1", "Leaf store"], ["مخزن تصنيـف", "0", "Parent store"]], "label_a": "مخزن حركات / تصنيف", "label_e": "Leaf / parent store"},
+   "ST_STORE.ACCOUNT_NUMBER1": {"widget": "POPUP", "lov": "select a.account_number || ' - ' || a.account_name d, a.account_number r from ac_master a where a.account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or a.account_number in (select m2.account_number from ac_master m2, ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE) and rpad(substr(to_char(p2.account_number), 1, p2.account_end_pos), 12, '0') = rpad(substr(to_char(m2.account_number), 1, p2.account_end_pos), 12, '0'))) order by a.account_number"},
+   "ST_STORE.ACCOUNT_NUMBER2": {"widget": "POPUP", "lov": "select a.account_number || ' - ' || a.account_name d, a.account_number r from ac_master a where a.account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or a.account_number in (select m2.account_number from ac_master m2, ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE) and rpad(substr(to_char(p2.account_number), 1, p2.account_end_pos), 12, '0') = rpad(substr(to_char(m2.account_number), 1, p2.account_end_pos), 12, '0'))) order by a.account_number"},
+   "ST_STORE.ACCOUNT_NUMBER3": {"widget": "POPUP", "lov": "select a.account_number || ' - ' || a.account_name d, a.account_number r from ac_master a where a.account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or a.account_number in (select m2.account_number from ac_master m2, ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE) and rpad(substr(to_char(p2.account_number), 1, p2.account_end_pos), 12, '0') = rpad(substr(to_char(m2.account_number), 1, p2.account_end_pos), 12, '0'))) order by a.account_number"},
+   "ST_STORE.ACCOUNT_NUMBER4": {"widget": "POPUP", "lov": "select a.account_number || ' - ' || a.account_name d, a.account_number r from ac_master a where a.account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or a.account_number in (select m2.account_number from ac_master m2, ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE) and rpad(substr(to_char(p2.account_number), 1, p2.account_end_pos), 12, '0') = rpad(substr(to_char(m2.account_number), 1, p2.account_end_pos), 12, '0'))) order by a.account_number"},
+   "ST_STORE.COST_CODE": {"widget": "SELECT", "lov": "select c.cost_code || ' - ' || c.cost_desc d, c.cost_code r from ac_cost_centers c where c.cost_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or c.cost_code in (select m2.cost_code from ac_cost_centers m2, ac_password_cost1 p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE) and rpad(substr(to_char(p2.cost_code), 1, p2.cost_end_pos), 9, '0') = rpad(substr(to_char(m2.cost_code), 1, p2.cost_end_pos), 9, '0') and m2.cost_status = 1)) order by c.cost_code"},
+   "ST_ITEM_STORE_LOCATIONS.LOCATION_LABEL": {"widget": "POPUP", "cascade": "STORE_CODE",
+    "lov": "select l.location_label || ' - ' || l.desc_a d, l.location_label r from st_store_locations l where l.store_code = :PAGE_STORE_CODE order by l.location_label"}
+  },
+  "computed": {
+   "ST_ITEM_STORE_LOCATIONS.ITEM_NAME": {"sql": "(select max(i.name_a) from st_item i where i.item_group_code = t.group_code and i.item_code = t.item_code)",
+                                         "label_a": "اسم الصنف", "label_e": "Item Nm"},
+   "ST_ITEM_STORE_LOCATIONS.GROUP_NAME": {"sql": "(select max(g.name_a) from st_item_group g where g.item_group_code = t.group_code)",
+                                          "label_a": "اسم المجموعة", "label_e": "Group Nm"}
+  }
+ }
+}

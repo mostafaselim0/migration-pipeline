@@ -1,0 +1,9 @@
+{
+ "pattern": "AUTO",
+ "notes": "origin countries: code max+1 (generated key); the code is a plain number field (no list of values: the own-key fallback picked Z_COUNTRY)",
+ "rules": {
+  "columns": {
+   "ST_ORG_COUNTRY.COUNTRY_CODE": {"lov": null}
+  }
+ }
+}

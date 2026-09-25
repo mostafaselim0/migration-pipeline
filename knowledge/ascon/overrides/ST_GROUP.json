@@ -1,0 +1,68 @@
+{
+ "pattern": "MASTER_DETAIL",
+ "master": {"table": "ST_ITEM_GROUP"},
+ "details": [
+  {"table": "ST_ITEM_GROUP_COV", "join": [["GROUP_CODE", "ITEM_GROUP_CODE"]], "title_a": "نسب التغطية", "title_e": "Coverage ratios"}
+ ],
+ "notes": "item groups (ST_GROUP.fmx): 12-digit code by the group structure (level, parent, parent without items, duplicate), new group is a transaction group and its parent a classification group, flags from ST_BASIC, propagation of account / cost centre / stop flag to the sub-groups and the stop flag to the group's items; delete refused with items or sub-groups; tab نسب التغطية (ST_ITEM_GROUP_COV, serial max+1 per group); total cost panel; button add sub-group",
+ "rules": {
+  "where": "app_rules3_st.group_allowed(ITEM_GROUP_CODE, 0) = 1",
+  "key_expr": {
+   "ST_ITEM_GROUP.ITEM_GROUP_CODE": "app_rules3_st.code_required(2)"
+  },
+  "row_rules": {
+   "ST_ITEM_GROUP": "app_rules3_st.group_row(inserting, updating, :new.item_group_code, :new.group_level, :new.group_status, :new.stop_flag, :new.stop_reason, :new.account_number, :new.cost_code, :new.cost_code2, :old.account_number, :old.cost_code, :old.cost_code2, :old.stop_flag);",
+   "ST_ITEM_GROUP_COV": "app_rules3_st.group_cov_row(:new.from_cov, :new.to_cov);"
+  },
+  "validations": [
+   {
+    "name": "رقم المجموعة: الهيكل والمجموعة الرئيسية والتكرار",
+    "plsql": "return app_rules3_st.val_group(:PAGE_ROWID, :REQUEST, :PAGE_ITEM_GROUP_CODE);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "المجموعة الرئيسية ونقل الحساب والإيقاف إلى المجموعات الفرعية والأصناف",
+    "plsql": "app_rules3_st.group_after(:PAGE_ROWID, :REQUEST);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "defaults": {
+   "ST_ITEM_GROUP.EXPIRE_FLAG": {"type": "SQL_QUERY", "value": "select nvl(max(expire_flag), 0) from st_basic"},
+   "ST_ITEM_GROUP.COLOR_FLAG": {"type": "SQL_QUERY", "value": "select nvl(max(color_flag), 0) from st_basic"},
+   "ST_ITEM_GROUP.SIZE_FLAG": {"type": "SQL_QUERY", "value": "select nvl(max(size_flag), 0) from st_basic"}
+  },
+  "info": [
+   {"name": "CURRENT_COST", "label_a": "تكلفة كلية", "label_e": "Total cost",
+    "sql": "select to_char(app_rules3_st.group_total_cost(to_number(:PAGE_ITEM_GROUP_CODE)), 'FM999G999G999G990D00') from dual"}
+  ],
+  "columns": {
+   "ST_ITEM_GROUP.ITEM_GROUP_CODE": {"required": true}
+  },
+  "readonly": ["ST_ITEM_GROUP.GROUP_LEVEL", "ST_ITEM_GROUP.GROUP_STATUS"],
+  "optional": ["ST_ITEM_GROUP.GROUP_LEVEL", "ST_ITEM_GROUP.GROUP_STATUS"],
+  "add_columns": {
+   "ST_ITEM_GROUP.GROUP_LEVEL": {"label_a": "مستوى المجموعة", "label_e": "Group level"},
+   "ST_ITEM_GROUP.GROUP_STATUS": {"label_a": "مجموعة حركات (1) / تصنيف (0)", "label_e": "Transaction group (1) / parent group (0)"}
+  }
+ },
+ "actions": [
+  {
+   "name": "ADD_SON",
+   "label_a": "إضافة مجموعة فرعية",
+   "label_e": "Add sub-group",
+   "confirm_a": "هل تريد إضافة مجموعة فرعية لهذه المجموعة؟",
+   "confirm_e": "Add a sub-group under this group?",
+   "params": [
+    {"name": "NAME_A", "label_a": "اسم المجموعة الفرعية", "label_e": "Sub-group name", "type": "text", "required": true},
+    {"name": "NAME_E", "label_a": "الاسم لاتيني", "label_e": "English name", "type": "text"}
+   ],
+   "call": "app_rules3_st.add_child_group(:PAGE_ROWID, :NAME_A, :NAME_E)",
+   "target_form": "ST_GROUP",
+   "message": "app_rules3_st.last_message",
+   "success_a": "تم إضافة المجموعة الفرعية",
+   "success_e": "Sub-group created"
+  }
+ ]
+}

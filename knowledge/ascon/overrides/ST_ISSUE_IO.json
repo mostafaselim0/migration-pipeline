@@ -1,0 +1,179 @@
+{
+  "pattern": "AUTO",
+  "notes": "Sales invoices on ST_TRNS_MAST/ST_TRNS_DET (types EFFECT 2, TRNS_TYPE 2/5): legacy numbering (serial per type, DOC_NO_SEQ, INVOICE_NO), customer/salesman/date/credit-limit/stock/price/sales-order checks, line derivations and VAT, lots split by expiry (DEVIDE_CONFGS), invoice from a sales order, posted read-only, soft delete (APP_RULES_SA); wave 3: displays of the customer credit / counters, delete with the sales order (APP_ACT_ST)",
+  "rules": {
+  "computed": {
+   "ST_TRNS_DET.ITEM_NAME": {"sql": "(select max(nvl(i.name_e, i.name_a)) from st_item i where i.item_group_code = t.group_code and i.item_code = t.item_code)", "label_a": "إســم الصنـــف", "label_e": "Item Name"},
+   "ST_TRNS_DET.LOT_NO": {"sql": "(select max(c.lot_number) from st_item_confg c where c.item_confg_id = t.item_confg_id)", "label_a": "Btch #", "label_e": "Btch #"},
+   "ST_TRNS_DET.EXPIRE_DATE": {"sql": "app_ui.lot_expiry(t.item_confg_id)", "label_a": "تاريخ الصلاحيه", "label_e": "Expire Date", "type": "DATE"},
+   "ST_TRNS_DET.STORE_BALANCE": {"sql": "case when (nvl(to_number(v('G_USER_CODE')), 0) = 0 or (select nvl(max(u.allow_view_balance), 0) from users u where u.users_code = to_number(v('G_USER_CODE'))) = 1) then round(nvl(get_balance_confg(t.store_code, t.group_code, t.item_code, t.item_confg_id, t.trns_date, t.date_serial, t.item_serial), 0) / nvl((select max(u.factor) from st_item_unit u where u.group_code = t.group_code and u.item_code = t.item_code and u.unit_code = t.unit_code), 1), 3) end", "label_a": "الرصيد", "label_e": "Balance", "type": "NUMBER"},
+   "ST_TRNS_DET.STORE_COST": {"sql": "case when (nvl(to_number(v('G_PASSWORD_NUMBER')), 0) = 0 or ((select nvl(max(b.show_cost), 0) from st_basic b) = 1 and (select nvl(max(u.allow_view_cost), 0) from users u where u.users_code = to_number(v('G_USER_CODE'))) = 1)) then get_unit_cost_confg(t.store_code, t.group_code, t.item_code, t.item_confg_id, t.trns_date, t.date_serial, t.item_serial) end", "label_a": "تكلفة الصنف بالريال", "label_e": "Item Cost In Riyal", "type": "NUMBER"},
+   "ST_TRNS_DET.LOC_NAME_E": {"sql": "(select max(o.name_e) from st_org_country o, st_item i where to_char(o.country_code) = i.country_code and i.item_group_code = t.group_code and i.item_code = t.item_code)", "label_a": "CO.O", "label_e": "CO.O"},
+   "ST_TRNS_DET.BASIC_UNIT_NAME_E": {"sql": "(select max(u.name_e) from st_item_unit iu, st_unit u where iu.group_code = t.group_code and iu.item_code = t.item_code and nvl(iu.basic_unit, 0) = 1 and u.unit_code = iu.unit_code)", "label_a": "Basic Unit", "label_e": "Basic Unit"}
+  },
+  "columns": {
+   "ST_TRNS_MAST.TRNS_TYPE_CODE": {"readonly_after_insert": true},
+   "ST_TRNS_MAST.STORE_CODE": {"readonly_after_insert": true, "required": true},
+   "ST_TRNS_MAST.CLASS_CODE": {"widget": "SELECT", "lov": "select c.class_code || ' - ' || c.desc_a d, c.class_code r from ar_st_item_classes c order by c.class_code"},
+   "ST_TRNS_MAST.PAYMENT_TYPE": {"widget": "SELECT", "lov": "select p.serial || ' - ' || p.type_name d, p.serial r from st_payment_terms p order by p.serial"},
+   "ST_TRNS_DET.LOT_NUMBER": {"hidden": true},
+   "ST_TRNS_DET.PRODUCTION_DATE": {"hidden": true},
+   "ST_TRNS_DET.ITEM_CONFG_ID": {"widget": "POPUP", "cascade": "ITEM_CODE", "lov": "select c.item_confg_id || ' - ' || c.lot_number || ' - ' || to_char(c.expire_date, 'DD/MM/YYYY') d, c.item_confg_id r from st_item_confg c where c.item_code = :PAGE_ITEM_CODE order by c.expire_date, c.item_confg_id"}
+  },
+    "where": "TRNS_TYPE_CODE IN (SELECT T.TRNS_TYPE_CODE FROM ST_TRNS_TYPE T WHERE T.EFFECT = 2 AND T.TRNS_TYPE IN (2,5)) AND NVL(DELETE_FLAG,0) = 0 AND (NVL(:G_PASSWORD_NUMBER,0) = 0 OR TRNS_TYPE_CODE IN (SELECT TP.TRNS_TYPE_CODE FROM ST_TRNSTYPE_PASSWORD TP WHERE TP.FLAG = 1 AND TP.PASSWORD_NUMBER = :G_PASSWORD_NUMBER))",
+    "defaults": {
+      "ST_TRNS_MAST.TRNS_TYPE_CODE": {
+        "type": "SQL_QUERY",
+        "value": "select app_rules_sa.first_type('SI') from dual"
+      },
+      "ST_TRNS_DET.AUTO_DISC": {
+        "type": "STATIC",
+        "value": "1"
+      }
+    },
+    "readonly": [
+      "ST_TRNS_MAST.TRNS_SERIAL",
+      "ST_TRNS_MAST.DOC_NO",
+      "ST_TRNS_MAST.POST_FLAG",
+      "ST_TRNS_MAST.CUST_POST_FLAG",
+      "ST_TRNS_MAST.SUPP_POST_FLAG",
+      "ST_TRNS_MAST.CUST_TRNS_ID",
+      "ST_TRNS_MAST.CUST_TRNS_SERIAL",
+      "ST_TRNS_MAST.SUPP_TRNS_ID",
+      "ST_TRNS_MAST.SUPP_TRNS_SERIAL",
+      "ST_TRNS_MAST.AC_ENTRY_YEAR",
+      "ST_TRNS_MAST.AC_ENTRY_TYPE",
+      "ST_TRNS_MAST.AC_ENTRY_NO",
+      "ST_TRNS_MAST.TAX_VALUE1",
+      "ST_TRNS_DET.TAX_VALUE1",
+      "ST_TRNS_MAST.INVOICE_NO",
+      "ST_TRNS_MAST.DEMO_TRNS_TYPE_CODE",
+      "ST_TRNS_MAST.DEMO_TRNS_SERIAL",
+      "ST_TRNS_DET.DISC"
+    ],
+    "optional": [
+      "ST_TRNS_MAST.DATE_SERIAL",
+      "ST_TRNS_MAST.DELETE_FLAG",
+      "ST_TRNS_DET.GROUP_CODE",
+      "ST_TRNS_DET.UNIT_CODE",
+      "ST_TRNS_DET.BASIC_QTY",
+      "ST_TRNS_DET.COST_FLAG",
+      "ST_TRNS_DET.ITEM_CONFG_ID"
+    ],
+    "row_rules": {
+      "ST_TRNS_MAST": "if app_rules_sa.doc_kind(:new.trns_type_code) in ('SI','SR') then app_rules_sa.trns_mast_row(inserting, :new.trns_type_code, :new.trns_serial, :new.trns_date, :new.doc_no, :new.invoice_no, :new.invoice_ref, :new.desc_a, :new.desc_e, :new.store_code, :new.customer_code, :new.salesman_code, :new.currency_code, :new.currency_rate, :new.due_days, :new.due_date, :new.delete_flag, :new.print_flag, :new.return_type_flag, :new.ret_trns_type_code, :new.ret_trns_serial, :new.order_trns_type_code, :new.order_trns_serial, :new.demo_trns_type_code, :new.demo_trns_serial, :new.trnsport_val); end if;",
+      "ST_TRNS_DET": "if app_rules_sa.doc_kind(:new.trns_type_code) in ('SI','SR') then app_rules_sa.trns_det_row2(inserting, :new.trns_type_code, :new.trns_serial, :new.item_serial, :new.group_code, :new.item_code, :new.unit_code, :new.item_confg_id, :new.quantity, :new.bonus, :new.extra_bonus, :new.extra_bonus_ratio, :new.basic_qty, :new.unit_price_curr, :new.unit_price, :new.disc1_ratio, :new.disc1_value, :new.disc2_ratio, :new.disc2_value, :new.disc3_ratio, :new.disc3_value, :new.det_disc, :new.disc, :new.cost_flag, :new.unit_cost, :new.store_code, :new.tax_code1, :new.tax_value1, :new.auto_disc, :new.org_disc1_ratio, :new.org_disc2_ratio, :new.org_disc3_ratio, :new.org_bonus_ratio, :new.org_unit_price_curr, :new.org_extra_bonus_ratio, :new.org_class_code, :old.item_code, :old.unit_code, :old.item_confg_id, :old.quantity, :old.bonus, :old.extra_bonus, :old.unit_price_curr); end if;",
+      "ST_TRNS_SERVICES": "if app_rules_sa.doc_kind(:new.trns_type_code) in ('SI','SR') then app_rules_sa.trns_srv_row(inserting, :new.trns_type_code, :new.trns_serial, :new.service_code, :new.service_cost, :new.units_no, :new.tax_code1, :new.tax_value1); end if;"
+    },
+    "validations": [
+      {
+        "name": "قواعد فاتورة المبيعات",
+        "when": "CREATE,SAVE",
+        "plsql": "return app_rules_sa.si_validate(:REQUEST, :PAGE_ROWID, :PAGE_TRNS_TYPE_CODE, :PAGE_TRNS_DATE, :PAGE_STORE_CODE, :PAGE_CUSTOMER_CODE, :PAGE_SALESMAN_CODE, :PAGE_CURRENCY_CODE, :PAGE_CURRENCY_RATE, :PAGE_CLASS_CODE, :PAGE_ORDER_TRNS_TYPE_CODE, :PAGE_ORDER_TRNS_SERIAL);"
+      }
+    ],
+    "after_save": [
+      {
+        "name": "أصناف أمر البيع وإجماليات وحد ائتمان الفاتورة",
+        "when": "CREATE,SAVE",
+        "plsql": "app_rules_sa.si_after_save(:REQUEST, :PAGE_ROWID);"
+      },
+      {
+        "name": "إلغاء الفاتورة: تحرير أمر البيع (POST-UPDATE)",
+        "when": "DELETE",
+        "plsql": "app_act_st.si_after_delete(:PAGE_ROWID);"
+      }
+    ],
+    "soft_delete": {
+      "set": {
+        "DELETE_FLAG": "1",
+        "DELETE_USER": ":G_USER_CODE",
+        "DELETE_DATE": "sysdate"
+      },
+      "lines": "keep",
+      "check": "return app_act_st.si_delete_check(:PAGE_ROWID);",
+      "message_a": "تم حذف الفاتورة"
+    },
+    "info": [
+      {
+        "name": "CREDIT_LIMIT",
+        "label_a": "الحد الائتماني",
+        "label_e": "Credit limit",
+        "sql": "select app_act_st.si_info(:PAGE_ROWID, 'CREDIT_LIMIT') from dual"
+      },
+      {
+        "name": "BALANCE",
+        "label_a": "رصيد العميل",
+        "label_e": "Customer balance",
+        "sql": "select app_act_st.si_info(:PAGE_ROWID, 'BALANCE') from dual"
+      },
+      {
+        "name": "DAY_NO",
+        "label_a": "فترة السماح (يوم)",
+        "label_e": "Allowed days",
+        "sql": "select app_act_st.si_info(:PAGE_ROWID, 'DAY_NO') from dual"
+      },
+      {
+        "name": "DAYS",
+        "label_a": "أقدم مديونية (يوم)",
+        "label_e": "Oldest open debt (days)",
+        "sql": "select app_act_st.si_info(:PAGE_ROWID, 'DAYS') from dual"
+      },
+      {
+        "name": "STATUS",
+        "label_a": "حالة العميل",
+        "label_e": "Customer status",
+        "sql": "select app_act_st.si_info(:PAGE_ROWID, 'STATUS') from dual"
+      },
+      {
+        "name": "ITEMS",
+        "label_a": "الأصناف",
+        "label_e": "Items",
+        "sql": "select app_act_st.si_info(:PAGE_ROWID, 'ITEMS') from dual"
+      },
+      {
+        "name": "DIFF_POLICY",
+        "label_a": "مخالف للسياسة",
+        "label_e": "Over the price policy",
+        "sql": "select app_act_st.si_info(:PAGE_ROWID, 'DIFF_POLICY') from dual"
+      },
+      {
+        "name": "SALES_LIMIT",
+        "label_a": "تعدي حد البيع",
+        "label_e": "Over the sales limit",
+        "sql": "select app_act_st.si_info(:PAGE_ROWID, 'SALES_LIMIT') from dual"
+      },
+      {
+        "name": "TOTAL",
+        "label_a": "إجمالي الأصناف",
+        "label_e": "Items total",
+        "sql": "select app_act_st.si_info(:PAGE_ROWID, 'TOTAL') from dual"
+      },
+      {
+        "name": "NET",
+        "label_a": "صافي الفاتورة",
+        "label_e": "Invoice net",
+        "sql": "select app_act_st.si_info(:PAGE_ROWID, 'NET') from dual"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "name": "DEL_ORDER",
+      "label_a": "حذف الفاتورة مع أمر البيع",
+      "label_e": "Delete the invoice with its sales order",
+      "confirm_a": "هل تريد حذف هذا السجل ؟ سيتم حذف أمر البيع المحول إلى هذه الفاتورة أيضا (نعم بحذف أمر البيع).",
+      "confirm_e": "Do you want to Delete That Record? The sales order converted into this invoice is deleted too (Yes With Delete Sales Order).",
+      "condition": "app_act_st.si_can_delete_order(:PAGE_ROWID) = 'Y' and app_sec.can_page(to_number(:APP_PAGE_ID), 'D')",
+      "call": "app_act_st.si_delete_with_order(p_rowid => :PAGE_ROWID)",
+      "message": "app_act_st.last_message",
+      "success_a": "تم حذف الفاتورة وأمر البيع",
+      "success_e": "The invoice and its sales order were deleted",
+      "icon": "fa-trash"
+    }
+  ],
+ "links": [
+  {"label_a": "ترحيل السند", "label_e": "Post transaction", "form": "ST_POSTING_CPOSTING", "icon": "fa-send", "items": {"FROM_TYPE": "TRNS_TYPE_CODE", "TO_TYPE": "TRNS_TYPE_CODE", "FROM_SERIAL": "TRNS_SERIAL", "TO_SERIAL": "TRNS_SERIAL", "FROM_DATE": "TRNS_DATE", "TO_DATE": "TRNS_DATE"}},
+  {"label_a": "ملف العملاء", "label_e": "Customers file", "form": "CUSTOMER", "icon": "fa-users"}
+ ]
+}

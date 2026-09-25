@@ -1,0 +1,237 @@
+{
+ "pattern": "AUTO",
+ "notes": "Supplier debit transactions (payments/settlements, VN_TRNSTYPE EFFECT 0, manual only): legacy numbering, header checks, payment-line settlement against open invoices, GL-link balance, posted/paid lock. Wave 3b: legacy LOVs (types, suppliers, cost centres, accounts, payment types, open invoices of the supplier, contracts and bands as cascading lists), type and supplier fixed after insert, payment method list (1 descending / 2 invoice help / 3 debit amount), invoice residual and riyal net value on the payment lines.",
+ "rules": {
+  "where": "TRNS_ID IN (SELECT ID FROM VN_TRNSTYPE WHERE EFFECT = 0 AND TRNS_TYPE <> 5 AND NVL(SUM_TRNS, 0) = 0) AND MAIN_TRNS_ID IS NULL AND MAIN_TRNS_SERIAL IS NULL AND NVL(LINK_FLAG, 0) = 0 AND SERIAL IS NULL AND (:G_PASSWORD_NUMBER = 0 OR TRNS_ID IN (SELECT TRNS_ID FROM VN_TRNSTYPE_PASSWORD WHERE FLAG = 1 AND PASSWORD_NUMBER = :G_PASSWORD_NUMBER)) AND (:G_PASSWORD_NUMBER = 0 OR (SUPPLIER_ID >= (SELECT FROM_SUPPLIER_CODE FROM VN_SUPPLIER_PASSWORD WHERE PASSWORD_NUMBER = :G_PASSWORD_NUMBER) AND SUPPLIER_ID <= (SELECT TO_SUPPLIER_CODE FROM VN_SUPPLIER_PASSWORD WHERE PASSWORD_NUMBER = :G_PASSWORD_NUMBER)))",
+  "key_expr": {
+   "VN_MAINTRNS.TRNS_SERIAL": "app_rules_vn.next_trns_serial(:new.trns_id)"
+  },
+  "row_rules": {
+   "VN_MAINTRNS": "if inserting then\n  :new.alt_key := :new.trns_id || '-' || :new.trns_serial;\nend if;\nif nvl(:new.link_flag, 0) = 0 and :new.post_system is null then\n  if inserting then\n    :new.pay_method := nvl(:new.pay_method, 5);\n    :new.bill_pay_method := nvl(:new.bill_pay_method, 1);\n    :new.pay_type_code := nvl(:new.pay_type_code, app_rules_vn.default_pay_type);\n    :new.resp_code := nvl(:new.resp_code, app_rules_vn.supplier_resp(:new.supplier_id));\n    :new.description_e := app_rules_vn.payment_desc_e(:new.trns_id, :new.description_e, :new.doc_no, :new.pay_method, :new.acc_post_date);\n  end if;\n  if :new.inv_value is not null and (inserting\n     or app_rules_vn.differs(:new.inv_value, :old.inv_value) = 1 or app_rules_vn.differs(:new.tax_value2, :old.tax_value2) = 1\n     or app_rules_vn.differs(:new.supplier_id, :old.supplier_id) = 1 or app_rules_vn.differs(:new.trns_date, :old.trns_date) = 1) then\n    app_rules_vn.calc_tax(:new.trns_id, :new.supplier_id, :new.trns_date, :new.inv_value, :new.tax_code1, :new.tax_value1);\n    :new.total_value := app_rules_vn.total_with_tax(:new.trns_id, :new.supplier_id, :new.inv_value, :new.tax_value1, :new.tax_value2);\n  end if;\nend if;",
+   "VN_MAINTRNS_ACC": "app_rules_vn.acc_line(:new.acc_number, :new.acc_val, :new.cost_center, :new.cost_center2);",
+   "VN_MAINTRNS_SUPP_ACC": "app_rules_vn.acc_line(:new.acc_number, :new.acc_val, :new.cost_center, :new.cost_center2);\nif inserting then\n  :new.acc_memo := app_rules_vn.supp_acc_memo(:new.trns_id, :new.trns_serial, :new.acc_memo);\nend if;",
+   "VN_SUBTRNS_BAND": "if :new.supplier_id is null then\n  :new.supplier_id := app_rules_vn.band_supplier(:new.trns_id, :new.trns_serial);\nend if;"
+  },
+  "defaults": {
+   "VN_MAINTRNS.TRNS_ID": {
+    "type": "SQL_QUERY",
+    "value": "select app_rules_vn.default_trns_id('VNDBTRN') from dual"
+   },
+   "VN_MAINTRNS.PAY_TYPE_CODE": {
+    "type": "SQL_QUERY",
+    "value": "select app_rules_vn.default_pay_type from dual"
+   }
+  },
+  "readonly": [
+   "VN_MAINTRNS.TRNS_SERIAL",
+   "VN_MAINTRNS.POST_FLAG",
+   "VN_MAINTRNS.PAY_FLAG",
+   "VN_MAINTRNS.ACC_NO",
+   "VN_MAINTRNS.ACC_DATE",
+   "VN_MAINTRNS.TOTAL_VALUE",
+   "VN_MAINTRNS.TAX_VALUE1",
+   "VN_MAINTRNS.ACC_YEAR",
+   "VN_MAINTRNS.ACC_TYPE",
+   "VN_MAINTRNS.RP_TRNS_TYPE_CODE",
+   "VN_MAINTRNS.RP_TRNS_SERIAL",
+   "VN_MAINTRNS.CHECK_TRNS_TYPE_CODE",
+   "VN_MAINTRNS.CHECK_TRNS_SERIAL",
+   "VN_SUBTRNS.INV_DATE",
+   "VN_SUBTRNS.INV_SUPPLIER_REF",
+   "VN_SUBTRNS.NET_VALUE",
+   "VN_SUBTRNS.BILL_ID2"
+  ],
+  "validations": [
+   {
+    "name": "VNDBTRN legacy header rules",
+    "plsql": "return app_rules_vn.check_header('VNDBTRN', :REQUEST, :PAGE_ROWID, :PAGE_TRNS_ID, :PAGE_SUPPLIER_ID, :PAGE_TRNS_DATE, :PAGE_ACC_POST_DATE, :PAGE_DOC_NO, :PAGE_CURRENCY_CODE, :PAGE_CURRENCY_RATE, :PAGE_INV_VALUE);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "VNDBTRN payment lines, totals, GL link",
+    "plsql": "app_rules_vn.after_save('VNDBTRN', :PAGE_ROWID, :REQUEST);",
+    "when": "CREATE,SAVE"
+   },
+   {
+    "name": "VNDBTRN delete rules",
+    "plsql": "app_rules_vn.on_delete('VNDBTRN', :PAGE_TRNS_ID, :PAGE_TRNS_SERIAL, :PAGE_POST_FLAG, :PAGE_PAY_FLAG, :PAGE_LINK_FLAG);",
+    "when": "DELETE"
+   }
+  ],
+  "warnings": [
+   {
+    "name": "DOC_NO_ASK",
+    "plsql": "return app_act_pr.vn_doc_warning(:PAGE_ROWID, :PAGE_TRNS_ID, :PAGE_DOC_NO);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "info": [
+   {
+    "name": "BAL",
+    "label_a": "رصيد المورد الحالى",
+    "label_e": "Current supplier balance",
+    "sql": "select app_act_pr.vn_supplier_balance(:PAGE_SUPPLIER_ID) from dual"
+   }
+  ],
+  "columns": {
+   "VN_MAINTRNS.TRNS_ID": {
+    "widget": "SELECT",
+    "readonly_after_insert": true,
+    "lov": "select id || ' - ' || description_a d, id r from vn_trnstype where effect = 0 and trns_type <> 5 and nvl(sum_trns, 0) = 0 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or id in (select trns_id from vn_trnstype_password where flag = 1 and password_number = to_number(:G_PASSWORD_NUMBER))) order by id"
+   },
+   "VN_MAINTRNS.SUPPLIER_ID": {
+    "widget": "POPUP",
+    "readonly_after_insert": true,
+    "lov": "select s.code || ' - ' || s.name_a d, s.code r from supplier s where nvl(s.stopflag, 0) = 0 and nvl(s.supplier_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (s.code >= (select max(from_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)) and s.code <= (select max(to_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)))) order by 2"
+   },
+   "VN_MAINTRNS.COST_NO": {
+    "widget": "SELECT",
+    "lov": "select cost_code || ' - ' || cost_desc d, cost_code r from ac_cost_centers where nvl(cost_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or cost_code in (select p.cost_code from ac_password_cost1 p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by 2"
+   },
+   "VN_MAINTRNS.DISC_ACCOUNT": {
+    "widget": "POPUP",
+    "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or account_number in (select p.account_number from ac_password_master p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by account_number"
+   },
+   "VN_MAINTRNS.PAY_TYPE_CODE": {
+    "widget": "SELECT",
+    "lov": "select settel_type_code || ' - ' || settel_type_desc d, settel_type_code r from lc_settel_type order by 2"
+   },
+   "VN_MAINTRNS.BILL_PAY_METHOD": {
+    "hidden": false,
+    "label_a": "طريقة الدفع",
+    "label_e": "Pay Method",
+    "static": [
+     [
+      "تنازلي علي الفاتورة",
+      "1",
+      "Descending on invoices"
+     ],
+     [
+      "مساعدة الفواتير",
+      "2",
+      "Invoice help"
+     ],
+     [
+      "مبلغ مدين",
+      "3",
+      "Debit amount"
+     ]
+    ],
+    "default": {
+     "type": "STATIC",
+     "value": "1"
+    }
+   },
+   "VN_SUBTRNS.PAY_TYPE_CODE": {
+    "widget": "SELECT",
+    "lov": "select settel_type_code || ' - ' || settel_type_desc d, settel_type_code r from lc_settel_type where nvl(non_pay_flag, 0) = 0 order by 2"
+   },
+   "VN_SUBTRNS.BILL_ID1": {
+    "widget": "POPUP",
+    "cascade": [
+     "TRNS_ID",
+     "TRNS_SERIAL"
+    ],
+    "lov": "select s.bill_id1 || ' / ' || s.bill_id2 || ' - ' || to_char(m.trns_date, 'DD-MM-YYYY') || nvl2(m.supplier_ref, ' - ' || m.supplier_ref, '') || ' - المتبقي ' || to_char(s.total_value - vn_subtrns_payed_value(s.trns_id, s.trns_serial, s.bill_seq)) d, s.bill_id1 r from vn_subtrns s, vn_maintrns m, vn_maintrns h where h.trns_id = :PAGE_TRNS_ID and h.trns_serial = :PAGE_TRNS_SERIAL and m.trns_id in (select id from vn_trnstype where effect = 1) and m.trns_id = s.trns_id and m.trns_serial = s.trns_serial and m.supplier_id = h.supplier_id and m.currency_code = h.currency_code and s.pay_type_code = h.pay_type_code and nvl(s.stop_flag, 0) = 0 and nvl(s.total_value - vn_subtrns_payed_value(s.trns_id, s.trns_serial, s.bill_seq), 0) > 0 order by m.trns_date, s.bill_id1, s.bill_id2"
+   },
+   "VN_MAINTRNS_ACC.ACC_NUMBER": {
+    "widget": "POPUP",
+    "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or account_number in (select p.account_number from ac_password_master p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by account_number"
+   },
+   "VN_MAINTRNS_ACC.COST_CENTER": {
+    "widget": "SELECT",
+    "lov": "select cost_code || ' - ' || cost_desc d, cost_code r from ac_cost_centers where nvl(cost_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or cost_code in (select p.cost_code from ac_password_cost1 p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by 2"
+   },
+   "VN_MAINTRNS_ACC.COST_CENTER2": {
+    "widget": "SELECT",
+    "lov": "select cost_code || ' - ' || cost_desc d, cost_code r from ac_cost_centers2 where nvl(cost_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or cost_code in (select p.cost_code from ac_password_cost2 p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by 2"
+   },
+   "VN_MAINTRNS_SUPP_ACC.ACC_NUMBER": {
+    "widget": "POPUP",
+    "lov": "select account_number || ' - ' || account_name d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or account_number in (select p.account_number from ac_password_master p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by account_number"
+   },
+   "VN_MAINTRNS_SUPP_ACC.COST_CENTER": {
+    "widget": "SELECT",
+    "lov": "select cost_code || ' - ' || cost_desc d, cost_code r from ac_cost_centers where nvl(cost_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or cost_code in (select p.cost_code from ac_password_cost1 p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by 2"
+   },
+   "VN_MAINTRNS_SUPP_ACC.COST_CENTER2": {
+    "widget": "SELECT",
+    "lov": "select cost_code || ' - ' || cost_desc d, cost_code r from ac_cost_centers2 where nvl(cost_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or :G_COMPANY_CODE is null or cost_code in (select p.cost_code from ac_password_cost2 p where p.password_number = to_number(:G_PASSWORD_NUMBER) and p.company_code = :G_COMPANY_CODE)) order by 2"
+   },
+   "VN_SUBTRNS_BAND.CONTRACT_ID": {
+    "widget": "SELECT",
+    "cascade": [
+     "TRNS_ID",
+     "TRNS_SERIAL"
+    ],
+    "lov": "select contract_id || ' - ' || desc_a d, contract_id r from vn_contract where supplier_id = (select h.supplier_id from vn_maintrns h where h.trns_id = :PAGE_TRNS_ID and h.trns_serial = :PAGE_TRNS_SERIAL) order by 2"
+   },
+   "VN_SUBTRNS_BAND.BAND_ID": {
+    "widget": "SELECT",
+    "cascade": [
+     "CONTRACT_ID",
+     "TRNS_ID",
+     "TRNS_SERIAL"
+    ],
+    "lov": "select cb.band_id || ' - ' || b.name_a || ' - ' || nvl(cb.band_value, 0) d, cb.band_id r from vn_contract_band cb, vn_band b where b.band_id = cb.band_id and cb.supplier_id = (select h.supplier_id from vn_maintrns h where h.trns_id = :PAGE_TRNS_ID and h.trns_serial = :PAGE_TRNS_SERIAL) and cb.contract_id = :PAGE_CONTRACT_ID and check_band_status((select h.supplier_id from vn_maintrns h where h.trns_id = :PAGE_TRNS_ID and h.trns_serial = :PAGE_TRNS_SERIAL), :PAGE_CONTRACT_ID, cb.band_id) = 0 order by 2"
+   }
+  },
+  "computed": {
+   "VN_SUBTRNS.INV_RESIDUAL": {
+    "sql": "(select s.total_value - vn_subtrns_payed_value(s.trns_id, s.trns_serial, s.bill_seq) from vn_subtrns s where s.trns_id = t.inv_trns_id and s.trns_serial = t.inv_trns_serial and s.bill_seq = t.inv_bill_seq)",
+    "label_a": "المتبقي من الفاتورة",
+    "label_e": "Invoice residual",
+    "type": "NUMBER"
+   },
+   "VN_SUBTRNS.NET_VALUE_CURR": {
+    "sql": "(select t.net_value * nvl(h.currency_rate, 1) from vn_maintrns h where h.trns_id = t.trns_id and h.trns_serial = t.trns_serial)",
+    "label_a": "صافى الفاتورة ( الريال )",
+    "label_e": "Net Amount (RS)",
+    "type": "NUMBER"
+   }
+  }
+ },
+ "actions": [
+  {
+   "name": "POST",
+   "label_a": "الترحيل للحسابات العامة",
+   "label_e": "Posting to GL",
+   "confirm_a": "سيتم ترحيل الحركة الحالية للحسابات العامة (قيد للحركة). هل تريد الاستمرار؟",
+   "confirm_e": "The transaction will be posted to the GL. Continue?",
+   "condition": "app_act_pr.vn_can(:PAGE_ROWID, 'POST') = 'Y'",
+   "call": "app_act_pr.vn_post(:PAGE_ROWID)",
+   "message": "app_act_pr.last_message",
+   "success_a": "تمت عملية الترحيل",
+   "success_e": "Posting completed",
+   "icon": "fa-share-square-o"
+  },
+  {
+   "name": "UNPOST",
+   "label_a": "الغاء الترحيل",
+   "label_e": "Cancel Posting",
+   "confirm_a": "سيتم حذف قيد الحسابات الخاص بالحركة الحالية. هل تريد الاستمرار؟",
+   "confirm_e": "The GL voucher of the transaction will be deleted. Continue?",
+   "condition": "app_act_pr.vn_can(:PAGE_ROWID, 'UNPOST') = 'Y'",
+   "call": "app_act_pr.vn_unpost(:PAGE_ROWID)",
+   "message": "app_act_pr.last_message",
+   "success_a": "تمت عملية إلغاء الترحيل",
+   "success_e": "Cancel posting completed",
+   "icon": "fa-undo"
+  },
+  {
+   "name": "FILL_BILLS",
+   "label_a": "توزيع السداد على الفواتير",
+   "label_e": "Allocate the payment to the invoices",
+   "confirm_a": "سيتم توزيع قيمة السداد على الفواتير المفتوحة للمورد من الأقدم. هل تريد الاستمرار؟",
+   "confirm_e": "The payment will be allocated to the open invoices of the supplier, oldest first. Continue?",
+   "condition": "app_act_pr.vn_can(:PAGE_ROWID, 'FILL_BILLS') = 'Y'",
+   "call": "app_act_pr.vn_fill_bills(:PAGE_ROWID)",
+   "message": "app_act_pr.last_message",
+   "success_a": "تم توزيع السداد على الفواتير",
+   "success_e": "The payment was allocated",
+   "icon": "fa-list-ol"
+  }
+ ]
+}

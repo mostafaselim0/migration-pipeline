@@ -1,0 +1,109 @@
+{
+  "pattern": "PROCESS",
+  "notes": "Manual allocation of customer payments to invoices (AR_MAINTRNS master = open payments, AR_SUBTRNS detail = allocation lines): rebuilt from the SQL and texts of the compiled AR_INVOICE_ADJESTMENT_MAN.fmx in app_proc_ar.manual_adjust (one allocation per run; remove = legacy DEL_BTN).",
+  "proc": {
+    "procedure": "app_proc_ar.manual_adjust",
+    "description_a": "تسوية فواتير العملاء يدوياً: اختر حركة السداد (سند قبض أو تسوية دائنة لها قيمة غير مسواة) ثم الفاتورة المفتوحة لنفس العميل والقيمة (إذا تركت فارغة تسوى أقل القيمتين: المتبقي من السند أو المتبقي من الفاتورة). يحسب خصم السداد المبكر حسب فترات الخصم (العميل / فئة العميل / نوع الحركة / القسم) إذا ترك الخصم فارغاً. يضاف سطر تسكين على السند بوصف سداد كامل / باقي / جزء من الفاتورة ويعاد حساب المتبقي والخصم والصافي للسند والمتبقي من الفاتورة. عملية (حذف تسكينات السند) تحذف كل تسكينات السند وتحتاج صلاحية حذف تسويات العملاء. الجدول يعرض الفواتير المفتوحة لعميل السند وتسكينات السند.",
+    "description_e": "Manual customer invoice adjustment: choose the payment (receipt or credit adjustment with an unallocated value), then an open invoice of the same customer and the value (empty = the smaller of the open payment and the open invoice). An empty discount is computed from the early-payment discount periods (customer / customer class / transaction type / category). An allocation line is added to the payment (pay total / remaining / part of the invoice) and the open value, discount and net of the payment and the open value of the invoice are recalculated. 'Remove allocations' deletes all allocation lines of the payment and needs the permission to delete AR adjustments. The table lists the open invoices of the payment's customer and the allocations of the payment.",
+    "params": [
+      {
+        "name": "ACTION",
+        "arg": "p_action",
+        "label_a": "العملية",
+        "label_e": "Action",
+        "type": "number",
+        "required": true,
+        "lov_sql": "select decode(:G_LANG, 'en', 'Allocate to invoice', 'تسكين على فاتورة') d, 1 r from dual union all select decode(:G_LANG, 'en', 'Remove the allocations of the payment', 'حذف تسكينات السند') d, 2 r from dual",
+        "default": "1",
+        "default_type": "STATIC"
+      },
+      {
+        "name": "PAYMENT",
+        "arg": "p_payment",
+        "label_a": "حركة السداد",
+        "label_e": "Payment",
+        "type": "text",
+        "required": true,
+        "lov_sql": "select m.trns_id || '/' || m.trns_serial || ' - ' || decode(:G_LANG, 'en', nvl(c.name_e, c.name_a), c.name_a) || ' - ' || to_char(m.trns_date, 'DD/MM/YYYY') || ' (' || to_char(m.total_value - ar_residual_value_date(m.trns_id, m.trns_serial, m.mainarea_id, m.subarea_id, sysdate)) || ')' d, m.trns_id || ':' || m.mainarea_id || ':' || m.subarea_id || ':' || m.trns_serial r from ar_maintrns m left join customer c on c.code = m.customer_id where m.trns_id in (select id from ar_trnstype where effect = 1) and (:G_PASSWORD_NUMBER = 0 or (m.trns_id in (select tp.trns_id from ar_trnstype_password tp where tp.flag = 1 and tp.password_number = :G_PASSWORD_NUMBER) and m.customer_id in (select cp.customer_code from ar_cust_password cp where cp.password_number = :G_PASSWORD_NUMBER) and m.salesman_id in (select sp.salesman_code from ar_salesman_password sp where sp.password_number = :G_PASSWORD_NUMBER))) order by case when nvl(m.total_value, 0) - ar_residual_value_date(m.trns_id, m.trns_serial, m.mainarea_id, m.subarea_id, sysdate) > 0 then 0 else 1 end, m.trns_date desc, m.trns_id, m.trns_serial"
+      },
+      {
+        "name": "INVOICE",
+        "arg": "p_invoice",
+        "label_a": "الفاتورة",
+        "label_e": "Invoice",
+        "type": "text",
+        "required": false,
+        "lov_sql": "select s.bill_id2 || '/' || s.bill_id1 || ' - ' || decode(:G_LANG, 'en', nvl(c.name_e, c.name_a), c.name_a) || ' - ' || to_char(s.inv_date, 'DD/MM/YYYY') || ' (' || to_char(s.total_value - ar_subtrns_payed_value(s.trns_id, s.trns_serial, s.mainarea_id, s.subarea_id, s.bill_seq)) || ')' d, s.trns_id || ':' || s.mainarea_id || ':' || s.subarea_id || ':' || s.trns_serial || ':' || s.bill_seq r from ar_subtrns s join ar_maintrns i on i.trns_id = s.trns_id and i.trns_serial = s.trns_serial and i.mainarea_id = s.mainarea_id and i.subarea_id = s.subarea_id left join customer c on c.code = i.customer_id where s.trns_id in (select id from ar_trnstype where effect = 0) and s.total_value - ar_subtrns_payed_value(s.trns_id, s.trns_serial, s.mainarea_id, s.subarea_id, s.bill_seq) != 0 and (:G_PASSWORD_NUMBER = 0 or i.customer_id in (select cp.customer_code from ar_cust_password cp where cp.password_number = :G_PASSWORD_NUMBER)) order by c.name_a, s.inv_date, s.bill_id1, s.bill_id2"
+      },
+      {
+        "name": "AMOUNT",
+        "arg": "p_amount",
+        "label_a": "القيمة",
+        "label_e": "Value",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "DISC",
+        "arg": "p_disc",
+        "label_a": "قيمة الخصم (فارغ = خصم فترات السداد)",
+        "label_e": "Discount (empty = payment-period discount)",
+        "type": "number",
+        "required": false
+      }
+    ],
+    "fixed_args": {
+      "p_company_code": "to_number(:G_COMPANY_CODE)",
+      "p_user_code": "to_number(:G_USER_CODE)",
+      "p_password_number": "to_number(:G_PASSWORD_NUMBER)"
+    },
+    "button_a": "تنفيذ",
+    "button_e": "Execute",
+    "confirm_a": "هل تريد تنفيذ التسوية على حركة السداد المختارة؟",
+    "success_a": "تمت التسوية بنجاح",
+    "preview_title_a": "فواتير العميل المفتوحة وتسكينات السند",
+    "preview_sql": "select x.* from (select 1 sort_key, decode(:G_LANG, 'en', 'Open invoice', 'فاتورة مفتوحة') kind, s.bill_id2 || '/' || s.bill_id1 invoice_no, s.inv_date, s.total_value, s.total_value - ar_subtrns_payed_value(s.trns_id, s.trns_serial, s.mainarea_id, s.subarea_id, s.bill_seq) open_value, cast(null as number) alloc_value, cast(null as varchar2(400)) det_desc from ar_subtrns s join ar_maintrns i on i.trns_id = s.trns_id and i.trns_serial = s.trns_serial and i.mainarea_id = s.mainarea_id and i.subarea_id = s.subarea_id where s.trns_id in (select id from ar_trnstype where effect = 0) and s.total_value - ar_subtrns_payed_value(s.trns_id, s.trns_serial, s.mainarea_id, s.subarea_id, s.bill_seq) != 0 and i.customer_id = (select p.customer_id from ar_maintrns p where p.trns_id || ':' || p.mainarea_id || ':' || p.subarea_id || ':' || p.trns_serial = v('P' || :APP_PAGE_ID || '_PAYMENT')) union all select 2, decode(:G_LANG, 'en', 'Allocation of the payment', 'تسكين على السند'), s.bill_id2 || '/' || s.bill_id1, s.inv_date, cast(null as number), cast(null as number), s.total_value, decode(:G_LANG, 'en', s.det_desc_e, s.det_desc) from ar_subtrns s where s.trns_id || ':' || s.mainarea_id || ':' || s.subarea_id || ':' || s.trns_serial = v('P' || :APP_PAGE_ID || '_PAYMENT')) x order by x.sort_key, x.inv_date, x.invoice_no",
+    "preview_columns": [
+      {
+        "name": "SORT_KEY",
+        "label_a": "ترتيب",
+        "type": "NUMBER"
+      },
+      {
+        "name": "KIND",
+        "label_a": "النوع",
+        "type": "STRING"
+      },
+      {
+        "name": "INVOICE_NO",
+        "label_a": "رقم الفاتورة",
+        "type": "STRING"
+      },
+      {
+        "name": "INV_DATE",
+        "label_a": "تاريخ الفاتورة",
+        "type": "DATE"
+      },
+      {
+        "name": "TOTAL_VALUE",
+        "label_a": "القيمة الكلية",
+        "type": "NUMBER"
+      },
+      {
+        "name": "OPEN_VALUE",
+        "label_a": "القيمة المتبقية",
+        "type": "NUMBER"
+      },
+      {
+        "name": "ALLOC_VALUE",
+        "label_a": "القيمة المدفوعة",
+        "type": "NUMBER"
+      },
+      {
+        "name": "DET_DESC",
+        "label_a": "شرح السداد",
+        "type": "STRING"
+      }
+    ]
+  }
+}

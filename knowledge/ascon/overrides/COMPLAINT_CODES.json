@@ -1,0 +1,11 @@
+{
+  "pattern": "AUTO",
+  "notes": "Complaint codes (code table, no business rules): the wrong automatic list of values on the key (RET_INV_CODES) is removed.",
+  "rules": {
+    "columns": {
+      "COMPLAINT_CODES.COMPLAINT_CODE": {
+        "lov": null
+      }
+    }
+  }
+}

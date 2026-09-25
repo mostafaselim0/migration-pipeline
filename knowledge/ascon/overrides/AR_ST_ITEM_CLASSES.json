@@ -1,0 +1,132 @@
+{
+ "pattern": "MASTER_DETAIL",
+ "notes": "Discount classes (AR_ST_ITEM_CLASSES + AR_ST_ITEMS_DISC): same tables as generated, legacy column order, general-class flag; class number max + 1, a name, one general class, lines (group / unit / retail price / MOH discount of the item, price 0..99999.99, non-negative discounts, no repeated item), Excel load button (APP_RULES3_SA). Wave 3b: wrong automatic list AS_CLASS (asset classes) removed from CLASS_CODE; general-class check box; legacy item / unit lists (units of the item cascading); item name and unit factor on the lines.",
+ "master": {
+  "table": "AR_ST_ITEM_CLASSES",
+  "columns": [
+   "CLASS_CODE",
+   "DESC_A",
+   "DESC_E",
+   "DEFAULT_FLAG"
+  ]
+ },
+ "details": [
+  {
+   "table": "AR_ST_ITEMS_DISC",
+   "join": [
+    [
+     "CLASS_CODE",
+     "CLASS_CODE"
+    ]
+   ],
+   "title_a": "شرائح الخصم",
+   "title_e": "Discount lines",
+   "columns": [
+    "ITEM_CODE",
+    "ITEM_GROUP_CODE",
+    "UNIT_CODE",
+    "SALES_PRICE",
+    "DISC_RATIO1",
+    "DISC_RATIO2",
+    "DISC_RATIO3",
+    "BONUS_RATIO",
+    "EXTRA_BONUS_RATIO"
+   ]
+  }
+ ],
+ "insert": true,
+ "update": true,
+ "delete": true,
+ "rules": {
+  "add_columns": {
+   "AR_ST_ITEM_CLASSES.DEFAULT_FLAG": {
+    "label_a": "فئة عامة",
+    "label_e": "General class"
+   }
+  },
+  "readonly": [
+   "AR_ST_ITEM_CLASSES.CLASS_CODE"
+  ],
+  "optional": [
+   "AR_ST_ITEMS_DISC.ITEM_GROUP_CODE"
+  ],
+  "defaults": {
+   "AR_ST_ITEM_CLASSES.DEFAULT_FLAG": {
+    "type": "STATIC",
+    "value": "0"
+   }
+  },
+  "row_rules": {
+   "AR_ST_ITEMS_DISC": "-- legacy line WHEN-VALIDATE-ITEM / PRE-INSERT: class, active group of the item, unit of the item (basic by default),\n-- retail price and MOH discount by default, price 0..99999.99, non-negative discounts / bonus, no repeated item per class\napp_rules3_sa.disc_line_row('AR_ST_ITEMS_DISC', inserting, :new.class_code, null, :new.item_group_code, :new.item_code, :new.unit_code,\n  :new.sales_price, :new.disc_ratio1, :new.disc_ratio2, :new.disc_ratio3, :new.bonus_ratio, :new.extra_bonus_ratio);"
+  },
+  "validations": [
+   {
+    "name": "فئة الخصم: الاسم والفئة العامة",
+    "when": "CREATE,SAVE",
+    "plsql": "return app_rules3_sa.class_validate(:REQUEST, :PAGE_ROWID, :PAGE_DESC_A, :PAGE_DESC_E, :PAGE_DEFAULT_FLAG);"
+   }
+  ],
+  "columns": {
+   "AR_ST_ITEM_CLASSES.CLASS_CODE": {
+    "lov": null
+   },
+   "AR_ST_ITEMS_DISC.CLASS_CODE": {
+    "lov": null
+   },
+   "AR_ST_ITEM_CLASSES.DEFAULT_FLAG": {
+    "widget": "CHECK",
+    "values": [
+     "1",
+     "0"
+    ]
+   },
+   "AR_ST_ITEMS_DISC.ITEM_CODE": {
+    "lov": "select it.item_code || ' - ' || nvl(it.name_a, it.name_e) d, it.item_code r from st_item it, st_item_unit iu where nvl(it.stop_flag, 0) = 0 and it.item_group_code = iu.group_code and it.item_code = iu.item_code and nvl(iu.basic_unit, 0) = 1 order by 2",
+    "widget": "POPUP"
+   },
+   "AR_ST_ITEMS_DISC.UNIT_CODE": {
+    "lov": "select u.unit_code || ' - ' || u.name_a || decode(iu.basic_unit, 1, ' (وحدة أساسية)', '') d, u.unit_code r from st_item_unit iu, st_unit u where iu.item_code = :PAGE_ITEM_CODE and (iu.group_code = :PAGE_ITEM_GROUP_CODE or :PAGE_ITEM_GROUP_CODE is null) and iu.unit_code = u.unit_code order by 2",
+    "widget": "SELECT",
+    "cascade": [
+     "ITEM_CODE",
+     "ITEM_GROUP_CODE"
+    ]
+   }
+  },
+  "computed": {
+   "AR_ST_ITEMS_DISC.ITEM_NAME": {
+    "sql": "(select max(nvl(i.name_a, i.name_e)) from st_item i where i.item_code = t.item_code and i.item_group_code = t.item_group_code)",
+    "label_a": "إســم الصنـــف",
+    "label_e": "Item Name"
+   },
+   "AR_ST_ITEMS_DISC.NDB_FACTOR": {
+    "sql": "(select max(u.factor) from st_item_unit u where u.item_code = t.item_code and u.group_code = t.item_group_code and u.unit_code = t.unit_code)",
+    "label_a": "معامل التحويل",
+    "label_e": "Converting Factor",
+    "type": "NUMBER"
+   }
+  }
+ },
+ "actions": [
+  {
+   "name": "LOAD_EXCEL",
+   "label_a": "تحميل EXCEL",
+   "label_e": "Load Excel",
+   "confirm_a": "هل تريد تحميل أصناف الفئة من الملف؟",
+   "confirm_e": "Load the class items from the file?",
+   "params": [
+    {
+     "name": "XLS_FILE",
+     "label_a": "الملف: رقم الصنف، الوحدة، سعر البيع، خصم 1، خصم 2، خصم 3، البونص %، البونص الأضافي %",
+     "label_e": "File: item, unit, sales price, discount 1, 2, 3, bonus %, extra bonus %",
+     "type": "file",
+     "required": true
+    }
+   ],
+   "call": "app_rules3_sa.class_load_excel(:PAGE_ROWID, :XLS_FILE)",
+   "message": "app_rules3_sa.last_message",
+   "success_a": "تم تحميل ملف الأكسل",
+   "success_e": "The Excel file was loaded"
+  }
+ ]
+}

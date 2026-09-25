@@ -1,0 +1,104 @@
+{
+  "pattern": "AUTO",
+  "notes": "Transfer of customers between salesmen: header per salesman and date, one line per customer; saving a line moves the customer's balance with a debit / credit transfer pair (AR_MAINTRNS / AR_SUBTRNS) and gives the department to the new salesman; deleting the last transfer reverses it; button 'إنزال عملاء المندوب' (APP_RULES3_AR).",
+  "rules": {
+    "where": "(nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or FROM_SLSMAN in (select SALESMAN_CODE from AR_SALESMAN_PASSWORD where PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)))",
+    "key_expr": {
+      "AR_SLSMAN_TRNSFR.DATE_SERIAL": "app_rules3_ar.next_trnsfr_date_serial(:new.from_slsman)",
+      "AR_SLSMAN_TRNSFR_DET.SERIAL": "app_rules3_ar.next_trnsfr_serial(:new.from_slsman, :new.trnsfr_date, :new.date_serial)"
+    },
+    "row_rules": {
+      "AR_SLSMAN_TRNSFR": "app_rules3_ar.trnsfr_mast_row(inserting, :new.from_slsman, :new.trnsfr_date);",
+      "AR_SLSMAN_TRNSFR_DET": "app_rules3_ar.trnsfr_line_row(inserting, :new.from_slsman, :new.trnsfr_date, :new.customer_code, :new.to_slsman, :new.ctgry_code, :new.cr_trns_code, :new.db_trns_code, :new.balance, :new.balance_riyal, :new.cr_trns_serial, :new.db_trns_serial);"
+    },
+    "after_save": [
+      {
+        "name": "يجب تحديد العملاء المنقولة",
+        "plsql": "begin\n  app_rules3_ar.trnsfr_after_save(:PAGE_ROWID);\nend;",
+        "when": "SAVE"
+      }
+    ],
+    "optional": [
+      "AR_SLSMAN_TRNSFR.DATE_SERIAL",
+      "AR_SLSMAN_TRNSFR_DET.SERIAL"
+    ],
+    "readonly": [
+      "AR_SLSMAN_TRNSFR.DATE_SERIAL",
+      "AR_SLSMAN_TRNSFR_DET.SERIAL"
+    ],
+    "add_columns": {
+      "AR_SLSMAN_TRNSFR.DATE_SERIAL": {
+        "label_a": "مسلسل",
+        "label_e": "Serial"
+      },
+      "AR_SLSMAN_TRNSFR_DET.DB_TRNS_SERIAL": {
+        "label_a": "مسلسل الحركة المدينة",
+        "label_e": "Debit transaction serial"
+      },
+      "AR_SLSMAN_TRNSFR_DET.CR_TRNS_SERIAL": {
+        "label_a": "مسلسل الحركة الدائنة",
+        "label_e": "Credit transaction serial"
+      }
+    },
+    "info": [
+      {
+        "name": "SLSM",
+        "label_a": "من مندوب",
+        "label_e": "From salesman",
+        "sql": "select max(decode(:G_LANG, 'en', nvl(name_e, name_a), name_a)) from salesman where code = to_number(:PAGE_FROM_SLSMAN)"
+      },
+      {
+        "name": "CNT",
+        "label_a": "عدد العملاء المنقولة",
+        "label_e": "Customers transferred",
+        "sql": "select count(*) from ar_slsman_trnsfr_det where from_slsman = to_number(:PAGE_FROM_SLSMAN) and trnsfr_date = to_date(:PAGE_TRNSFR_DATE, 'DD/MM/YYYY') and date_serial = to_number(:PAGE_DATE_SERIAL)"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "name": "LOAD_CUSTOMERS",
+      "label_a": "إنزال عملاء المندوب",
+      "label_e": "Load the salesman's customers",
+      "confirm_a": "هل تريد نقل كل عملاء المندوب (أو عملاء القسم المختار) إلى المندوب المختار؟",
+      "confirm_e": "Transfer all customers of the salesman (or of the chosen department) to the chosen salesman?",
+      "params": [
+        {
+          "name": "CTGRY_CODE",
+          "label_a": "القسم (فارغ = كل الأقسام)",
+          "label_e": "Department (empty = all)",
+          "type": "number",
+          "lov_sql": "select cs.ctgry_code || ' - ' || ct.category_type_desca d, cs.ctgry_code r from ar_ctgry_salesman cs, st_category_type ct where ct.category_type_code = cs.ctgry_code and cs.salesman_code = to_number(:PAGE_FROM_SLSMAN) order by 2"
+        },
+        {
+          "name": "TO_SLSMAN",
+          "label_a": "الى مندوب",
+          "label_e": "To salesman",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select code || ' - ' || name_a d, code r from salesman where code <> nvl(to_number(:PAGE_FROM_SLSMAN), -1) order by code"
+        },
+        {
+          "name": "CR_TRNS_CODE",
+          "label_a": "حركة النقل الدائنة",
+          "label_e": "Credit transfer type",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select id || ' - ' || description_a d, id r from ar_trnstype where effect = 1 and trns_type = 5 order by id"
+        },
+        {
+          "name": "DB_TRNS_CODE",
+          "label_a": "حركة النقل المدينة",
+          "label_e": "Debit transfer type",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select id || ' - ' || description_a d, id r from ar_trnstype where effect = 0 and trns_type = 5 order by id"
+        }
+      ],
+      "call": "app_rules3_ar.load_trnsfr_customers(:PAGE_ROWID, :CTGRY_CODE, :TO_SLSMAN, :CR_TRNS_CODE, :DB_TRNS_CODE)",
+      "success_a": "تم إنزال عملاء المندوب ونقلهم",
+      "success_e": "The customers were transferred",
+      "icon": "fa-exchange"
+    }
+  ]
+}

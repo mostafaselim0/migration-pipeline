@@ -1,0 +1,10 @@
+# client data never goes into git: dumps, delivered sources and everything the engine derives from them
+clients/*/dump/
+clients/*/sources/
+clients/*/work/
+# the overlay (reviewed rules of one client) and client.json are versioned
+
+__pycache__/
+*.pyc
+*.log
+.state_*.json

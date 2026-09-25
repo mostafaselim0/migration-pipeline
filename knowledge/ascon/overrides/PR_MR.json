@@ -1,0 +1,89 @@
+{
+ "pattern": "AUTO",
+ "notes": "Supplier requests for quotation (PR_REQ_MAST / PR_REQ_DET / PR_QUOT_MAST; unused, no QUOT types configured): colour/size by group, supplier currency, generated price lines per supplier, accepted supplier cannot be removed, status 1 without suppliers (APP_RULES_SA) Wave 3b: cycle status as its legacy list (DECODE of the .fmx), RFQ / purchase-request type and supplier lists, item name on the lines.",
+ "rules": {
+  "where": "TRNS_TYPE_CODE IN (SELECT T.QUOT_TRNS_TYPE FROM ST_TRNS_TYPE T WHERE T.EFFECT = 7 AND T.TRNS_TYPE = 13 AND T.QUOT_TRNS_TYPE IS NOT NULL) AND (NVL(:G_PASSWORD_NUMBER,0) = 0 OR TRNS_TYPE_CODE IN (SELECT TP.TRNS_TYPE_CODE FROM ST_TRNSTYPE_PASSWORD TP WHERE NVL(TP.FLAG,0) = 1 AND TP.PASSWORD_NUMBER = :G_PASSWORD_NUMBER))",
+  "readonly": [
+   "PR_REQ_MAST.REQ_STATUS"
+  ],
+  "row_rules": {
+   "PR_REQ_DET": "app_rules_sa.rfq_det_row(:new.item_group_code, :new.color_code, :new.size_code);",
+   "PR_QUOT_MAST": "app_rules_sa.quot_mast_row(inserting, :new.trns_type_code, :new.trns_serial, :new.supplier_id, :new.quot_serial, :new.currency_code, :new.currency_rate, :new.disc_val, :new.date_send, :new.accept_flag, :old.accept_flag, :new.quot_flag, :old.quot_flag, :old.disc_val);"
+  },
+  "validations": [
+   {
+    "name": "لقطة الموردين",
+    "when": "CREATE,SAVE",
+    "plsql": "return app_rules_sa.rfq_validate(:REQUEST, :PAGE_ROWID);"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "أسطر عروض الموردين وحالة الطلب",
+    "when": "CREATE,SAVE",
+    "plsql": "app_rules_sa.rfq_after_save(:REQUEST, :PAGE_ROWID);"
+   },
+   {
+    "name": "delete: RFQ with suppliers refused (KEY-DELREC)",
+    "plsql": "app_act_pr.rfq_after_delete(:PAGE_TRNS_TYPE_CODE, :PAGE_TRNS_SERIAL);",
+    "when": "DELETE"
+   }
+  ],
+  "columns": {
+   "PR_REQ_MAST.REQ_STATUS": {
+    "readonly": true,
+    "static": [
+     [
+      "طلب عروض اسعار",
+      "1",
+      "Request for quotations"
+     ],
+     [
+      "عروض أسعار من الموردين",
+      "2",
+      "Supplier quotations"
+     ],
+     [
+      "انتقاء عرض سعر وحيد",
+      "3",
+      "One quotation selected"
+     ],
+     [
+      "عمل امر شراء",
+      "4",
+      "Purchase order made"
+     ],
+     [
+      "استلام الكميات",
+      "5",
+      "Quantities received"
+     ],
+     [
+      "فواتير المشتريات",
+      "6",
+      "Purchase invoices"
+     ]
+    ]
+   },
+   "PR_REQ_MAST.TRNS_TYPE_CODE": {
+    "widget": "SELECT",
+    "lov": "select trns_type_code || ' - ' || desc_a d, trns_type_code r from st_trns_type where effect = 7 and trns_type = 25 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or trns_type_code in (select tp.trns_type_code from st_trnstype_password tp where tp.flag = 1 and tp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2"
+   },
+   "PR_REQ_MAST.PR_TRNS_TYPE_CODE": {
+    "widget": "SELECT",
+    "lov": "select trns_type_code || ' - ' || desc_a d, trns_type_code r from st_trns_type where effect = 7 and trns_type = 13 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or trns_type_code in (select tp.trns_type_code from st_trnstype_password tp where tp.flag = 1 and tp.password_number = to_number(:G_PASSWORD_NUMBER))) order by 2"
+   },
+   "PR_QUOT_MAST.SUPPLIER_ID": {
+    "widget": "POPUP",
+    "lov": "select s.code || ' - ' || s.name_a d, s.code r from supplier s where nvl(s.stopflag, 0) = 0 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (s.code >= (select max(from_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)) and s.code <= (select max(to_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)))) order by 2"
+   }
+  },
+  "computed": {
+   "PR_REQ_DET.ITEM_NAME_A": {
+    "sql": "(select max(nvl(i.name_a, i.name_e)) from st_item i where i.item_code = t.item_code and i.item_group_code = t.item_group_code)",
+    "label_a": "اسم الصنف",
+    "label_e": "Item name"
+   }
+  }
+ }
+}

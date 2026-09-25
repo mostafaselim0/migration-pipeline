@@ -1,0 +1,16 @@
+{
+ "pattern": "AUTO",
+ "notes": "brands: BRAND_CODE (VARCHAR2) = NVL(MAX(BRAND_CODE),0)+1 when left empty, Arabic or English name, duplicate code; delete refused while items use the brand (APP_RULES3_ST_BRAND_BD)",
+ "rules": {
+  "columns": {
+   "ST_BRAND.BRAND_CODE": {"lov": null}
+  },
+  "key_expr": {
+   "ST_BRAND.BRAND_CODE": "app_rules3_st.next_brand_code"
+  },
+  "optional": ["ST_BRAND.BRAND_CODE"],
+  "row_rules": {
+   "ST_BRAND": "app_rules3_st.brand_row(inserting, :new.brand_code, :new.brand_name_a, :new.brand_name_e);"
+  }
+ }
+}

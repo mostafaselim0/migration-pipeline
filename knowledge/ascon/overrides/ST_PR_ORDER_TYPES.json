@@ -1,0 +1,15 @@
+{
+ "pattern": "AUTO",
+ "notes": "Purchase order types (ST_PR_ORDER_TYPES): number > 0 (next number by the generated key), no duplicate, Arabic or English name required, purchase transaction must be a purchase-invoice type (legacy LOV EFFECT 1 / TRNS_TYPE 1) (APP_RULES3_PR)",
+ "rules": {
+  "row_rules": {
+   "ST_PR_ORDER_TYPES": "-- legacy WHEN-VALIDATE-ITEM / PRE-INSERT: number > 0, no duplicate, a name, purchase transaction from the LOV domain\napp_rules3_pr.pr_order_type_row(inserting, :new.serial, :new.name_a, :new.name_e, :new.trns_type_code);"
+  },
+  "columns": {
+   "ST_PR_ORDER_TYPES.TRNS_TYPE_CODE": {
+    "lov": "select trns_type_code || ' - ' || desc_a d, trns_type_code r from st_trns_type where effect = 1 and trns_type = 1 order by 2",
+    "widget": "SELECT"
+   }
+  }
+ }
+}

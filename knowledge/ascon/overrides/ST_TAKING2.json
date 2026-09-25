@@ -1,0 +1,117 @@
+{
+ "pattern": "MASTER_DETAIL",
+ "notes": "screen correction: ST_TAKING2.fmx works on ST_STOCK_TAKING_TEMP / _TEMP_DET (revaluation count, used by ST_AUTO_ADJ2), not ST_STOCK_TAKING; DECOMPOSE / CALC_COST buttons, adjustment status and total quantity (APP_ACT_ST)",
+ "master": {
+  "table": "ST_STOCK_TAKING_TEMP"
+ },
+ "details": [
+  {
+   "table": "ST_STOCK_TAKING_TEMP_DET",
+   "join": [
+    [
+     "ST_TAKING_DATE",
+     "ST_TAKING_DATE"
+    ],
+    [
+     "STORE_CODE",
+     "STORE_CODE"
+    ],
+    [
+     "SERIAL",
+     "SERIAL"
+    ]
+   ],
+   "title_a": "أصناف الجرد",
+   "title_e": "Stocktaking items"
+  }
+ ],
+ "insert": true,
+ "update": true,
+ "delete": true,
+ "rules": {
+  "computed": {
+   "ST_STOCK_TAKING_TEMP_DET.ITEM_NAME": {"sql": "(select max(i.name_a) from st_item i where i.item_group_code = t.group_code and i.item_code = t.item_code)", "label_a": "اســـم الصنـــــف", "label_e": "Item Nm"},
+   "ST_STOCK_TAKING_TEMP_DET.EXPIRE_DATE": {"sql": "app_ui.lot_expiry(t.item_confg_id)", "label_a": "تاريخ الصلاحيه", "label_e": "Exp. Dt", "type": "DATE"},
+   "ST_STOCK_TAKING_TEMP_DET.BAL_QTY": {"sql": "round(nvl(get_balance(t.store_code, t.group_code, t.item_code, t.st_taking_date), 0) / nvl((select max(u.factor) from st_item_unit u where u.group_code = t.group_code and u.item_code = t.item_code and u.unit_code = t.unit_code), 1), 3)", "label_a": "الرصيد الدفترى", "label_e": "Book balance", "type": "NUMBER"}
+  },
+  "columns": {
+   "ST_STOCK_TAKING_TEMP_DET.ITEM_CONFG_ID": {"widget": "POPUP", "cascade": "ITEM_CODE", "lov": "select c.item_confg_id || ' - ' || c.lot_number || ' - ' || to_char(c.expire_date, 'DD/MM/YYYY') d, c.item_confg_id r from st_item_confg c where c.item_code = :PAGE_ITEM_CODE order by c.expire_date, c.item_confg_id"}
+  },
+  "where": "(:G_PASSWORD_NUMBER = 0 or STORE_CODE in (select sp.store_code from st_store_password sp where sp.password_number = :G_PASSWORD_NUMBER))",
+  "key_expr": {
+   "ST_STOCK_TAKING_TEMP_DET.TAKING_NUMBER": "app_rules_st.next_temp_taking_no(:new.st_taking_date, :new.store_code, :new.serial)"
+  },
+  "validations": [
+   {
+    "name": "legacy header rules (store, date)",
+    "plsql": "return app_rules_st.val_taking('ST_TAKING2', :PAGE_ROWID, :REQUEST, :PAGE_STORE_CODE, :PAGE_ST_TAKING_DATE);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "legacy commit rules (lines required, delete the lines of a deleted count)",
+    "plsql": "app_rules_st.after_taking('ST_TAKING2', :REQUEST, :PAGE_ROWID, :PAGE_STORE_CODE, :PAGE_ST_TAKING_DATE, :PAGE_SERIAL);",
+    "when": "SAVE,DELETE"
+   }
+  ],
+  "row_rules": {
+   "ST_STOCK_TAKING_TEMP_DET": "app_rules_st.taking_det_row2(:new.store_code, :new.st_taking_date, :new.group_code, :new.item_code, :new.unit_code, :new.item_confg_id, :new.quantity, :new.basic_qty, :new.unit_price, :new.unit_cost);"
+  },
+  "readonly": [
+   "ST_STOCK_TAKING_TEMP.SERIAL"
+  ],
+  "hidden": [
+   "ST_STOCK_TAKING_TEMP_DET.TAKING_NUMBER",
+   "ST_STOCK_TAKING_TEMP_DET.BASIC_QTY"
+  ],
+  "optional": [
+   "ST_STOCK_TAKING_TEMP_DET.TAKING_NUMBER",
+   "ST_STOCK_TAKING_TEMP_DET.BASIC_QTY",
+   "ST_STOCK_TAKING_TEMP_DET.GROUP_CODE",
+   "ST_STOCK_TAKING_TEMP_DET.UNIT_CODE"
+  ],
+  "info": [
+   {
+    "name": "STATUS",
+    "label_a": "حالة تسوية الجرد",
+    "label_e": "Adjustment status",
+    "sql": "select app_act_st.tk_status(:PAGE_ROWID, 'ST_TAKING2') from dual"
+   },
+   {
+    "name": "TOTAL_QTY",
+    "label_a": "اجمالى الكمية",
+    "label_e": "Total quantity",
+    "sql": "select app_act_st.tk_total_qty(:PAGE_ROWID, 'ST_TAKING2') from dual"
+   }
+  ]
+ },
+ "actions": [
+  {
+   "name": "DECOMPOSE",
+   "label_a": "إنزال أصناف المخزن",
+   "label_e": "Load the store items",
+   "confirm_a": "هل تريد إنزال كل أصناف المخزن وشحناتها بالرصيد الدفترى والتكلفة فى تاريخ الجرد؟",
+   "confirm_e": "Load every item and lot of the store with its book balance and cost at the stocktaking date?",
+   "condition": "app_act_st.tk_can_fill(:PAGE_ROWID, 'ST_TAKING2') = 'Y'",
+   "call": "app_act_st.tk_decompose(p_rowid => :PAGE_ROWID, p_form => 'ST_TAKING2')",
+   "message": "app_act_st.last_message",
+   "success_a": "تم إنزال أصناف المخزن",
+   "success_e": "The store items were loaded",
+   "icon": "fa-download"
+  },
+  {
+   "name": "CALC_COST",
+   "label_a": "إنزال تكلفة أصناف الجرد",
+   "label_e": "Load the stocktaking costs",
+   "confirm_a": "هل تريد وضع التكلفة الدفترية للشحنة فى تاريخ الجرد لكل أصناف الجرد؟",
+   "confirm_e": "Set the book cost of the lot at the stocktaking date on every line?",
+   "condition": "app_act_st.tk_has_lines(:PAGE_ROWID, 'ST_TAKING2') = 'Y'",
+   "call": "app_act_st.tk_calc_cost(p_rowid => :PAGE_ROWID, p_form => 'ST_TAKING2')",
+   "message": "app_act_st.last_message",
+   "success_a": "تم إنزال تكلفة أصناف الجرد",
+   "success_e": "The stocktaking costs were loaded",
+   "icon": "fa-calculator"
+  }
+ ]
+}

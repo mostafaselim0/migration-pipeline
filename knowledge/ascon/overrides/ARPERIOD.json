@@ -1,0 +1,16 @@
+{
+  "pattern": "AUTO",
+  "notes": "Discount-day periods: serial max+1, FROM = previous TO + 1, TO > FROM, no new period while one is open, only the last serial may be deleted (APP_RULES3_AR).",
+  "rules": {
+    "row_rules": {
+      "AR_PERIOD": "app_rules3_ar.period_row(inserting, :new.serial, :new.from_p, :new.to_p);"
+    },
+    "readonly": [
+      "AR_PERIOD.FROM_P",
+      "AR_PERIOD.SERIAL"
+    ],
+    "optional": [
+      "AR_PERIOD.FROM_P"
+    ]
+  }
+}

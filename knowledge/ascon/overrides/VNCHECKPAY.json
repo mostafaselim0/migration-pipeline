@@ -1,0 +1,183 @@
+{
+ "pattern": "AUTO",
+ "notes": "Supplier cheque payment requests (VN_MAINTRNS_CHECK, own table): supplier/currency/date checks, supplier balance snapshot, invoice lines resolved against open invoices, authorised requests locked. Wave 3b: legacy LOVs (suppliers in range, cash boxes, banks and their branches as a cascading list, open invoices of the supplier on the lines).",
+ "rules": {
+  "row_rules": {
+   "VN_MAINTRNS_CHECK": "if inserting or app_rules_vn.differs(:new.supplier_id, :old.supplier_id) = 1 then\n  app_rules_vn.checkpay_supplier_info(:new.supplier_id, :new.supplier_bal, :new.db_cr_flag, :new.db_cr_flag_e,\n                                      :new.check_hold, :new.currency_code, :new.currency_rate, :new.resp_code);\nend if;"
+  },
+  "readonly": [
+   "VN_MAINTRNS_CHECK.SERIAL",
+   "VN_MAINTRNS_CHECK.SUPPLIER_BAL",
+   "VN_MAINTRNS_CHECK.CHECK_HOLD",
+   "VN_SUBTRNS_CHECK.NET_VALUE",
+   "VN_SUBTRNS_CHECK.INV_DATE"
+  ],
+  "validations": [
+   {
+    "name": "VNCHECKPAY legacy header rules",
+    "plsql": "return app_rules_vn.check_checkpay(:REQUEST, :PAGE_ROWID, :PAGE_SUPPLIER_ID, :PAGE_FROM_DATE, :PAGE_TO_DATE, :PAGE_DUE_DATE, :PAGE_DOC_NO, :PAGE_CURRENCY_CODE, :PAGE_CURRENCY_RATE, :PAGE_DUE_DISC, :PAGE_AUTH_FLAG);",
+    "when": "CREATE,SAVE"
+   }
+  ],
+  "after_save": [
+   {
+    "name": "VNCHECKPAY invoice lines",
+    "plsql": "app_rules_vn.after_save_checkpay(:PAGE_ROWID, :REQUEST);",
+    "when": "CREATE,SAVE"
+   },
+   {
+    "name": "VNCHECKPAY delete rules",
+    "plsql": "app_rules_vn.on_delete_checkpay(:PAGE_SERIAL, :PAGE_AUTH_FLAG);",
+    "when": "DELETE"
+   }
+  ],
+  "info": [
+   {
+    "name": "AUTH1",
+    "label_a": "اعتماد المستوى 1",
+    "label_e": "Approval level 1",
+    "sql": "select app_act_pr.checkpay_level_text(:PAGE_ROWID, 1) from dual"
+   },
+   {
+    "name": "AUTH2",
+    "label_a": "اعتماد المستوى 2",
+    "label_e": "Approval level 2",
+    "sql": "select app_act_pr.checkpay_level_text(:PAGE_ROWID, 2) from dual"
+   },
+   {
+    "name": "AUTH3",
+    "label_a": "اعتماد المستوى 3",
+    "label_e": "Approval level 3",
+    "sql": "select app_act_pr.checkpay_level_text(:PAGE_ROWID, 3) from dual"
+   },
+   {
+    "name": "AUTH4",
+    "label_a": "اعتماد المستوى 4",
+    "label_e": "Approval level 4",
+    "sql": "select app_act_pr.checkpay_level_text(:PAGE_ROWID, 4) from dual"
+   },
+   {
+    "name": "AUTH5",
+    "label_a": "اعتماد المستوى 5",
+    "label_e": "Approval level 5",
+    "sql": "select app_act_pr.checkpay_level_text(:PAGE_ROWID, 5) from dual"
+   },
+   {
+    "name": "AUTH6",
+    "label_a": "اعتماد المستوى 6",
+    "label_e": "Approval level 6",
+    "sql": "select app_act_pr.checkpay_level_text(:PAGE_ROWID, 6) from dual"
+   }
+  ],
+  "columns": {
+   "VN_MAINTRNS_CHECK.SUPPLIER_ID": {
+    "widget": "POPUP",
+    "lov": "select s.code || ' - ' || s.name_a d, s.code r from supplier s where nvl(s.stopflag, 0) = 0 and nvl(s.supplier_status, 0) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (s.code >= (select max(from_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)) and s.code <= (select max(to_supplier_code) from vn_supplier_password where password_number = to_number(:G_PASSWORD_NUMBER)))) order by 2"
+   },
+   "VN_MAINTRNS_CHECK.BOX_CODE": {
+    "widget": "SELECT",
+    "lov": "select box_code || ' - ' || name_a d, box_code r from rp_boxs where nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or box_code in (select box_code from rp_boxs_password where password_number = to_number(:G_PASSWORD_NUMBER)) order by 2"
+   },
+   "VN_MAINTRNS_CHECK.BANK_CODE": {
+    "widget": "SELECT",
+    "lov": "select code || ' - ' || name_a d, code r from bank where nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or code in (select bank_code from bank_password where password_number = to_number(:G_PASSWORD_NUMBER)) order by 2"
+   },
+   "VN_MAINTRNS_CHECK.BRANCH": {
+    "widget": "SELECT",
+    "cascade": "BANK_CODE",
+    "lov": "select b.code || ' - ' || b.desc_a d, b.code r from bank_branchs b, ac_master a where b.brnch_acc_chrt_no = a.account_number and b.bank_code = :PAGE_BANK_CODE order by 2"
+   },
+   "VN_SUBTRNS_CHECK.BILL_ID1": {
+    "widget": "POPUP",
+    "cascade": "SERIAL",
+    "lov": "select s.bill_id1 || ' / ' || s.bill_id2 || ' - ' || to_char(m.trns_date, 'DD-MM-YYYY') || nvl2(m.supplier_ref, ' - ' || m.supplier_ref, '') || ' - المتبقي ' || to_char(s.residual_value) d, s.bill_id1 r from vn_subtrns s, vn_maintrns m where m.trns_id in (select id from vn_trnstype where effect = 1) and nvl(s.residual_value, 0) != 0 and m.trns_id = s.trns_id and m.trns_serial = s.trns_serial and nvl(s.stop_flag, 0) = 0 and m.supplier_id = (select h.supplier_id from vn_maintrns_check h where h.serial = :PAGE_SERIAL) and m.currency_code = (select h.currency_code from vn_maintrns_check h where h.serial = :PAGE_SERIAL) and s.pay_type_code = (select h.pay_type_code from vn_maintrns_check h where h.serial = :PAGE_SERIAL) and s.total_value - vn_subtrns_payed_value(s.trns_id, s.trns_serial, s.bill_seq) != 0 and s.total_value - vn_subtrns_check_payed_value(s.trns_id, s.trns_serial, s.bill_seq) != 0 order by m.trns_date, s.bill_id1, s.bill_id2"
+   }
+  }
+ },
+ "actions": [
+  {
+   "name": "AUTH_ACCEPT",
+   "label_a": "موافق",
+   "label_e": "Approve",
+   "condition": "app_act_pr.checkpay_can(:PAGE_ROWID) = 'Y'",
+   "params": [
+    {
+     "name": "LVL",
+     "label_a": "المستوى",
+     "label_e": "Level",
+     "type": "number",
+     "required": true,
+     "lov_sql": "select decode(:G_LANG, 'en', 'Level ', 'المستوى ') || l d, l r from (select level l from dual connect by level <= 6) where app_act_pr.checkpay_level_right(l) = 1 order by l"
+    },
+    {
+     "name": "MEMO",
+     "label_a": "ملاحظة المستوى",
+     "label_e": "Memo of the level",
+     "type": "text",
+     "required": false
+    }
+   ],
+   "call": "app_act_pr.checkpay_decide(:PAGE_ROWID, :LVL, 1, :MEMO)",
+   "message": "app_act_pr.last_message",
+   "success_a": "تمت الموافقة",
+   "success_e": "Approved",
+   "icon": "fa-check"
+  },
+  {
+   "name": "AUTH_REFUSE",
+   "label_a": "مرفوض",
+   "label_e": "Refuse",
+   "condition": "app_act_pr.checkpay_can(:PAGE_ROWID) = 'Y'",
+   "params": [
+    {
+     "name": "LVL",
+     "label_a": "المستوى",
+     "label_e": "Level",
+     "type": "number",
+     "required": true,
+     "lov_sql": "select decode(:G_LANG, 'en', 'Level ', 'المستوى ') || l d, l r from (select level l from dual connect by level <= 6) where app_act_pr.checkpay_level_right(l) = 1 order by l"
+    },
+    {
+     "name": "MEMO",
+     "label_a": "ملاحظة المستوى",
+     "label_e": "Memo of the level",
+     "type": "text",
+     "required": false
+    }
+   ],
+   "call": "app_act_pr.checkpay_decide(:PAGE_ROWID, :LVL, -1, :MEMO)",
+   "message": "app_act_pr.last_message",
+   "success_a": "تم الرفض",
+   "success_e": "Refused",
+   "icon": "fa-times"
+  },
+  {
+   "name": "AUTH_MEMO",
+   "label_a": "ملاحظة المستوى",
+   "label_e": "Memo of a level",
+   "condition": "app_act_pr.checkpay_can(:PAGE_ROWID) = 'Y'",
+   "params": [
+    {
+     "name": "LVL",
+     "label_a": "المستوى",
+     "label_e": "Level",
+     "type": "number",
+     "required": true,
+     "lov_sql": "select decode(:G_LANG, 'en', 'Level ', 'المستوى ') || l d, l r from (select level l from dual connect by level <= 6) where app_act_pr.checkpay_level_right(l) = 1 order by l"
+    },
+    {
+     "name": "MEMO",
+     "label_a": "ملاحظة المستوى",
+     "label_e": "Memo of the level",
+     "type": "text",
+     "required": true
+    }
+   ],
+   "call": "app_act_pr.checkpay_memo(:PAGE_ROWID, :LVL, :MEMO)",
+   "message": "app_act_pr.last_message",
+   "success_a": "تم حفظ الملاحظة",
+   "success_e": "Memo saved",
+   "icon": "fa-comment"
+  }
+ ]
+}

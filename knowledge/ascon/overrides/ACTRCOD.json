@@ -1,0 +1,61 @@
+{
+  "pattern": "AUTO",
+  "notes": "Journal types per year: group filter (AC_PASSWORD_ENTRY), 'create new financial year' button copying the types, company and group grants; types with entries / company grants are not deleted (APP_RULES3_GL, see processes/ACTRCOD.md)",
+  "rules": {
+    "where": "(nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (ENTRY_YEAR, ENTRY_TYPE) in (select entry_year, entry_type from ac_password_entry where password_number = to_number(:G_PASSWORD_NUMBER) and company_code = to_number(:G_COMPANY_CODE)))",
+    "columns": {
+      "AC_TRN_CODES.AC_FLAG": {
+        "widget": "CHECK",
+        "values": [
+          "1",
+          "0"
+        ]
+      },
+      "AC_TRN_CODES.SERIAL_FLAG": {
+        "static": [
+          [
+            "سنوي",
+            "0",
+            "Yearly"
+          ],
+          [
+            "شهري",
+            "1",
+            "Monthly"
+          ]
+        ]
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "NEW_YEAR",
+      "label_a": "إنشاء سنة مالية جديدة",
+      "label_e": "Create New Financial Year",
+      "confirm_a": "هل تريد إنشاء السنة المالية الجديدة بنسخ أنواع الحركات؟",
+      "confirm_e": "Create the new financial year by copying the journal types?",
+      "condition": "app_sec.can_page(to_number(v('APP_PAGE_ID')), 'I')",
+      "params": [
+        {
+          "name": "FROM_YEAR",
+          "label_a": "من سنة",
+          "label_e": "From year",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select distinct to_char(entry_year) d, entry_year r from ac_trn_codes order by 2"
+        },
+        {
+          "name": "TO_YEAR",
+          "label_a": "إلى سنة",
+          "label_e": "To year",
+          "type": "number",
+          "required": true
+        }
+      ],
+      "call": "app_rules3_gl.copy_journal_year(:FROM_YEAR, :TO_YEAR)",
+      "message": "app_rules3_gl.last_message",
+      "success_a": "تم إنشاء السنة المالية",
+      "success_e": "Financial year created"
+    }
+  ]
+}

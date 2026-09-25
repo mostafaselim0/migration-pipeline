@@ -1,0 +1,26 @@
+{
+ "pattern": "MASTER_DETAIL",
+ "master": {"table": "ST_STOCK_DEF"},
+ "details": [
+  {"table": "ST_STOCK_DEF_DET", "join": [["ST_TAKING_DATE", "ST_TAKING_DATE"], ["STORE_CODE", "STORE_CODE"], ["MAST_SERIAL", "MAST_SERIAL"]],
+   "title_a": "الأصناف المجرودة", "title_e": "Counted items"}
+ ],
+ "notes": "stocktaking preparation file (ST_STOCK_DEF.fmx): header per store and date (MAST_SERIAL max+1 per store and date, stores allowed for the group) and the scanned lines (ITEM_SERIAL max+1; the code is a lot barcode, a GTIN, an item barcode or an item code; lot by lot number / expiry month; lot price)",
+ "rules": {
+  "where": "(:G_PASSWORD_NUMBER = 0 or STORE_CODE in (select sp.store_code from st_store_password sp where sp.password_number = :G_PASSWORD_NUMBER and sp.flag = 1))",
+  "row_rules": {
+   "ST_STOCK_DEF_DET": "app_rules3_st.stock_def_det_row(inserting, :new.code, :new.group_code, :new.item_code, :new.item_confg_id, :new.lot_number, :new.expire_date, :new.sales_price);"
+  },
+  "add_columns": {
+   "ST_STOCK_DEF_DET.CODE": {"label_a": "الكود المدخل", "label_e": "Scanned code"}
+  },
+  "columns": {
+   "ST_STOCK_DEF.STORE_CODE": {"widget": "SELECT",
+    "lov": "select s.store_code || ' - ' || s.name_a d, s.store_code r from st_store s where s.store_status = 1 and nvl(s.stop_flag, 0) = 0 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or s.store_code in (select sp.store_code from st_store_password sp where sp.password_number = to_number(:G_PASSWORD_NUMBER))) order by s.store_code"}
+  },
+  "computed": {
+   "ST_STOCK_DEF_DET.ITEM_NAME": {"sql": "(select max(i.name_a) from st_item i where i.item_group_code = t.group_code and i.item_code = t.item_code)",
+                                  "label_a": "اسم الصنف", "label_e": "Item name"}
+  }
+ }
+}

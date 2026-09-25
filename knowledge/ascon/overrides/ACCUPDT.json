@@ -1,0 +1,43 @@
+{
+  "pattern": "PROCESS",
+  "notes": "Legacy ACCUPDT (UPDATE_PROC): moves posted GL entries (POST_SYSTEM=1, CLOSE_FLAG<>1) of a voucher range from AC_YEARLY_TRN/_DET back to AC_DAILY_TRN/_DET, skipping entries in the closed period; reproduced in app_proc_gl.cancel_posting.",
+  "proc": {
+    "procedure": "app_proc_gl.cancel_posting",
+    "description_a": "إلغاء ترحيل القيود: يعيد القيود المرحلة من الحسابات العامة فى النطاق المحدد (من سنة / رقم حركة / قيد إلى سنة / رقم حركة / قيد، مع تصفية اختيارية بأرقام المستندات وبالتاريخ) إلى القيود اليومية ليمكن تعديلها ثم ترحيلها مرة أخرى. لا تشمل قيود الإقفال ولا القيود الواردة من الأنظمة الأخرى (العملاء، الموردين، المخازن...). القيود الواقعة فى فترة مقفلة (تاريخها لا يزيد عن تاريخ الإقفال) لا يلغى ترحيلها وتذكر فى رسالة النتيجة. الجدول أدناه يعرض القيود المرحلة فى النطاق وحالتها.",
+    "description_e": "Cancel posting: moves the GL-posted entries of the range (from year / entry type / entry no. to year / entry type / entry no., optionally filtered by document numbers and dates) back to the daily entries so they can be edited and posted again. Closing entries and entries coming from the sub-systems (customers, vendors, inventory...) are not included. Entries in the closed period (dated on or before the closing date) are skipped and listed in the result message. The table below lists the posted entries of the range and their status.",
+    "params": [
+      {"name": "FROM_YEAR", "arg": "p_from_year", "label_a": "من سنة", "label_e": "From year", "type": "number", "required": true,
+       "default": "app_proc_gl.current_year(to_number(:G_COMPANY_CODE))", "default_type": "EXPRESSION"},
+      {"name": "FROM_TYPE", "arg": "p_from_type", "label_a": "من رقم الحركة", "label_e": "From entry type", "type": "number", "required": true,
+       "lov_sql": "select t.entry_type || ' - ' || max(decode(:G_LANG, 'en', nvl(t.entry_desc_e, t.entry_desc), t.entry_desc)) d, t.entry_type r from ac_trn_codes t where app_proc_gl.type_allowed(t.entry_year, t.entry_type, to_number(:G_COMPANY_CODE), to_number(:G_PASSWORD_NUMBER)) = 1 group by t.entry_type order by t.entry_type"},
+      {"name": "FROM_NO", "arg": "p_from_no", "label_a": "من قيد", "label_e": "From voucher", "type": "number", "required": false},
+      {"name": "TO_YEAR", "arg": "p_to_year", "label_a": "إلى سنة", "label_e": "To year", "type": "number", "required": true,
+       "default": "app_proc_gl.current_year(to_number(:G_COMPANY_CODE))", "default_type": "EXPRESSION"},
+      {"name": "TO_TYPE", "arg": "p_to_type", "label_a": "إلى رقم الحركة", "label_e": "To entry type", "type": "number", "required": true,
+       "lov_sql": "select t.entry_type || ' - ' || max(decode(:G_LANG, 'en', nvl(t.entry_desc_e, t.entry_desc), t.entry_desc)) d, t.entry_type r from ac_trn_codes t where app_proc_gl.type_allowed(t.entry_year, t.entry_type, to_number(:G_COMPANY_CODE), to_number(:G_PASSWORD_NUMBER)) = 1 group by t.entry_type order by t.entry_type"},
+      {"name": "TO_NO", "arg": "p_to_no", "label_a": "إلى قيد", "label_e": "To voucher", "type": "number", "required": false},
+      {"name": "FROM_ENTRY_DATE", "arg": "p_from_date", "label_a": "من تاريخ", "label_e": "From date", "type": "date", "required": false},
+      {"name": "TO_ENTRY_DATE", "arg": "p_to_date", "label_a": "إلى تاريخ", "label_e": "To date", "type": "date", "required": false},
+      {"name": "FROM_DOC_NO", "arg": "p_from_doc_no", "label_a": "من مستند رقم", "label_e": "From doc. no.", "type": "number", "required": false},
+      {"name": "TO_DOC_NO", "arg": "p_to_doc_no", "label_a": "إلى مستند رقم", "label_e": "To doc. no.", "type": "number", "required": false}
+    ],
+    "fixed_args": {"p_company_code": "to_number(:G_COMPANY_CODE)", "p_user_code": "to_number(:G_USER_CODE)",
+                   "p_password_number": "to_number(:G_PASSWORD_NUMBER)"},
+    "button_a": "إلغاء الترحيل",
+    "button_e": "Cancel posting",
+    "confirm_a": "سيتم إلغاء ترحيل القيود المرحلة فى النطاق المحدد وإعادتها إلى القيود اليومية. هل تريد الاستمرار؟",
+    "success_a": "تمت العملية.",
+    "preview_title_a": "القيود المرحلة فى النطاق",
+    "preview_sql": "select y.entry_year, y.entry_type, y.entry_no, y.doc_no, y.entry_date, decode(:G_LANG, 'en', nvl(y.entry_desc_e, y.entry_desc), y.entry_desc) entry_desc, (select nvl(sum(case when d.value > 0 then d.value end), 0) from ac_yearly_trn_det d where d.entry_year = y.entry_year and d.entry_type = y.entry_type and d.entry_no = y.entry_no) debit, case when y.entry_date <= (select b.close_date from ac_basic b where b.company_code = to_number(:G_COMPANY_CODE)) then decode(:G_LANG, 'en', 'Closed period - cannot be unposted', 'فترة مقفلة - لا يمكن إلغاء ترحيله') else decode(:G_LANG, 'en', 'Can be unposted', 'يمكن إلغاء ترحيله') end status from ac_yearly_trn y where nvl(y.close_flag, 0) != 1 and nvl(y.post_system, 0) = 1 and app_proc_gl.type_allowed(y.entry_year, y.entry_type, to_number(:G_COMPANY_CODE), to_number(:G_PASSWORD_NUMBER)) = 1 and app_proc_gl.in_range(y.entry_year, y.entry_type, y.entry_no, to_number(v('P' || :APP_PAGE_ID || '_FROM_YEAR')), to_number(v('P' || :APP_PAGE_ID || '_FROM_TYPE')), to_number(v('P' || :APP_PAGE_ID || '_FROM_NO')), to_number(v('P' || :APP_PAGE_ID || '_TO_YEAR')), to_number(v('P' || :APP_PAGE_ID || '_TO_TYPE')), to_number(v('P' || :APP_PAGE_ID || '_TO_NO'))) = 1 and (y.doc_no >= to_number(v('P' || :APP_PAGE_ID || '_FROM_DOC_NO')) or v('P' || :APP_PAGE_ID || '_FROM_DOC_NO') is null) and (y.doc_no <= to_number(v('P' || :APP_PAGE_ID || '_TO_DOC_NO')) or v('P' || :APP_PAGE_ID || '_TO_DOC_NO') is null) and (y.entry_date >= to_date(v('P' || :APP_PAGE_ID || '_FROM_ENTRY_DATE'), 'DD/MM/YYYY') or v('P' || :APP_PAGE_ID || '_FROM_ENTRY_DATE') is null) and (y.entry_date <= to_date(v('P' || :APP_PAGE_ID || '_TO_ENTRY_DATE'), 'DD/MM/YYYY') or v('P' || :APP_PAGE_ID || '_TO_ENTRY_DATE') is null) order by y.entry_year, y.entry_type, y.entry_no",
+    "preview_columns": [
+      {"name": "ENTRY_YEAR", "label_a": "السنة", "type": "NUMBER"},
+      {"name": "ENTRY_TYPE", "label_a": "رقم الحركة", "type": "NUMBER"},
+      {"name": "ENTRY_NO", "label_a": "رقم القيد", "type": "NUMBER"},
+      {"name": "DOC_NO", "label_a": "رقم المستند", "type": "NUMBER"},
+      {"name": "ENTRY_DATE", "label_a": "تاريخ القيد", "type": "DATE"},
+      {"name": "ENTRY_DESC", "label_a": "البيان", "type": "STRING"},
+      {"name": "DEBIT", "label_a": "إجمالى المدين", "type": "NUMBER"},
+      {"name": "STATUS", "label_a": "الحالة", "type": "STRING"}
+    ]
+  }
+}

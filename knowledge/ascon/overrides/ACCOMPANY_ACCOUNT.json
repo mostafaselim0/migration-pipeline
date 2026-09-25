@@ -1,0 +1,40 @@
+{
+  "pattern": "AUTO",
+  "notes": "GL data of a company (journals, accounts, cost centres 1/2, estimate periods) from which the groups are granted; derived level / end position, all-of-a-kind buttons (APP_RULES3_SE, see processes/ACCOMPANY_ACCOUNT.md)",
+  "rules": {
+    "row_rules": {
+      "AC_COMPANY_MASTER": "app_rules3_se.account_row(:new.account_number, :new.account_level, :new.account_end_pos);",
+      "AC_COMPANY_COST1": "app_rules3_se.cost_row(1, :new.cost_code, :new.cost_level, :new.cost_end_pos);",
+      "AC_COMPANY_COST2": "app_rules3_se.cost_row(2, :new.cost_code, :new.cost_level, :new.cost_end_pos);"
+    },
+    "columns": {
+      "AC_COMPANY_ENTRY.ENTRY_TYPE": {
+        "lov": "select entry_type || ' - ' || case when app_sec.lang = 'en' then nvl(entry_desc_e, entry_desc) else entry_desc end || ' (' || decode(serial_flag, 0, 'مسلسل سنوي', 1, 'مسلسل شهري') || ')' d, entry_type r from ac_trn_codes where entry_year = :PAGE_ENTRY_YEAR order by entry_type",
+        "widget": "SELECT",
+        "cascade": "ENTRY_YEAR"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "ALL_OF_KIND",
+      "label_a": "إضافة الكل",
+      "label_e": "Add all",
+      "params": [
+        {
+          "name": "KIND",
+          "label_a": "النوع",
+          "label_e": "Kind",
+          "type": "text",
+          "required": true,
+          "lov_sql": "select case when app_sec.lang = 'en' then e else a end d, r from (select 'جميع الحركات' a, 'All journals' e, 'ENTRY' r, 1 s from dual union all select 'جميع الحسابات', 'All accounts', 'MASTER', 2 from dual union all select 'مركز التكلفة 1', 'Cost centre 1', 'COST1', 3 from dual union all select 'مركز التكلفة 2', 'Cost centre 2', 'COST2', 4 from dual union all select 'فترات تقديريه', 'Estimate periods', 'PERIOD', 5 from dual) order by s"
+        }
+      ],
+      "call": "app_rules3_se.ac_company_all(:PAGE_ROWID, :KIND)",
+      "message": "app_rules3_se.last_message",
+      "success_a": "تمت الإضافة",
+      "success_e": "Added",
+      "icon": "fa-plus-square"
+    }
+  ]
+}

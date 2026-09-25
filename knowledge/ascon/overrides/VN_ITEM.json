@@ -1,0 +1,12 @@
+{
+  "pattern": "AUTO",
+  "notes": "Non-stock items of AP: code typed by the user (no legacy numbering), code > 0 with the legacy message (APP_RULES3_VN).",
+  "rules": {
+    "key_expr": {
+      "VN_ITEM.CODE": "app_rules3_vn.need_num('يجب إدخال كود الصنف', 'Enter the item code')"
+    },
+    "row_rules": {
+      "VN_ITEM": "app_rules3_vn.positive_code(:new.code, 'رقم تصنيف المورد يجب ان يكون اكبر من الصفر', 'The code must be greater than zero');"
+    }
+  }
+}

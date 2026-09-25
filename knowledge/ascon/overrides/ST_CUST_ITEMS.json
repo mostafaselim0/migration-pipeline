@@ -1,0 +1,133 @@
+{
+ "pattern": "GRID",
+ "notes": "Customer item discounts (ST_CUST_ITEMS): grid per customer and item (the legacy CUSTOMER master block is the customer column); line rules as the class discounts (group, unit, retail price, MOH discount, ranges, no repeated item, item of the line's class), button to load a class's items for a customer (APP_RULES3_SA). Wave 3b: legacy customer / item / unit lists (units of the item cascading), item name and unit factor shown.",
+ "master": {
+  "table": "ST_CUST_ITEMS",
+  "columns": [
+   "CUSTOMER_CODE",
+   "ITEM_CODE",
+   "ITEM_GROUP_CODE",
+   "UNIT_CODE",
+   "SALES_PRICE",
+   "DISC_RATIO1",
+   "DISC_RATIO2",
+   "DISC_RATIO3",
+   "BONUS_RATIO",
+   "EXTRA_BONUS_RATIO"
+  ]
+ },
+ "insert": true,
+ "update": true,
+ "delete": true,
+ "rules": {
+  "optional": [
+   "ST_CUST_ITEMS.ITEM_GROUP_CODE"
+  ],
+  "row_rules": {
+   "ST_CUST_ITEMS": "-- legacy line WHEN-VALIDATE-ITEM / PRE-INSERT: active group of the item, unit (basic by default), retail price and MOH discount,\n-- price 0..99999.99, non-negative discounts / bonus, no repeated item per customer, item registered in the line's class\napp_rules3_sa.disc_line_row('ST_CUST_ITEMS', inserting, :new.customer_code, :new.class_code, :new.item_group_code, :new.item_code, :new.unit_code,\n  :new.sales_price, :new.disc_ratio1, :new.disc_ratio2, :new.disc_ratio3, :new.bonus_ratio, :new.extra_bonus_ratio);"
+  },
+  "columns": {
+   "ST_CUST_ITEMS.ITEM_CODE": {
+    "lov": "select it.item_code || ' - ' || nvl(it.name_a, it.name_e) d, it.item_code r from st_item it, st_item_unit iu where nvl(it.stop_flag, 0) = 0 and it.item_group_code = iu.group_code and it.item_code = iu.item_code and nvl(iu.basic_unit, 0) = 1 order by 2",
+    "widget": "POPUP"
+   },
+   "ST_CUST_ITEMS.UNIT_CODE": {
+    "lov": "select u.unit_code || ' - ' || u.name_a || decode(iu.basic_unit, 1, ' (وحدة أساسية)', '') d, u.unit_code r from st_item_unit iu, st_unit u where iu.item_code = :PAGE_ITEM_CODE and (iu.group_code = :PAGE_ITEM_GROUP_CODE or :PAGE_ITEM_GROUP_CODE is null) and iu.unit_code = u.unit_code order by 2",
+    "widget": "SELECT",
+    "cascade": [
+     "ITEM_CODE",
+     "ITEM_GROUP_CODE"
+    ]
+   },
+   "ST_CUST_ITEMS.CUSTOMER_CODE": {
+    "widget": "POPUP",
+    "lov": "select nvl(to_char(old_code), '-') || ' / ' || code || ' - ' || name_a d, code r from customer where nvl(stopflag, 0) = 0 and nvl(customer_status, 0) = 1 order by code"
+   }
+  },
+  "computed": {
+   "ST_CUST_ITEMS.ITEM_NAME": {
+    "sql": "(select max(nvl(i.name_a, i.name_e)) from st_item i where i.item_code = t.item_code and i.item_group_code = t.item_group_code)",
+    "label_a": "إســم الصنـــف",
+    "label_e": "Item Name"
+   },
+   "ST_CUST_ITEMS.NDB_FACTOR": {
+    "sql": "(select max(u.factor) from st_item_unit u where u.item_code = t.item_code and u.group_code = t.item_group_code and u.unit_code = t.unit_code)",
+    "label_a": "معامل التحويل",
+    "label_e": "Converting Factor",
+    "type": "NUMBER"
+   }
+  }
+ },
+ "actions": [
+  {
+   "name": "LOAD_CLASS",
+   "label_a": "إنزال أصناف الفئة",
+   "label_e": "Load the class items",
+   "confirm_a": "هل تريد أضافة إصناف الفئة الحالية ..........",
+   "confirm_e": "Add the items of the class to the customer?",
+   "params": [
+    {
+     "name": "CUST",
+     "label_a": "العميل",
+     "label_e": "Customer",
+     "type": "number",
+     "required": true,
+     "lov_sql": "select nvl(to_char(old_code), '-') || ' / ' || code || ' - ' || decode(:G_LANG, 'en', nvl(name_e, name_a), name_a) d, code r from customer where nvl(stopflag, 0) = 0 and nvl(customer_status, 0) = 1 order by code"
+    },
+    {
+     "name": "CLASS",
+     "label_a": "الفئة",
+     "label_e": "Class",
+     "type": "number",
+     "required": true,
+     "lov_sql": "select class_code || ' - ' || decode(:G_LANG, 'en', nvl(desc_e, desc_a), desc_a) d, class_code r from ar_st_item_classes order by class_code"
+    },
+    {
+     "name": "FROM_SUPP",
+     "label_a": "من المورد الرئيسى",
+     "label_e": "From main supplier",
+     "type": "number",
+     "required": false,
+     "lov_sql": "select code || ' - ' || decode(:G_LANG, 'en', nvl(name_e, name_a), name_a) d, code r from supplier order by code"
+    },
+    {
+     "name": "TO_SUPP",
+     "label_a": "الي المورد الرئيسى",
+     "label_e": "To main supplier",
+     "type": "number",
+     "required": false,
+     "lov_sql": "select code || ' - ' || decode(:G_LANG, 'en', nvl(name_e, name_a), name_a) d, code r from supplier order by code"
+    },
+    {
+     "name": "FROM_KIND",
+     "label_a": "من المصنع",
+     "label_e": "From manufacturer",
+     "type": "number",
+     "required": false,
+     "lov_sql": "select kind_code || ' - ' || decode(:G_LANG, 'en', nvl(name_e, name_a), name_a) d, kind_code r from st_good_kind order by kind_code"
+    },
+    {
+     "name": "TO_KIND",
+     "label_a": "الي المصنع",
+     "label_e": "To manufacturer",
+     "type": "number",
+     "required": false,
+     "lov_sql": "select kind_code || ' - ' || decode(:G_LANG, 'en', nvl(name_e, name_a), name_a) d, kind_code r from st_good_kind order by kind_code"
+    },
+    {
+     "name": "LOAD_MODE",
+     "label_a": "طريقة الإضافة",
+     "label_e": "Mode",
+     "type": "number",
+     "required": true,
+     "default": "1",
+     "lov_sql": "select decode(:G_LANG, 'en', 'Add without deleting', 'أضافة بدون حذف') d, 1 r from dual union all select decode(:G_LANG, 'en', 'Delete all and add', 'حذف الكل والأضافة'), 2 from dual"
+    }
+   ],
+   "call": "app_rules3_sa.cust_load_class(:CUST, :CLASS, :FROM_SUPP, :TO_SUPP, :FROM_KIND, :TO_KIND, :LOAD_MODE)",
+   "message": "app_rules3_sa.last_message",
+   "success_a": "تم الانتهاء من اضافة اصناف العميل",
+   "success_e": "The customer items were added"
+  }
+ ]
+}

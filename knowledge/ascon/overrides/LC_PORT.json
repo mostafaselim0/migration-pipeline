@@ -1,0 +1,16 @@
+{
+ "pattern": "AUTO",
+ "notes": "Ports (LC_PORT): number > 0, no duplicate, delete refused while letters of credit use the port (APP_RULES3_PR). Wave 3b: the wrong automatic list ST_SHIP_PORTS (empty table) removed from PORT_CODE (plain number field, legacy label); an empty number still gets the next number.",
+ "rules": {
+  "row_rules": {
+   "LC_PORT": "-- legacy WHEN-VALIDATE-ITEM / PRE-INSERT: number > 0, no duplicate (delete check: trigger APP_R3_LC_PORT_BD)\napp_rules3_pr.port_row(inserting, :new.port_code);"
+  },
+  "columns": {
+   "LC_PORT.PORT_CODE": {
+    "lov": null,
+    "label_a": "رقم الميناء",
+    "label_e": "Port No"
+   }
+  }
+ }
+}

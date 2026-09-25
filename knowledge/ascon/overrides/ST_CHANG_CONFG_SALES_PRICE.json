@@ -1,0 +1,14 @@
+{
+ "pattern": "AUTO",
+ "notes": "lot data change (ST_chang_confg_SALES_PRICE.fmb): lots are updated only (no insert / delete); lot number, expiry date and discount editable, the lot unit price is not updatable (item UpdateAllowed = No), the discount only for users with USERS.CHANGE_CONFG_SALES_PRICE = 1",
+ "rules": {
+  "computed": {
+   "ST_ITEM_CONFG.ITEM_NAME": {"sql": "(select max(nvl(i.name_e, i.name_a)) from st_item i where i.item_group_code = t.group_code and i.item_code = t.item_code)",
+                               "label_a": "إسم الصنف", "label_e": "Item Name"}
+  },
+  "row_rules": {
+   "ST_ITEM_CONFG": "if updating then app_rules3_st.confg_price_row(:new.disc_ratio, :old.disc_ratio, :new.unit_price, :old.unit_price); end if;"
+  },
+  "readonly": ["ST_ITEM_CONFG.ITEM_CODE", "ST_ITEM_CONFG.ITEM_CONFG_ID", "ST_ITEM_CONFG.UNIT_PRICE", "ST_ITEM_CONFG.GROUP_CODE"]
+ }
+}

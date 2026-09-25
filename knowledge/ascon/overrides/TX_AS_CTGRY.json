@@ -1,0 +1,87 @@
+{
+  "pattern": "AUTO",
+  "notes": "Tax obligation per fixed-asset category (AS_CTGRY leaf categories): category must exist, percentage > 0, no automatic category code, range button (تطبيق) - APP_RULES3_TX, see processes/TX_AS_CTGRY.md",
+  "rules": {
+    "key_expr": {
+      "TX_TAXES_AS_CTGRY.CTGRY_CD_ASCT": "null"
+    },
+    "row_rules": {
+      "TX_TAXES_AS_CTGRY": "app_rules3_tx.oblig_row('ASCT', inserting, :new.ctgry_cd_asct, :new.ctgry_type_asct, :old.tax_per, :new.tax_per);"
+    },
+    "add_columns": {
+      "TX_TAXES_AS_CTGRY.TAX_CODE": {
+        "label_a": "رقم الضريبة",
+        "label_e": "Tax no."
+      },
+      "TX_TAXES_AS_CTGRY.CTGRY_TYPE_ASCT": {
+        "label_a": "نوع الأصل",
+        "label_e": "Asset type"
+      },
+      "TX_TAXES_AS_CTGRY.CTGRY_CD_ASCT": {
+        "label_a": "كود نوع الأصل",
+        "label_e": "Asset category"
+      },
+      "TX_TAXES_AS_CTGRY.TAX_PER": {
+        "label_a": "النسبة",
+        "label_e": "Percentage"
+      }
+    },
+    "columns": {
+      "TX_TAXES_AS_CTGRY.CTGRY_CD_ASCT": {
+        "lov": "select m.ctgry_cd_asct || ' - ' || case when app_sec.lang = 'en' then nvl(m.desc_e_asct, m.desc_a_asct) else m.desc_a_asct end d, m.ctgry_cd_asct r from as_ctgry m where nvl(m.leaf, 0) = 1 and m.ctgry_type_asct = :PAGE_CTGRY_TYPE_ASCT order by to_char(m.ctgry_cd_asct)",
+        "widget": "POPUP",
+        "cascade": "CTGRY_TYPE_ASCT"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "APPLY",
+      "label_a": "تطبيق",
+      "label_e": "Apply",
+      "confirm_a": "سيتم حذف أنواع الأصول المحددة لهذه الضريبة وإعادة إنشائها. هل تريد الاستمرار؟",
+      "confirm_e": "The asset categories of the range are replaced for this tax. Continue?",
+      "condition": "app_sec.can_page(:APP_PAGE_ID, 'I')",
+      "params": [
+        {
+          "name": "TAX",
+          "label_a": "رقم الضريبة",
+          "label_e": "Tax no.",
+          "type": "number",
+          "required": true,
+          "default": "select min(tax_code) from tx_taxes_types",
+          "default_type": "SQL_QUERY",
+          "lov_sql": "select tax_code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, tax_code r from tx_taxes_types order by tax_code"
+        },
+        {
+          "name": "FROM_CAT",
+          "label_a": "من نوع اصل",
+          "label_e": "From asset category",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select ctgry_cd_asct || ' - ' || case when app_sec.lang = 'en' then nvl(desc_e_asct, desc_a_asct) else desc_a_asct end d, ctgry_cd_asct r from as_ctgry where nvl(leaf, 0) = 1 order by to_char(ctgry_cd_asct)"
+        },
+        {
+          "name": "TO_CAT",
+          "label_a": "إلى نوع اصل",
+          "label_e": "To asset category",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select ctgry_cd_asct || ' - ' || case when app_sec.lang = 'en' then nvl(desc_e_asct, desc_a_asct) else desc_a_asct end d, ctgry_cd_asct r from as_ctgry where nvl(leaf, 0) = 1 order by to_char(ctgry_cd_asct)"
+        },
+        {
+          "name": "PER",
+          "label_a": "النسبة",
+          "label_e": "Percentage",
+          "type": "number",
+          "required": true
+        }
+      ],
+      "call": "app_rules3_tx.apply_as_ctgry(:TAX, :FROM_CAT, :TO_CAT, :PER)",
+      "message": "app_rules3_tx.last_message",
+      "success_a": "تم التطبيق",
+      "success_e": "Applied",
+      "icon": "fa-check"
+    }
+  ]
+}

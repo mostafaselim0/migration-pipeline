@@ -1,0 +1,10 @@
+{
+ "pattern": "AUTO",
+ "notes": "production companies: KIND_CODE = NVL(MAX(KIND_CODE),0)+1 when left empty (st_good_kind.fmx; key_expr, the generator no longer numbers *KIND* keys); no other rule",
+ "rules": {
+  "key_expr": {
+   "ST_GOOD_KIND.KIND_CODE": "app_rules3_st.next_code('ST_GOOD_KIND')"
+  },
+  "optional": ["ST_GOOD_KIND.KIND_CODE"]
+ }
+}

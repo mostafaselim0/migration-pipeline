@@ -1,0 +1,96 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "SYS_SYSTEMS"
+  },
+  "details": [
+    {
+      "table": "SYS_FILES",
+      "join": [
+        [
+          "SYSTEM_NUMBER",
+          "SYSTEM_NUMBER"
+        ]
+      ],
+      "title_a": "الشاشات",
+      "title_e": "Screens"
+    },
+    {
+      "table": "SYS_REPORTS",
+      "join": [
+        [
+          "SYSTEM_NUMBER",
+          "SYSTEM_NUMBER"
+        ]
+      ],
+      "title_a": "التقارير",
+      "title_e": "Reports"
+    }
+  ],
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Module screens and reports registry (legacy master SYS_SYSTEMS + tabs SYS_FILES / SYS_REPORTS; was generated as a grid on SYS_FILES); a system with screens or reports cannot be deleted (APP_RULES3_SE, see processes/SYS_FORMS.md)",
+  "rules": {
+    "add_columns": {
+      "SYS_FILES.MENU_NAME": {
+        "label_a": "الاسم فى القائمة",
+        "label_e": "Menu name"
+      },
+      "SYS_FILES.FILE_NAME_E": {
+        "label_a": "اسم الشاشة (لاتينى)",
+        "label_e": "Screen name (En)"
+      },
+      "SYS_FILES.PARENT": {
+        "label_a": "الاب",
+        "label_e": "Parent"
+      },
+      "SYS_REPORTS.MENU_NAME": {
+        "label_a": "الاسم فى القائمة",
+        "label_e": "Menu name"
+      },
+      "SYS_REPORTS.REPORT_FILE_NAME_E": {
+        "label_a": "اسم التقرير (لاتينى)",
+        "label_e": "Report name (En)"
+      }
+    },
+    "columns": {
+      "SYS_FILES.FILE_STATUS": {
+        "static": [
+          [
+            "تصنيف",
+            "0",
+            "Category"
+          ],
+          [
+            "شاشة",
+            "1",
+            "Screen"
+          ]
+        ]
+      },
+      "SYS_REPORTS.REPORT_STATUS": {
+        "static": [
+          [
+            "تصنيف",
+            "0",
+            "Category"
+          ],
+          [
+            "شاشة",
+            "1",
+            "Screen"
+          ]
+        ]
+      }
+    },
+    "blocks": {
+      "SYS_FILES": {
+        "where": "(SYSTEM_NUMBER, FILE_SERIAL) NOT IN (SELECT SYSTEM_NUMBER, FILE_SERIAL FROM SYS_NVSBL_FILES)"
+      },
+      "SYS_REPORTS": {
+        "where": "(SYSTEM_NUMBER, REPORT_SERIAL) NOT IN (SELECT SYSTEM_NUMBER, REPORT_SERIAL FROM SYS_NVSBL_REPORTS)"
+      }
+    }
+  }
+}

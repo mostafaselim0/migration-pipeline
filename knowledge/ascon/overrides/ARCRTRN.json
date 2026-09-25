@@ -1,0 +1,469 @@
+{
+  "pattern": "AUTO",
+  "notes": "Customer credit transactions/payments (own, LINK_FLAG=0): type filter/default, legacy numbering, customer/date checks, receipt books, pay method with allocation to invoices (1 oldest first, 2 invoice picker, 4 none), totals and residual, account link, GL posting buttons (APP_RULES_AR / APP_ACT_AR, see processes/ARCRTRN.md)",
+  "rules": {
+    "where": "TRNS_ID in (select ID from AR_TRNSTYPE where EFFECT = 1 and TRNS_TYPE not in (5, 6) and nvl(TOT_TRNS_FLAG, 0) = 0) and TRNS_SERIAL_TOT is null and nvl(LINK_FLAG, 0) = 0 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (TRNS_ID in (select TRNS_ID from AR_TRNSTYPE_PASSWORD where FLAG = 1 and PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)) and CUSTOMER_ID in (select CUSTOMER_CODE from AR_CUST_PASSWORD where PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)) and SALESMAN_ID in (select SALESMAN_CODE from AR_SALESMAN_PASSWORD where PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER))))",
+    "key_expr": {
+      "AR_MAINTRNS.MAINAREA_ID": "app_rules_ar.cust_mainarea(:new.customer_id)",
+      "AR_MAINTRNS.SUBAREA_ID": "app_rules_ar.cust_subarea(:new.customer_id)",
+      "AR_MAINTRNS.CTGRY_CODE": "case when v('REQUEST') in ('CREATE', 'SAVE') then app_rules_ar.default_ctgry(:new.trns_id, :new.customer_id) end",
+      "AR_MAINTRNS.SALESMAN_ID": "case when v('REQUEST') in ('CREATE', 'SAVE') then app_rules_ar.default_salesman(:new.trns_id, :new.customer_id, :new.ctgry_code) end",
+      "AR_MAINTRNS.TRNS_SERIAL": "app_rules_ar.next_trns_serial(:new.trns_id, :new.mainarea_id, :new.subarea_id, :new.customer_id)",
+      "AR_MAINTRNS_ACCOUNT_DET.SEQ": "app_rules_ar.next_acc_det_seq"
+    },
+    "validations": [
+      {
+        "name": "رأس الحركة: النوع والعميل والتاريخ والمندوب ومعامل التحويل",
+        "plsql": "return app_rules_ar.check_header('ARCRTRN', :PAGE_ROWID, to_number(:PAGE_TRNS_ID), to_number(:PAGE_CUSTOMER_ID), to_date(:PAGE_TRNS_DATE, 'DD/MM/YYYY'), to_number(:PAGE_CTGRY_CODE), to_number(:PAGE_SALESMAN_ID), to_number(:PAGE_CURRENCY_CODE), to_number(:PAGE_CURRENCY_RATE));",
+        "when": "CREATE,SAVE"
+      },
+      {
+        "name": "تاريخ الحركة وتاريخ الترحيل (الحد الأدنى وتاريخ اليوم)",
+        "plsql": "return app_rules_ar.check_dates('ARCRTRN', to_date(:PAGE_TRNS_DATE, 'DD/MM/YYYY'), to_date(:PAGE_ACC_POST_DATE, 'DD/MM/YYYY'));",
+        "when": "CREATE,SAVE"
+      },
+      {
+        "name": "طريقة الدفع",
+        "plsql": "return app_rules_ar.check_pay_method('ARCRTRN', :PAGE_ROWID, to_number(:PAGE_TRNS_ID), to_number(:PAGE_PAY_METHOD), to_number(:PAGE_INV_VALUE));",
+        "when": "CREATE,SAVE"
+      },
+      {
+        "name": "دفتر السندات ورقم السند",
+        "plsql": "return app_rules_ar.check_book(:PAGE_ROWID, to_number(:PAGE_TRNS_ID), to_number(:PAGE_CUSTOMER_ID), to_number(:PAGE_SALESMAN_ID), to_number(:PAGE_BOOK_SERIAL), to_number(:PAGE_BOOK_NO));",
+        "when": "CREATE,SAVE"
+      },
+      {
+        "name": "الحركة المرحلة أو المسددة لا تعدل",
+        "plsql": "return app_rules_ar.check_posted(:PAGE_ROWID);",
+        "when": "SAVE"
+      },
+      {
+        "name": "حفظ تفاصيل السداد قبل التعديل (لإرجاع المتبقي بالفواتير عند حذف سطر)",
+        "plsql": "return app_rules_ar.snapshot_alloc(:PAGE_ROWID);",
+        "when": "SAVE"
+      }
+    ],
+    "warnings": [
+      {
+        "name": "تذكير بعدد أرقام السندات المتبقية بالدفتر",
+        "plsql": "return app_rules_ar.warn_book(:PAGE_ROWID, to_number(:PAGE_TRNS_ID), to_number(:PAGE_SALESMAN_ID), to_number(:PAGE_BOOK_SERIAL), to_number(:PAGE_BOOK_NO));",
+        "when": "CREATE,SAVE"
+      },
+      {
+        "name": "رقم الشيك مكرر",
+        "plsql": "return app_rules_ar.warn_cheque(:PAGE_ROWID, to_number(:PAGE_TRNS_ID), to_number(:PAGE_CHEQUE_NUMBER));",
+        "when": "CREATE,SAVE"
+      }
+    ],
+    "after_save": [
+      {
+        "name": "إجمالي الحركة والمتبقي والتسكين على الفواتير والربط بالحسابات",
+        "plsql": "begin\n  app_rules_ar.after_save_credit('ARCRTRN', :PAGE_ROWID, :REQUEST);\nend;",
+        "when": "CREATE,SAVE"
+      }
+    ],
+    "info": [
+      {
+        "name": "CRN_BAL",
+        "label_a": "رصيد العميل",
+        "label_e": "Customer balance",
+        "sql": "select app_rules_ar.cust_balance(to_number(:PAGE_CUSTOMER_ID)) from dual"
+      },
+      {
+        "name": "TRNS_TOTAL",
+        "label_a": "إجمالي المسدد شامل الخصم",
+        "label_e": "Allocated incl. discount",
+        "sql": "select app_rules_ar.alloc_info(:PAGE_ROWID, 'TOTAL') from dual"
+      },
+      {
+        "name": "TRNS_DISC",
+        "label_a": "إجمالي الخصم",
+        "label_e": "Total discount",
+        "sql": "select app_rules_ar.alloc_info(:PAGE_ROWID, 'DISC') from dual"
+      },
+      {
+        "name": "TRNS_NET",
+        "label_a": "إجمالي القيمة المسددة",
+        "label_e": "Allocated net",
+        "sql": "select app_rules_ar.alloc_info(:PAGE_ROWID, 'NET') from dual"
+      },
+      {
+        "name": "TRNS_DIFF",
+        "label_a": "فرق صافي الفاتورة",
+        "label_e": "Unallocated net",
+        "sql": "select app_rules_ar.alloc_info(:PAGE_ROWID, 'DIFF') from dual"
+      },
+      {
+        "name": "TRNS_TOTAL_DIFF",
+        "label_a": "المتبقى من المسدد شامل الخصم",
+        "label_e": "Unallocated incl. discount",
+        "sql": "select app_rules_ar.alloc_info(:PAGE_ROWID, 'TOTAL_DIFF') from dual"
+      },
+      {
+        "name": "TRNS_SUM_VALUE",
+        "label_a": "اجمالي القيمة (الربط بالحسابات)",
+        "label_e": "Account lines total",
+        "sql": "select app_rules_ar.alloc_info(:PAGE_ROWID, 'ACCOUNTS') from dual"
+      },
+      {
+        "name": "TOTAL_LOCAL",
+        "label_a": "اجمالى بالريال",
+        "label_e": "Total in local currency",
+        "sql": "select app_rules_ar.alloc_info(:PAGE_ROWID, 'LOCAL') from dual"
+      },
+      {
+        "name": "RES_LOCAL",
+        "label_a": "متبقي بالريال",
+        "label_e": "Residual in local currency",
+        "sql": "select app_rules_ar.alloc_info(:PAGE_ROWID, 'RES_LOCAL') from dual"
+      },
+      {
+        "name": "BOOK_RANGE",
+        "label_a": "نطاق السندات",
+        "label_e": "Book range",
+        "sql": "select app_rules_ar.book_range(to_number(:PAGE_SALESMAN_ID), to_number(:PAGE_BOOK_SERIAL)) from dual"
+      },
+      {
+        "name": "CREATOR",
+        "label_a": "المستخدم",
+        "label_e": "Created by",
+        "sql": "select app_rules_ar.user_name(create_user_code) from ar_maintrns where rowid = chartorowid(:PAGE_ROWID)"
+      }
+    ],
+    "add_columns": {
+      "AR_MAINTRNS.PAY_METHOD": {
+        "label_a": "طريقة الدفع (1 تنازلي على الفواتير / 2 شاشة مساعدة للفواتير / 4 مبلغ دائن لعميل)",
+        "label_e": "Pay method (1 descending on invoices / 2 helping invoice screen / 4 debit sum for client)"
+      },
+      "AR_MAINTRNS.BOOK_SERIAL": {
+        "label_a": "دفتر السندات",
+        "label_e": "Receipt book"
+      },
+      "AR_MAINTRNS.BOOK_NO": {
+        "label_a": "رقم السند",
+        "label_e": "Receipt no."
+      },
+      "AR_SUBTRNS.WITHOUT_COMM_FLAG": {
+        "label_a": "بدون عمولة",
+        "label_e": "Without commission"
+      }
+    },
+    "defaults": {
+      "AR_MAINTRNS.TRNS_ID": {
+        "type": "SQL_QUERY",
+        "value": "select app_rules_ar.default_type('ARCRTRN') from dual"
+      },
+      "AR_MAINTRNS.T_TAX_FLAG1": {
+        "type": "STATIC",
+        "value": "0"
+      },
+      "AR_MAINTRNS.DISC_VAL": {
+        "type": "STATIC",
+        "value": "0"
+      },
+      "AR_MAINTRNS.PAY_METHOD": {
+        "type": "STATIC",
+        "value": "2"
+      }
+    },
+    "readonly": [
+      "AR_MAINTRNS.TRNS_SERIAL",
+      "AR_MAINTRNS.DOC_NO",
+      "AR_MAINTRNS.MAINAREA_ID",
+      "AR_MAINTRNS.SUBAREA_ID",
+      "AR_MAINTRNS.TOTAL_VALUE",
+      "AR_MAINTRNS.RESIDUAL_VALUE",
+      "AR_MAINTRNS.DISC_VAL_RATIO",
+      "AR_MAINTRNS.CURRENCY_CODE",
+      "AR_MAINTRNS.TAX_VALUE1",
+      "AR_MAINTRNS.TAX_VALUE2",
+      "AR_MAINTRNS.POST_FLAG",
+      "AR_MAINTRNS.PAY_FLAG",
+      "AR_MAINTRNS.ACC_YEAR",
+      "AR_MAINTRNS.ACC_TYPE",
+      "AR_MAINTRNS.ACC_NO",
+      "AR_MAINTRNS.ACC_DATE",
+      "AR_MAINTRNS.RP_TRNS_TYPE_CODE",
+      "AR_MAINTRNS.RP_TRNS_SERIAL",
+      "AR_MAINTRNS.CHECK_TRNS_TYPE_CODE",
+      "AR_MAINTRNS.CHECK_TRNS_SERIAL",
+      "AR_SUBTRNS.WITHOUT_COMM_FLAG"
+    ],
+    "optional": [
+      "AR_MAINTRNS.MAINAREA_ID",
+      "AR_MAINTRNS.SUBAREA_ID"
+    ],
+    "columns": {
+      "AR_MAINTRNS.TRNS_ID": {
+        "lov": "select id || ' - ' || case when app_sec.lang = 'en' then nvl(description_e, description_a) else description_a end d, id r from ar_trnstype where effect = 1 and nvl(tot_trns_flag, 0) = 0 and trns_type in (3, 4) and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or id in (select trns_id from ar_trnstype_password where flag = 1 and password_number = to_number(:G_PASSWORD_NUMBER))) order by id",
+        "widget": "SELECT",
+        "readonly_after_insert": true
+      },
+      "AR_MAINTRNS.CUSTOMER_ID": {
+        "readonly_after_insert": true
+      },
+      "AR_MAINTRNS.CTGRY_CODE": {
+        "lov": "select category_type_code || ' - ' || case when app_sec.lang = 'en' then nvl(category_type_desce, category_type_desca) else category_type_desca end d, category_type_code r from st_category_type order by category_type_code",
+        "widget": "SELECT",
+        "readonly_after_insert": true
+      },
+      "AR_MAINTRNS.SALESMAN_ID": {
+        "lov": "select code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, code r from salesman where code in (select salesman_code from ar_cust_salesman where ctgry_code = :PAGE_CTGRY_CODE and customer_code = :PAGE_CUSTOMER_ID) and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or code in (select salesman_code from ar_salesman_password where password_number = to_number(:G_PASSWORD_NUMBER))) order by code",
+        "widget": "POPUP",
+        "cascade": [
+          "CUSTOMER_ID",
+          "CTGRY_CODE"
+        ]
+      },
+      "AR_MAINTRNS.BOOK_SERIAL": {
+        "lov": "select b.book_serial || ' (' || b.from_serial || ' - ' || b.to_serial || ')' d, b.book_serial r from ar_salesman_books b where b.salesman_code = :PAGE_SALESMAN_ID and nvl(b.stop_flag, 0) = 0 and nvl(b.book_finsh, 0) = 0 and nvl(b.book_type, 0) = 1 order by b.book_serial",
+        "widget": "POPUP",
+        "cascade": "SALESMAN_ID"
+      },
+      "AR_MAINTRNS.PAY_METHOD": {
+        "static": [
+          [
+            "تنازلي على الفواتير",
+            "1"
+          ],
+          [
+            "شاشة مساعدة للفواتير",
+            "2"
+          ],
+          [
+            "مبلغ دائن لعميل",
+            "4"
+          ]
+        ],
+        "required": true,
+        "label_a": "طريقة الدفع",
+        "label_e": "Pay method"
+      },
+      "AR_MAINTRNS.T_TAX_FLAG1": {
+        "static": [
+          [
+            "بدون",
+            "0"
+          ],
+          [
+            "اثبات الضريبة مع التأثير على حساب العميل",
+            "1"
+          ],
+          [
+            "اثبات الضريبة بدون التأثير على حساب العميل",
+            "2"
+          ],
+          [
+            "ارتداد الضريبة مع التأثير على حساب العميل",
+            "3"
+          ],
+          [
+            "ارتداد الضريبة بدون التأثير على حساب العميل",
+            "4"
+          ]
+        ],
+        "required": true,
+        "label_a": "مؤشر الضريبة",
+        "label_e": "Tax indicator"
+      },
+      "AR_MAINTRNS.CASH_FLAG": {
+        "static": [
+          [
+            "شيكات",
+            "0"
+          ],
+          [
+            "نقدية",
+            "1"
+          ],
+          [
+            "حسابات",
+            "2"
+          ]
+        ],
+        "hidden": false,
+        "readonly": true,
+        "default": {
+          "type": "STATIC",
+          "value": "2"
+        },
+        "label_a": "نوع السداد",
+        "label_e": "Payment kind"
+      },
+      "AR_MAINTRNS.INV_VALUE": {
+        "required": true,
+        "label_a": "القيمة قبل الضريبة",
+        "label_e": "Value before tax"
+      },
+      "AR_MAINTRNS.DISC_VAL": {
+        "required": true,
+        "readonly_after_insert": true
+      },
+      "AR_MAINTRNS.ACC_POST_DATE": {
+        "label_a": "تاريخ الايداع",
+        "label_e": "Deposit date"
+      },
+      "AR_MAINTRNS.COST_CODE1": {
+        "lov": "select cost_code || ' - ' || case when app_sec.lang = 'en' then nvl(cost_desc_e, cost_desc) else cost_desc end d, cost_code r from ac_cost_centers where cost_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or cost_code in (select p2.cost_code from ac_password_cost1 p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE))) order by cost_code",
+        "widget": "POPUP"
+      },
+      "AR_MAINTRNS.TRNS_ACCOUNT": {
+        "lov": "select account_number || ' - ' || case when app_sec.lang = 'en' then nvl(account_name_e, account_name) else account_name end d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or account_number in (select p2.account_number from ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE))) order by account_number",
+        "widget": "POPUP"
+      },
+      "AR_MAINTRNS.CUSTOMER_ACCOUNT": {
+        "lov": "select account_number || ' - ' || case when app_sec.lang = 'en' then nvl(account_name_e, account_name) else account_name end d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or account_number in (select p2.account_number from ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE))) order by account_number",
+        "widget": "POPUP"
+      },
+      "AR_MAINTRNS.DISC_ACCOUNT": {
+        "lov": "select account_number || ' - ' || case when app_sec.lang = 'en' then nvl(account_name_e, account_name) else account_name end d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or account_number in (select p2.account_number from ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE))) order by account_number",
+        "widget": "POPUP"
+      },
+      "AR_MAINTRNS_ACCOUNT_DET.TRNS_ACCOUNT": {
+        "lov": "select account_number || ' - ' || case when app_sec.lang = 'en' then nvl(account_name_e, account_name) else account_name end d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or account_number in (select p2.account_number from ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE))) order by account_number",
+        "widget": "POPUP"
+      },
+      "AR_MAINTRNS_ACCOUNT_DET.COST_CODE1": {
+        "lov": "select cost_code || ' - ' || case when app_sec.lang = 'en' then nvl(cost_desc_e, cost_desc) else cost_desc end d, cost_code r from ac_cost_centers where cost_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or cost_code in (select p2.cost_code from ac_password_cost1 p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE))) order by cost_code",
+        "widget": "POPUP"
+      }
+    },
+    "computed": {
+      "AR_MAINTRNS.MAINAREA_NAME": {
+        "sql": "(select max(a.name_a) from ar_mainarea a where a.id = t.mainarea_id)",
+        "label_a": "اسم المنطقة",
+        "label_e": "Area name"
+      },
+      "AR_MAINTRNS.SUBAREA_NAME": {
+        "sql": "(select max(s.name_a) from ar_subarea s where s.main_id = t.mainarea_id and s.id = t.subarea_id)",
+        "label_a": "اسم الفرع",
+        "label_e": "Branch name"
+      },
+      "AR_MAINTRNS.INV_VALUE_TAX": {
+        "sql": "nvl(t.inv_value, 0) + nvl(t.tax_value1, 0)",
+        "label_a": "القيمة بعد الضريبة",
+        "label_e": "Value after tax",
+        "type": "NUMBER"
+      },
+      "AR_MAINTRNS.TOTAL_TRNS_VALUE": {
+        "sql": "nvl(t.total_value, 0) + nvl(t.disc_val, 0)",
+        "label_a": "اجمالى بعد الخصم",
+        "label_e": "Total with discount",
+        "type": "NUMBER"
+      },
+      "AR_SUBTRNS.INV_TRNS_DATE": {
+        "sql": "(select max(s.inv_date) from ar_subtrns s where s.trns_id = t.inv_trns_id and s.trns_serial = t.inv_trns_serial and s.mainarea_id = t.inv_mainarea_id and s.subarea_id = t.inv_subarea_id and s.bill_seq = t.inv_bill_seq)",
+        "label_a": "تاريخ الفاتورة",
+        "label_e": "Invoice date",
+        "type": "DATE"
+      },
+      "AR_SUBTRNS.INV_TOTAL_VALUE": {
+        "sql": "(select max(s.total_value) from ar_subtrns s where s.trns_id = t.inv_trns_id and s.trns_serial = t.inv_trns_serial and s.mainarea_id = t.inv_mainarea_id and s.subarea_id = t.inv_subarea_id and s.bill_seq = t.inv_bill_seq)",
+        "label_a": "قيمة الكلية للفاتورة",
+        "label_e": "Invoice total",
+        "type": "NUMBER"
+      },
+      "AR_SUBTRNS.INV_RESIDUAL_VALUE": {
+        "sql": "(select max(s.total_value - ar_subtrns_payed_value(s.trns_id, s.trns_serial, s.mainarea_id, s.subarea_id, s.bill_seq)) from ar_subtrns s where s.trns_id = t.inv_trns_id and s.trns_serial = t.inv_trns_serial and s.mainarea_id = t.inv_mainarea_id and s.subarea_id = t.inv_subarea_id and s.bill_seq = t.inv_bill_seq)",
+        "label_a": "القيمة المتبقية بالفاتورة",
+        "label_e": "Invoice residual",
+        "type": "NUMBER"
+      },
+      "AR_SUBTRNS.TOTAL_VALUE_RIYALH": {
+        "sql": "nvl((select max(m.currency_rate) from ar_maintrns m where m.trns_id = t.trns_id and m.mainarea_id = t.mainarea_id and m.subarea_id = t.subarea_id and m.trns_serial = t.trns_serial), 0) * nvl(t.total_value, 0)",
+        "label_a": "القيمة المدفوعة بالريال",
+        "label_e": "Paid (local)",
+        "type": "NUMBER"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "ALLOC_INVOICE",
+      "label_a": "تسكين فاتورة (شاشة مساعدة للفواتير)",
+      "label_e": "Allocate an invoice (helping invoice screen)",
+      "condition": "app_act_ar.can_alloc(:PAGE_ROWID) = 'Y'",
+      "params": [
+        {
+          "name": "INVOICE",
+          "label_a": "الفاتورة",
+          "label_e": "Invoice",
+          "type": "text",
+          "required": true,
+          "lov_sql": "select s.bill_id2 || '/' || s.bill_id1 || ' - ' || to_char(s.inv_date, 'DD/MM/YYYY') || ' (' || to_char(app_act_ar.bill_open('ARCRTRN', s.trns_id, s.mainarea_id, s.subarea_id, s.trns_serial, s.bill_seq), 'FM999G999G990D00') || ')' d, s.trns_id || ':' || s.mainarea_id || ':' || s.subarea_id || ':' || s.trns_serial || ':' || s.bill_seq r from ar_subtrns s join ar_maintrns m on m.trns_id = s.trns_id and m.mainarea_id = s.mainarea_id and m.subarea_id = s.subarea_id and m.trns_serial = s.trns_serial where m.trns_id in (select id from ar_trnstype where effect = 0) and m.customer_id = to_number(:PAGE_CUSTOMER_ID) and app_act_ar.bill_open('ARCRTRN', s.trns_id, s.mainarea_id, s.subarea_id, s.trns_serial, s.bill_seq) > 0 and app_act_ar.in_payment(:PAGE_ROWID, s.bill_id1, s.bill_id2) = 0 order by m.trns_date, s.bill_id1, s.bill_id2"
+        },
+        {
+          "name": "AMOUNT",
+          "label_a": "المسدد شامل الخصم (فارغ = الأقل من المتبقي بالسند والفاتورة)",
+          "label_e": "Amount incl. discount (empty = the smaller open value)",
+          "type": "number"
+        },
+        {
+          "name": "DISC",
+          "label_a": "قيمة الخصم (فارغ = خصم فترات السداد)",
+          "label_e": "Discount (empty = payment-period discount)",
+          "type": "number"
+        }
+      ],
+      "call": "app_act_ar.alloc_invoice(:PAGE_ROWID, :INVOICE, :AMOUNT, :DISC, 'ARCRTRN')",
+      "message": "app_act_ar.last_message",
+      "success_a": "تم تسكين الفاتورة",
+      "success_e": "Invoice allocated"
+    },
+    {
+      "name": "TOGGLE_COMM",
+      "label_a": "تفعيل / إلغاء العمولة على سطر",
+      "label_e": "Commission on / off for a line",
+      "condition": "app_act_ar.can_toggle_comm(:PAGE_ROWID) = 'Y'",
+      "params": [
+        {
+          "name": "LINE",
+          "label_a": "سطر الفاتورة",
+          "label_e": "Invoice line",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select s.bill_seq || ' - ' || s.bill_id2 || '/' || s.bill_id1 || ' - ' || case when nvl(s.without_comm_flag, 0) = 1 then 'بدون عمولة' else 'بعمولة' end d, s.bill_seq r from ar_subtrns s, ar_maintrns m where m.rowid = chartorowid(:PAGE_ROWID) and s.trns_id = m.trns_id and s.mainarea_id = m.mainarea_id and s.subarea_id = m.subarea_id and s.trns_serial = m.trns_serial order by s.bill_seq"
+        }
+      ],
+      "call": "app_act_ar.toggle_comm(:PAGE_ROWID, :LINE)",
+      "message": "app_act_ar.last_message",
+      "success_a": "تم تعديل مؤشر العمولة",
+      "success_e": "Commission flag changed"
+    },
+    {
+      "name": "POST",
+      "label_a": "ترحيل",
+      "label_e": "Post",
+      "confirm_a": "هل تريد ترحيل الحركة الحالية للحسابات العامة؟",
+      "confirm_e": "Post this transaction to the GL?",
+      "condition": "app_act_ar.can_post(:PAGE_ROWID) = 'Y'",
+      "call": "app_act_ar.post_trns(:PAGE_ROWID)",
+      "message": "app_act_ar.last_message",
+      "success_a": "تم الترحيل",
+      "success_e": "Posted"
+    },
+    {
+      "name": "CANCEL_POST",
+      "label_a": "إلغاء الترحيل",
+      "label_e": "Cancel posting",
+      "confirm_a": "هل تريد إلغاء ترحيل الحركة الحالية؟",
+      "confirm_e": "Cancel the GL posting of this transaction?",
+      "condition": "app_act_ar.can_cancel_post(:PAGE_ROWID) = 'Y'",
+      "params": [
+        {
+          "name": "ALLOW_GROUPED",
+          "label_a": "إلغاء القيد إن كان مشتركاً مع حركات أخرى",
+          "label_e": "Also when the voucher is shared",
+          "type": "number",
+          "default": "0",
+          "default_type": "STATIC",
+          "lov_sql": "select case when app_sec.lang = 'en' then 'No' else 'لا' end d, 0 r from dual union all select case when app_sec.lang = 'en' then 'Yes' else 'نعم' end d, 1 r from dual"
+        }
+      ],
+      "call": "app_act_ar.cancel_post_trns(:PAGE_ROWID, :ALLOW_GROUPED)",
+      "message": "app_act_ar.last_message",
+      "success_a": "تم إلغاء الترحيل",
+      "success_e": "Posting cancelled"
+    }
+  ]
+}

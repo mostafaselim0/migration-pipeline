@@ -1,0 +1,52 @@
+{
+  "pattern": "AUTO",
+  "notes": "Debt age tables: code table (AGE_ID max+1); labels of the legacy form.",
+  "rules": {
+    "add_columns": {
+      "AR_AGES.AGE_ID": {
+        "label_a": "الرقم",
+        "label_e": "No."
+      },
+      "AR_AGES.AGE_DESC": {
+        "label_a": "الأسم عربى",
+        "label_e": "Arabic name"
+      },
+      "AR_AGES.AGE_DESC_E": {
+        "label_a": "الأسم لاتينى",
+        "label_e": "English name"
+      },
+      "AR_AGES.P1": {
+        "label_a": "الفترة الاولى",
+        "label_e": "Period 1"
+      },
+      "AR_AGES.P2": {
+        "label_a": "الفترة الثانية",
+        "label_e": "Period 2"
+      },
+      "AR_AGES.P3": {
+        "label_a": "الفترة الثالثة",
+        "label_e": "Period 3"
+      },
+      "AR_AGES.P4": {
+        "label_a": "الفترة الرابعة",
+        "label_e": "Period 4"
+      },
+      "AR_AGES.P5": {
+        "label_a": "الفترة الخامسة",
+        "label_e": "Period 5"
+      },
+      "AR_AGES.P6": {
+        "label_a": "الفترة السادسة",
+        "label_e": "Period 6"
+      },
+      "AR_AGES.P7": {
+        "label_a": "الفترة السابعة",
+        "label_e": "Period 7"
+      },
+      "AR_AGES.IS_DEFAULT": {
+        "label_a": "أساسي",
+        "label_e": "Default"
+      }
+    }
+  }
+}

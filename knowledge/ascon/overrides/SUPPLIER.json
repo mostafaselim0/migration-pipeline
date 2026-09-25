@@ -1,0 +1,304 @@
+{
+  "pattern": "MASTER_DETAIL",
+  "master": {
+    "table": "SUPPLIER",
+    "columns": [
+      "CODE",
+      "NAME_A",
+      "NAME_E",
+      "SUPPLIER_TYPE",
+      "EMP_FLAG",
+      "VENDOR_CODE",
+      "SUPPLIER_LEVEL",
+      "SUPPLIER_STATUS",
+      "ADDRESS_A",
+      "ADDRESS_E",
+      "CONTACT",
+      "TELEPHONE1",
+      "TELEPHONE2",
+      "TELEPHONE3",
+      "FAX",
+      "E_MAIL",
+      "WEB_SITE",
+      "MAINAREA_ID",
+      "SUBAREA_ID",
+      "SUPP_CLASS",
+      "ACT_CODE",
+      "CURRENCY_CODE",
+      "REG_NO",
+      "IBAN1",
+      "IBAN2",
+      "IBAN3",
+      "IBAN4",
+      "DEBIT_LIMIT",
+      "DUE_DAYS",
+      "SINGLE_PAY",
+      "START_DATE",
+      "STOPFLAG",
+      "STOPDATE",
+      "STOPREASON",
+      "ACCOUNT_NO",
+      "DISC_ACCOUNT",
+      "COST_NO",
+      "COST_NO2",
+      "PRODUCT_NAME_A",
+      "PRODUCT_NAME_E",
+      "BEG_BAL",
+      "CRN_BAL_TOTAL"
+    ]
+  },
+  "details": [
+    {
+      "table": "VN_PAY_METHODE_ACC",
+      "join": [
+        [
+          "SUPPLIER_CODE",
+          "CODE"
+        ]
+      ],
+      "title_a": "حسابات طرق الدفع",
+      "title_e": "Payment method accounts"
+    },
+    {
+      "table": "VN_SUPP_RESP",
+      "join": [
+        [
+          "SUPP_CODE",
+          "CODE"
+        ]
+      ],
+      "title_a": "المسئولين عن المورد",
+      "title_e": "Responsibles of supplier"
+    },
+    {
+      "table": "VN_SUPP_KIND",
+      "join": [
+        [
+          "SUPP_CODE",
+          "CODE"
+        ]
+      ],
+      "title_a": "ارقام المصنعين",
+      "title_e": "Manufacturers"
+    },
+    {
+      "table": "SUPPLIER_SHIPPING_TYPE",
+      "join": [
+        [
+          "SUPPLIER_CODE",
+          "CODE"
+        ]
+      ],
+      "title_a": "طرق شحن المورد",
+      "title_e": "Shipping methods"
+    },
+    {
+      "table": "SUPPLIER_STAT",
+      "join": [
+        [
+          "SUPPLIER_ID",
+          "CODE"
+        ]
+      ],
+      "title_a": "المطابقات",
+      "title_e": "Balance reconciliations"
+    }
+  ],
+  "where": null,
+  "insert": true,
+  "update": true,
+  "delete": true,
+  "notes": "Suppliers file (live VN\\FMB\\supplier.fmx, 2020, with the supplier code structure): the legacy blocks SUPPLIER, VN_PAY_METHODE_ACC, VN_SUPP_RESP, VN_SUPP_KIND, SUPPLIER_SHIPPING_TYPE, SUPPLIER_STAT; code structure (level, parent, leaf status), telephones, limits, locked currency / activity, delete rules, balances (APP_RULES3_VN).",
+  "rules": {
+    "where": "nvl(SPPLIER_STATUS, 1) = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or (CODE >= (select min(FROM_SUPPLIER_CODE) from VN_SUPPLIER_PASSWORD where PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER)) and CODE <= (select max(TO_SUPPLIER_CODE) from VN_SUPPLIER_PASSWORD where PASSWORD_NUMBER = to_number(:G_PASSWORD_NUMBER))))",
+    "key_expr": {
+      "SUPPLIER.CODE": "app_rules3_vn.need_num('يجب إدخال رقم المورد', 'Enter the supplier code')"
+    },
+    "row_rules": {
+      "SUPPLIER": "if app_rules3_vn.is_form('SUPPLIER') and app_rules3_vn.busy = 0 then\n  app_rules3_vn.supplier_row(inserting, :new.code, :new.supplier_level, :new.supplier_status, case when inserting or app_rules3_vn.chg(:new.telephone1, :old.telephone1) = 1 then :new.telephone1 end, case when inserting or app_rules3_vn.chg(:new.telephone2, :old.telephone2) = 1 then :new.telephone2 end, case when inserting or app_rules3_vn.chg(:new.telephone3, :old.telephone3) = 1 then :new.telephone3 end, case when inserting or app_rules3_vn.chg(:new.fax, :old.fax) = 1 then :new.fax end, case when inserting or app_rules3_vn.chg(:new.debit_limit, :old.debit_limit) = 1 then :new.debit_limit end, case when inserting or app_rules3_vn.chg(:new.due_days, :old.due_days) = 1 then :new.due_days end, :new.stopflag, :new.stopreason, case when inserting or app_rules3_vn.chg(:new.account_no, :old.account_no) = 1 then :new.account_no end, case when inserting or app_rules3_vn.chg(:new.disc_account, :old.disc_account) = 1 then :new.disc_account end, case when inserting or app_rules3_vn.chg(:new.cost_no, :old.cost_no) = 1 then :new.cost_no end, case when inserting or app_rules3_vn.chg(:new.cost_no2, :old.cost_no2) = 1 then :new.cost_no2 end, :new.currency_code, :old.currency_code, :new.act_code, :old.act_code);\nend if;",
+      "VN_PAY_METHODE_ACC": "app_rules3_vn.pay_acc_row(:new.settel_type_code, :new.account_no, :new.disc_account, :new.cost_code, :new.cost_code2);",
+      "SUPPLIER_STAT": "app_rules3_vn.stat_row(inserting, :new.supplier_id, :new.stat_year, :new.stat_date, :new.sttm_bal, :old.stat_date);"
+    },
+    "after_save": [
+      {
+        "name": "المورد الرئيسي (حالة المورد)",
+        "plsql": "begin\n  app_rules3_vn.supplier_after(:REQUEST, :PAGE_ROWID, :PAGE_CODE, :PAGE_SUPPLIER_LEVEL);\nend;",
+        "when": "CREATE,SAVE,DELETE"
+      }
+    ],
+    "readonly": [
+      "SUPPLIER.SUPPLIER_LEVEL",
+      "SUPPLIER.SUPPLIER_STATUS",
+      "SUPPLIER.BEG_BAL",
+      "SUPPLIER.CRN_BAL_TOTAL",
+      "SUPPLIER_STAT.STTM_BAL"
+    ],
+    "optional": [
+      "SUPPLIER_STAT.STAT_YEAR"
+    ],
+    "add_columns": {
+      "SUPPLIER.CODE": {
+        "label_a": "رقم المورد",
+        "label_e": "Supplier code"
+      },
+      "SUPPLIER.SUPPLIER_TYPE": {
+        "label_a": "نوعية المورد (1 مورد / 2 مقاول)",
+        "label_e": "Vendor type (1 supplier / 2 contractor)"
+      },
+      "SUPPLIER.SUPPLIER_LEVEL": {
+        "label_a": "المستوي",
+        "label_e": "Level"
+      },
+      "SUPPLIER.SUPPLIER_STATUS": {
+        "label_a": "حالة المورد (0 رئيسي / 1 فرعي)",
+        "label_e": "Status (0 parent / 1 leaf)"
+      },
+      "SUPPLIER.ADDRESS_E": {
+        "label_a": "العنوان (لاتيني)",
+        "label_e": "Address (English)"
+      },
+      "SUPPLIER.TELEPHONE2": {
+        "label_a": "تليفون 2",
+        "label_e": "Telephone 2"
+      },
+      "SUPPLIER.TELEPHONE3": {
+        "label_a": "تليفون 3",
+        "label_e": "Telephone 3"
+      },
+      "SUPPLIER.REG_NO": {
+        "label_a": "رقم السجل",
+        "label_e": "Registry no."
+      },
+      "SUPPLIER.IBAN1": {
+        "label_a": "حساب ايبان 1",
+        "label_e": "IBAN 1"
+      },
+      "SUPPLIER.IBAN2": {
+        "label_a": "حساب ايبان 2",
+        "label_e": "IBAN 2"
+      },
+      "SUPPLIER.IBAN3": {
+        "label_a": "حساب ايبان 3",
+        "label_e": "IBAN 3"
+      },
+      "SUPPLIER.IBAN4": {
+        "label_a": "حساب ايبان 4",
+        "label_e": "IBAN 4"
+      },
+      "SUPPLIER.DEBIT_LIMIT": {
+        "label_a": "حــــد المديونية",
+        "label_e": "Debit limit"
+      },
+      "SUPPLIER.STOPFLAG": {
+        "label_a": "المورد متوقف",
+        "label_e": "Stopped"
+      },
+      "SUPPLIER.PRODUCT_NAME_E": {
+        "label_a": "اسم الصنف (لاتيني)",
+        "label_e": "Item name (English)"
+      },
+      "SUPPLIER.CRN_BAL_TOTAL": {
+        "label_a": "الرصيد الجاري (المخزن في ملف المورد)",
+        "label_e": "Current balance (stored)"
+      },
+      "VN_PAY_METHODE_ACC.SETTEL_TYPE_CODE": {
+        "label_a": "طريقة الدفع",
+        "label_e": "Payment method"
+      },
+      "VN_PAY_METHODE_ACC.ACCOUNT_NO": {
+        "label_a": "رقم الحساب",
+        "label_e": "Account"
+      },
+      "VN_PAY_METHODE_ACC.DISC_ACCOUNT": {
+        "label_a": "حساب الخصم المسموح به",
+        "label_e": "Allowed discount account"
+      },
+      "VN_PAY_METHODE_ACC.COST_CODE": {
+        "label_a": "مركز تكلفة1",
+        "label_e": "Cost centre 1"
+      },
+      "VN_PAY_METHODE_ACC.COST_CODE2": {
+        "label_a": "مركز تكلفة2",
+        "label_e": "Cost centre 2"
+      },
+      "VN_SUPP_RESP.CODE": {
+        "label_a": "رقم المسئول",
+        "label_e": "Responsible code"
+      },
+      "VN_SUPP_KIND.KIND_CODE": {
+        "label_a": "رقم المصنع",
+        "label_e": "Manufacturer"
+      },
+      "SUPPLIER_SHIPPING_TYPE.FROM_PORT_CODE": {
+        "label_a": "من ميناء",
+        "label_e": "From port"
+      },
+      "SUPPLIER_SHIPPING_TYPE.TO_PORT_CODE": {
+        "label_a": "إلى ميناء",
+        "label_e": "To port"
+      },
+      "SUPPLIER_SHIPPING_TYPE.SHIPPING_TYPE": {
+        "label_a": "طريقة الشحن",
+        "label_e": "Shipping method"
+      },
+      "SUPPLIER_SHIPPING_TYPE.SHIPPING_PERIOD": {
+        "label_a": "مدة الشحن بالايام",
+        "label_e": "Shipping days"
+      },
+      "SUPPLIER_STAT.STAT_DATE": {
+        "label_a": "تاريخ المطابقة",
+        "label_e": "Reconciliation date"
+      },
+      "SUPPLIER_STAT.STAT_YEAR": {
+        "label_a": "السنة",
+        "label_e": "Year"
+      },
+      "SUPPLIER_STAT.ACT_BAL": {
+        "label_a": "رصيد المورد",
+        "label_e": "Supplier's balance"
+      },
+      "SUPPLIER_STAT.STTM_BAL": {
+        "label_a": "الرصيد في كشف الحساب",
+        "label_e": "Balance per statement"
+      }
+    },
+    "info": [
+      {
+        "name": "BAL",
+        "label_a": "رصيد المورد الجاري",
+        "label_e": "Current balance",
+        "sql": "select app_rules3_vn.supp_info(:PAGE_CODE, 'BAL') from dual"
+      },
+      {
+        "name": "BEG",
+        "label_a": "الرصــيد الإفتتـاحى",
+        "label_e": "Opening balance",
+        "sql": "select app_rules3_vn.supp_info(:PAGE_CODE, 'BEG') from dual"
+      },
+      {
+        "name": "LEVEL",
+        "label_a": "المستوي / الحالة",
+        "label_e": "Level / status",
+        "sql": "select app_rules3_vn.supp_info(:PAGE_CODE, 'LEVEL') from dual"
+      },
+      {
+        "name": "LAST",
+        "label_a": "آخر سجل",
+        "label_e": "Last record",
+        "sql": "select app_rules3_vn.supp_info(:PAGE_CODE, 'LAST') from dual"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "name": "NEXT_CHILD",
+      "label_a": "رقم المورد الفرعي التالي",
+      "label_e": "Next sub-supplier code",
+      "call": "app_rules3_vn.next_child_code(:PAGE_CODE)",
+      "message": "app_rules3_vn.last_message",
+      "success_a": "تم",
+      "success_e": "Done",
+      "icon": "fa-sitemap"
+    }
+  ]
+}

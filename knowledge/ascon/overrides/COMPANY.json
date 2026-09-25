@@ -1,0 +1,22 @@
+{
+  "pattern": "AUTO",
+  "notes": "Companies with communication ways and licences; duplicate code, licence dates, GL / payroll parameter row created with the company and removed with it, logo upload (APP_RULES3_SE, see processes/COMPANY.md)",
+  "rules": {
+    "defaults": {"COMPANY.COMPANY_CODE": {"type": "STATIC", "value": ""}},
+    "row_rules": {
+      "COMPANY": "app_rules3_se.company_row(inserting, :new.company_code);",
+      "COMPANY_LICENCE": "app_rules3_se.licence_dates(:new.start_dt, :new.end_dt, :new.renewal_dt);"
+    },
+    "after_save": [
+      {"name": "إنشاء مؤشرات الأنظمة للشركة الجديدة",
+       "plsql": "declare\n  l number;\nbegin\n  select company_code into l from company where rowid = chartorowid(:PAGE_ROWID);\n  app_rules3_se.company_created(l);\nend;",
+       "when": "CREATE"}
+    ]
+  },
+  "actions": [
+    {"name": "LOGO", "label_a": "شعار الشركة", "label_e": "Company logo",
+     "params": [{"name": "LOGO_FILE", "label_a": "ملف الصورة", "label_e": "Image file", "type": "file", "required": true, "file_types": "image/*"}],
+     "call": "app_rules3_se.load_logo(:PAGE_ROWID, :LOGO_FILE)", "message": "app_rules3_se.last_message",
+     "success_a": "تم تحميل الشعار", "success_e": "Logo loaded", "icon": "fa-image"}
+  ]
+}

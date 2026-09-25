@@ -1,0 +1,22 @@
+{
+  "pattern": "GRID",
+  "master": {"table": "COMPANY", "columns": ["COMPANY_CODE", "COMPANY_DESC", "COMPANY_DESC_E", "TAX_NO", "LEGAL_ADDRESS", "TAX_STAT_PERIOD"]},
+  "details": [],
+  "where": null,
+  "order_by": "COMPANY_CODE",
+  "insert": false,
+  "update": true,
+  "delete": false,
+  "notes": "Tax system parameters are the company tax fields (COMPANY.TAX_NO, LEGAL_ADDRESS, TAX_STAT_PERIOD in months); update only, companies are created in the COMPANY screen; code and names shown read-only as in the legacy block.",
+  "rules": {
+    "readonly": ["COMPANY.COMPANY_CODE", "COMPANY.COMPANY_DESC", "COMPANY.COMPANY_DESC_E"],
+    "add_columns": {
+      "COMPANY.COMPANY_CODE": {"label_a": "رقم الشركة", "label_e": "Company no."},
+      "COMPANY.COMPANY_DESC": {"label_a": "الأسم عربى", "label_e": "Arabic name"},
+      "COMPANY.COMPANY_DESC_E": {"label_a": "الأسم لاتينى", "label_e": "English name"},
+      "COMPANY.TAX_NO": {"label_a": "الرقم الضريبي", "label_e": "VAT number"},
+      "COMPANY.LEGAL_ADDRESS": {"label_a": "العنوان القانوني", "label_e": "Legal address"},
+      "COMPANY.TAX_STAT_PERIOD": {"label_a": "فترة التقديم (بالشهور)", "label_e": "Statement period (months)"}
+    }
+  }
+}

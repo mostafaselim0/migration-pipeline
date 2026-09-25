@@ -1,0 +1,85 @@
+{
+  "pattern": "AUTO",
+  "notes": "Tax obligation per item: item of the group (active, group allowed for the user group), percentage from ST_ITEM.VAT_VALUE, percentage > 0, range button by item group (تطبيق) - APP_RULES3_TX, see processes/TX_ITEMS.md",
+  "rules": {
+    "row_rules": {
+      "TX_TAXES_ITEMS": "app_rules3_tx.items_row(inserting, :new.group_code, :new.item_code, :old.tax_per, :new.tax_per);"
+    },
+    "add_columns": {
+      "TX_TAXES_ITEMS.TAX_CODE": {
+        "label_a": "رقم الضريبة",
+        "label_e": "Tax no."
+      },
+      "TX_TAXES_ITEMS.GROUP_CODE": {
+        "label_a": "المجموعة",
+        "label_e": "Item group"
+      },
+      "TX_TAXES_ITEMS.ITEM_CODE": {
+        "label_a": "رقم الصنف",
+        "label_e": "Item"
+      },
+      "TX_TAXES_ITEMS.TAX_PER": {
+        "label_a": "النسبة",
+        "label_e": "Percentage"
+      }
+    },
+    "computed": {
+      "TX_TAXES_ITEMS.PRICE_AFTER": {
+        "sql": "(select max((u.retail_sale_price * (100 + t.tax_per)) / 100) from st_item_unit u where u.item_code = t.item_code and u.group_code = t.group_code and u.basic_unit = 1)",
+        "label_a": "سعر البيع بعد النسبة",
+        "label_e": "Sale price after the rate",
+        "type": "NUMBER"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "APPLY",
+      "label_a": "تطبيق",
+      "label_e": "Apply",
+      "confirm_a": "سيتم حذف أصناف المجموعات المحددة لهذه الضريبة وإعادة إنشائها. هل تريد الاستمرار؟",
+      "confirm_e": "The items of the chosen groups are replaced for this tax. Continue?",
+      "condition": "app_sec.can_page(:APP_PAGE_ID, 'I')",
+      "params": [
+        {
+          "name": "TAX",
+          "label_a": "رقم الضريبة",
+          "label_e": "Tax no.",
+          "type": "number",
+          "required": true,
+          "default": "select min(tax_code) from tx_taxes_types",
+          "default_type": "SQL_QUERY",
+          "lov_sql": "select tax_code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, tax_code r from tx_taxes_types order by tax_code"
+        },
+        {
+          "name": "FROM_GRP",
+          "label_a": "من مجموعة",
+          "label_e": "From group",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select item_group_code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, item_group_code r from st_item_group where nvl(stop_flag, 0) = 0 and group_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or item_group_code in (select group_code from st_group_password where password_number = to_number(:G_PASSWORD_NUMBER))) order by item_group_code"
+        },
+        {
+          "name": "TO_GRP",
+          "label_a": "إلى مجموعة",
+          "label_e": "To group",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select item_group_code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, item_group_code r from st_item_group where nvl(stop_flag, 0) = 0 and group_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or item_group_code in (select group_code from st_group_password where password_number = to_number(:G_PASSWORD_NUMBER))) order by item_group_code"
+        },
+        {
+          "name": "PER",
+          "label_a": "النسبة",
+          "label_e": "Percentage",
+          "type": "number",
+          "required": true
+        }
+      ],
+      "call": "app_rules3_tx.apply_items(:TAX, :FROM_GRP, :TO_GRP, :PER)",
+      "message": "app_rules3_tx.last_message",
+      "success_a": "تم التطبيق",
+      "success_e": "Applied",
+      "icon": "fa-check"
+    }
+  ]
+}

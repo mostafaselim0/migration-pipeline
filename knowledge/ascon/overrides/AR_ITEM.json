@@ -1,0 +1,9 @@
+{
+  "pattern": "AUTO",
+  "notes": "Non-stock items of AR: code must be greater than zero (legacy message) (APP_RULES3_AR).",
+  "rules": {
+    "row_rules": {
+      "AR_ITEM": "app_rules3_ar.positive_code(:new.code, 'رقم تصنيف المورد يجب ان يكون اكبر من الصفر', 'The code must be greater than zero');"
+    }
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "pattern": "AUTO",
+  "notes": "Tax types: name required, duplicate number, account LOV rules, copy of a previous tax type's obligations (نسخ بيانات نوع ضريبة سابقة) - APP_RULES3_TX, see processes/TX_TAXES_TYPES.md",
+  "rules": {
+    "validations": [
+      {
+        "name": "نوع الضريبة: الاسم ورقم الضريبة والحسابات",
+        "plsql": "return app_rules3_tx.types_check(:PAGE_ROWID, :REQUEST, :PAGE_TAX_CODE, :PAGE_NAME_A, :PAGE_DB_ACCOUNT_NO, :PAGE_CR_ACCOUNT_NO, :PAGE_CUSTOM_ACCOUNT_NO, :PAGE_EXP_ACCOUNT_NO, :PAGE_TRNSIT_ACCOUNT_NO, :PAGE_ADV_ACCOUNT_NO);",
+        "when": "CREATE,SAVE"
+      }
+    ],
+    "add_columns": {
+      "TX_TAXES_TYPES.TAX_CODE": {
+        "label_a": "رقم الضريبة",
+        "label_e": "Tax no."
+      },
+      "TX_TAXES_TYPES.NAME_A": {
+        "label_a": "الأسم عربى",
+        "label_e": "Arabic name"
+      },
+      "TX_TAXES_TYPES.NAME_E": {
+        "label_a": "الأسم لاتينى",
+        "label_e": "English name"
+      },
+      "TX_TAXES_TYPES.START_DATE": {
+        "label_a": "بداية التطبيق",
+        "label_e": "Start date"
+      },
+      "TX_TAXES_TYPES.DB_ACCOUNT_NO": {
+        "label_a": "الحساب المدين (مدخلات)",
+        "label_e": "Debit account (inputs)"
+      },
+      "TX_TAXES_TYPES.CR_ACCOUNT_NO": {
+        "label_a": "الحساب الدائن (مخرجات)",
+        "label_e": "Credit account (outputs)"
+      },
+      "TX_TAXES_TYPES.CUSTOM_ACCOUNT_NO": {
+        "label_a": "حساب مصلحة الجمارك",
+        "label_e": "Customs account"
+      },
+      "TX_TAXES_TYPES.EXP_ACCOUNT_NO": {
+        "label_a": "حساب مصروفات الضرائب",
+        "label_e": "Tax expense account"
+      },
+      "TX_TAXES_TYPES.TRNSIT_ACCOUNT_NO": {
+        "label_a": "حساب مجمع ضرائب الاصول",
+        "label_e": "Assets tax account"
+      },
+      "TX_TAXES_TYPES.ADV_ACCOUNT_NO": {
+        "label_a": "حساب الدفعة المقدمة للضريبة",
+        "label_e": "Tax advance payment account"
+      },
+      "TX_TAXES_TYPES.INIT_TAX_PRCN": {
+        "label_a": "نسبة الضريبة %",
+        "label_e": "Tax percentage %"
+      }
+    },
+    "columns": {
+      "TX_TAXES_TYPES.DB_ACCOUNT_NO": {
+        "lov": "select account_number || ' - ' || case when app_sec.lang = 'en' then nvl(account_name_e, account_name) else account_name end d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or account_number in (select p2.account_number from ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE))) order by account_number",
+        "widget": "POPUP"
+      },
+      "TX_TAXES_TYPES.CR_ACCOUNT_NO": {
+        "lov": "select account_number || ' - ' || case when app_sec.lang = 'en' then nvl(account_name_e, account_name) else account_name end d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or account_number in (select p2.account_number from ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE))) order by account_number",
+        "widget": "POPUP"
+      },
+      "TX_TAXES_TYPES.CUSTOM_ACCOUNT_NO": {
+        "lov": "select account_number || ' - ' || case when app_sec.lang = 'en' then nvl(account_name_e, account_name) else account_name end d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or account_number in (select p2.account_number from ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE))) order by account_number",
+        "widget": "POPUP"
+      },
+      "TX_TAXES_TYPES.EXP_ACCOUNT_NO": {
+        "lov": "select account_number || ' - ' || case when app_sec.lang = 'en' then nvl(account_name_e, account_name) else account_name end d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or account_number in (select p2.account_number from ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE))) order by account_number",
+        "widget": "POPUP"
+      },
+      "TX_TAXES_TYPES.TRNSIT_ACCOUNT_NO": {
+        "lov": "select account_number || ' - ' || case when app_sec.lang = 'en' then nvl(account_name_e, account_name) else account_name end d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or account_number in (select p2.account_number from ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE))) order by account_number",
+        "widget": "POPUP"
+      },
+      "TX_TAXES_TYPES.ADV_ACCOUNT_NO": {
+        "lov": "select account_number || ' - ' || case when app_sec.lang = 'en' then nvl(account_name_e, account_name) else account_name end d, account_number r from ac_master where account_status = 1 and (nvl(to_number(:G_PASSWORD_NUMBER), 0) = 0 or account_number in (select p2.account_number from ac_password_master p2 where p2.password_number = to_number(:G_PASSWORD_NUMBER) and p2.company_code = to_number(:G_COMPANY_CODE))) order by account_number",
+        "widget": "POPUP"
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "COPY",
+      "label_a": "نسخ بيانات نوع ضريبة سابقة",
+      "label_e": "Copy the data of a previous tax type",
+      "condition": "app_sec.can_page(:APP_PAGE_ID, 'I')",
+      "params": [
+        {
+          "name": "SRC_TAX",
+          "label_a": "كود الضريبة",
+          "label_e": "Tax code",
+          "type": "number",
+          "required": true,
+          "lov_sql": "select tax_code || ' - ' || case when app_sec.lang = 'en' then nvl(name_e, name_a) else name_a end d, tax_code r from tx_taxes_types where tax_code <> nvl(to_number(:PAGE_TAX_CODE), -1) order by tax_code"
+        }
+      ],
+      "call": "app_rules3_tx.copy_tax(:PAGE_ROWID, :SRC_TAX)",
+      "message": "app_rules3_tx.last_message",
+      "success_a": "تم نسخ بيانات الضريبة",
+      "success_e": "Tax data copied",
+      "icon": "fa-copy"
+    }
+  ]
+}

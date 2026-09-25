@@ -1,0 +1,31 @@
+{
+  "pattern": "AUTO",
+  "notes": "AP system parameters: one record per company (SERIAL = company), minimum <= maximum date, posting voucher / account / payment type checks; the missing legacy items added (APP_RULES3_VN).",
+  "rules": {
+    "where": "SERIAL = to_number(:G_COMPANY_CODE)",
+    "key_expr": {
+      "VN_BASIC.SERIAL": "to_number(v('G_COMPANY_CODE'))"
+    },
+    "row_rules": {
+      "VN_BASIC": "app_rules3_vn.basic_row(:new.min_date, :new.max_date, :new.srv_year, :new.srv_entry, :new.srv_supp_acc, :new.pay_type_code);"
+    },
+    "add_columns": {
+      "VN_BASIC.SRV_YEAR": {
+        "label_a": "سنة الترحيل",
+        "label_e": "Posting year"
+      },
+      "VN_BASIC.SRV_ENTRY": {
+        "label_a": "قيد الترحيل (نوع قيد الحسابات)",
+        "label_e": "Posting voucher type"
+      },
+      "VN_BASIC.PAY_TYPE_CODE": {
+        "label_a": "رقم الدفعة العامة بالمشتريات",
+        "label_e": "General payment type in purchasing"
+      },
+      "VN_BASIC.COST_CODE_FLAG": {
+        "label_a": "ادخال مركز تكلفة 1 للحركات (1 نعم / 0 لا)",
+        "label_e": "Enter cost centre 1 on transactions (1 yes / 0 no)"
+      }
+    }
+  }
+}
