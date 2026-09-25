@@ -396,11 +396,29 @@ def db(data):
         fh.write("\n\n".join(sqls) + "\n")
     out = runsql(path)
     print("triggers", len(sqls), "errors:" if out.stdout.strip() else "ok", out.stdout.strip()[:2000])
-    # a generated trigger that still does not compile would invalidate the legacy triggers ordered after it: drop it
+    # a generated trigger that does not compile: first without the transpiled rules (they are the newest, least reviewed
+    # part), so the table keeps its audit columns, keys and reviewed rules; a trigger that still fails is dropped
     c = connect(); cur = c.cursor()
-    cur.execute(r"""select o.object_name, (select min(text) from user_errors e where e.name = o.object_name and e.type = 'TRIGGER')
-                     from user_objects o where o.object_type = 'TRIGGER' and o.status = 'INVALID' and o.object_name like 'APPX\_%' escape '\'""")
+    bad_sql = r"""select o.object_name, (select min(text) from user_errors e where e.name = o.object_name and e.type = 'TRIGGER')
+                    from user_objects o where o.object_type = 'TRIGGER' and o.status = 'INVALID' and o.object_name like 'APPX\_%' escape '\'"""
+    cur.execute(bad_sql)
     bad = dict(cur.fetchall())
+    retry = []
+    for name, err in bad.items():
+        t = next((tb for tb in gen if ("APPX_" + tb)[:128] == name), None)
+        if t and any("(transpiled)" in r for r in row_rules.get(t, [])):
+            row_rules[t] = [r for r in row_rules[t] if "(transpiled)" not in r]
+            gen[t] = trigger_sql(meta, t, key_exprs.get(t), row_rules.get(t))
+            degrade.LOG["skipped_rules"].append(f"{t}: transpiled rules left out, the generated trigger did not compile with them ({(err or '').strip()[:120]})")
+            if gen[t]: retry.append(gen[t])
+    if retry:
+        path2 = mp.work("db", "11_generated_triggers_retry.sql")
+        with io.open(path2, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write("set define off\n\n" + "\n\n".join(retry) + "\n")
+        out = runsql(path2)
+        print("triggers re-created without transpiled rules:", len(retry), "errors:" if out.stdout.strip() else "ok", out.stdout.strip()[:600])
+        cur.execute(bad_sql)
+        bad = dict(cur.fetchall())
     if bad:
         drop_stale_appx({("APPX_" + t)[:128] for t, x in gen.items() if x} - set(bad))
         degrade.LOG["dropped_triggers"] += [f"{n}: {e}" for n, e in bad.items()]

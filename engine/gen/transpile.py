@@ -278,12 +278,15 @@ def to_row_rule(trg, ctx, meta):
                 f"(:new.{col} is not null and :old.{col} is null) or :new.{col} <> :old.{col}))")
     else:
         when = "inserting or updating"
-    core = f"  declare\n    l_msg varchar2(4000);\n    {decl.strip()}\n  begin\n{body.strip()}\n  {exc.strip()}\n  end;"
     # the rule belongs to this screen only: a table shared by several screens (ST_TRNS_MAST ...) must not run another
-    # screen's checks; the page -> form lookup is added after the compile check (APP_PAGE_MAP exists only after a build)
-    guard = f"(select max(form_name) from app_page_map where page_id = to_number(v('APP_PAGE_ID'))) = '{ctx.form['form']}'"
+    # screen's checks.  The page -> form lookup (APP_PAGE_MAP) exists only after a build, so the compile check uses a
+    # constant in its place.
+    def wrap(form_lookup):
+        return (f"if ({when}) then\n  declare\n    l_msg varchar2(4000);\n    l_form varchar2(255);\n    {decl.strip()}\n  begin\n"
+                f"    {form_lookup}\n    if l_form = '{ctx.form['form']}' then\n{body.strip()}\n    end if;\n  {exc.strip()}\n  end;\nend if;")
     head = f"-- {ctx.form['form']} {block}.{trg.get('item') or ''} {name} (transpiled)\n"
-    return table, (head + f"if ({when}) then\n{core}\nend if;", head + f"if ({when}) and {guard} then\n{core}\nend if;")
+    lookup = "select max(form_name) into l_form from app_page_map where page_id = to_number(v('APP_PAGE_ID'));"
+    return table, (head + wrap(f"l_form := '{ctx.form['form']}';"), head + wrap(lookup))
 
 
 def to_defaults(trg, ctx):
